@@ -357,8 +357,10 @@ def label_inventory(classifiers: list[ClassifierSource], date_start: Optional[st
     ai = [c for c in classifiers if c.role == "ai"]
     if not ai:
         raise ValueError("At least one classifier with role 'ai' is needed.")
-    media = pd.concat([read_table(find_table(Path(c.path), "media"), ("mediaID", "timestamp")) for c in ai],
+    media = pd.concat([read_table(find_table(Path(c.path), "media"), ("mediaID", "timestamp", "filePath")) for c in ai],
                       ignore_index=True).drop_duplicates("mediaID")
+    fp = media["filePath"].astype("string") if "filePath" in media else pd.Series(dtype="string")
+    remote = float(fp.str.match(r"^https?://", na=False).mean()) if len(fp) else 0.0
     day = media["timestamp"].astype("string").str.slice(0, 10)
     full_range = (day.min(), day.max()) if day.notna().any() else (None, None)
     universe = set(media.loc[_in_period(day, date_start, date_end).to_numpy(), "mediaID"])
@@ -375,4 +377,7 @@ def label_inventory(classifiers: list[ClassifierSource], date_start: Optional[st
         "n_photos": len(universe),
         "labels": out,
         "families": [l for l in labels if _FAMILY_RE.match(l)],
+        # share of photos whose filePath is a web address: the review will need
+        # a CamtrapDP with the local photo paths
+        "remote_paths": remote,
     }

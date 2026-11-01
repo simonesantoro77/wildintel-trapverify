@@ -443,6 +443,7 @@
     "strategy_learned_context": "Gelernt, mit Nachbarfotos",
     "opening": "Datensatz wird geöffnet… (er wird erneut gelesen: das kann eine Minute dauern)",
     "media_source": "CamtrapDP mit den Fotopfaden",
-    "media_source_hint": "Verwenden, wenn die media.csv der Klassifizierer nicht auf die Fotos auf diesem Computer zeigt (z. B. Trapper-URLs oder eine andere Dateiendung): filePath und fileName werden über die mediaID aus der media.csv dieses CamtrapDP übernommen."
+    "media_source_hint": "Verwenden, wenn die media.csv der Klassifizierer nicht auf die Fotos auf diesem Computer zeigt (z. B. Trapper-URLs oder eine andere Dateiendung): filePath und fileName werden über die mediaID aus der media.csv dieses CamtrapDP übernommen.",
+    "remote_paths_warning": "{{pct}} % der Fotos in der media.csv der KI-Klassifizierer sind Webadressen (z. B. Trapper): Die Prüfung findet sie auf diesem Computer nur, wenn dieses Feld ausgefüllt ist."
   }
 }

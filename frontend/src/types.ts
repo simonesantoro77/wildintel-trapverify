@@ -124,6 +124,7 @@ export interface McLabels {
   n_photos: number
   labels: { classifier: string; label: string; photos: number }[]
   families: string[]
+  remote_paths: number
 }
 
 export interface McRunRequest {

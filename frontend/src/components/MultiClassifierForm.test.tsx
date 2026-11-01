@@ -8,7 +8,7 @@ import { api } from '../api'
 vi.mock('../api', () => ({
   api: {
     mcLabels: vi.fn(async () => ({
-      date_min: '2023-02-01', date_max: '2023-05-31', n_photos: 1000, families: ['Cervidae'],
+      date_min: '2023-02-01', date_max: '2023-05-31', n_photos: 1000, families: ['Cervidae'], remote_paths: 0,
       labels: [
         { classifier: 'DF', label: 'Cervus elaphus', photos: 500 },
         { classifier: 'DF', label: 'Dama dama', photos: 100 },

@@ -173,6 +173,7 @@ def test_label_inventory(archive):
     labels = {(r["classifier"], r["label"]) for r in inv["labels"]}
     assert ("A", "Dama dama") in labels and ("R", "Vulpes vulpes") in labels
     assert inv["date_min"] == "2024-03-01"
+    assert inv["remote_paths"] == 0
 
 
 def test_run_writes_a_camtrapdp_the_app_can_load(archive, tmp_path):

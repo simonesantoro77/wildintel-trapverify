@@ -443,6 +443,7 @@
     "strategy_learned_context": "Learned, with neighbouring photos",
     "opening": "Opening the dataset… (it is read again: this can take a minute)",
     "media_source": "CamtrapDP with the photo paths",
-    "media_source_hint": "Use it when the classifiers' media.csv don't point to the photos on this computer (e.g. Trapper URLs or a different file extension): filePath and fileName are taken from this CamtrapDP's media.csv, matched by mediaID."
+    "media_source_hint": "Use it when the classifiers' media.csv don't point to the photos on this computer (e.g. Trapper URLs or a different file extension): filePath and fileName are taken from this CamtrapDP's media.csv, matched by mediaID.",
+    "remote_paths_warning": "{{pct}} % of the photos in the AI classifiers' media.csv are web addresses (e.g. Trapper): the review won't find them on this computer unless you fill in this field."
   }
 }

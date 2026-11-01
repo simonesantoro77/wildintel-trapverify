@@ -257,6 +257,11 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
             <button type="button" className={browseBtn} onClick={() => setPicker(-1)}>{t('setup.browse')}</button>
           </div>
           <p className={hintClass}>{t('mc.media_source_hint')}</p>
+          {inv && inv.remote_paths > 0.5 && !mediaSource.trim() && (
+            <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+              {t('mc.remote_paths_warning', { pct: Math.round(100 * inv.remote_paths) })}
+            </p>
+          )}
         </div>
       </div>
 
