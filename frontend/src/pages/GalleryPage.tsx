@@ -423,14 +423,19 @@ export default function GalleryPage() {
     const ev = events[lbEvIdx]
     if (!ev) return
     const frameRep = ev.frames[lbIndex]?.burstRepObsId ?? ev.repObsId
-    decide(ev.key, frameRep, d)
-    // The lightbox moves on right away, so a conflict with another species
-    // confirmed from this event is also told in a toast (Backspace goes back).
+    // Confirmed or unsure here while another species was confirmed from a
+    // photo of this event: right only with animals of both species. The
+    // decision is recorded but the lightbox stays on the card; pressing the
+    // same decision again moves on.
     const crossHere = (crossByCell[`${ev.siteId}|${ev.occasion}`] ?? [])
       .filter((c) => c.status === 'cross' && ev.frames.some((f) => f.mediaId === c.mediaID))
       .map((c) => c.scientificName)
-    if (!completed && d !== 'rejected' && crossHere.length > 0) {
+    const conflict = !completed && d !== 'rejected' && crossHere.length > 0
+    const repeated = decisionsRef.current[ev.key] === d
+    decide(ev.key, frameRep, d)
+    if (conflict && !repeated) {
       showToast(t('gallery.cross_conflict_toast', { species: crossHere.join(', ') }), 'warning', 7000)
+      return
     }
     if (!completed) {
       // decisionsRef mirrors state as of the last render, so it doesn't

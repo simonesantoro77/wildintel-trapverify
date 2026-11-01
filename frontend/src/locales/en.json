@@ -285,7 +285,7 @@
     "prev_card_tooltip": "Back to the card you just decided (Backspace)",
     "cross_confirmed_note": "You confirmed {{species}} in this event and also this species: right only if there are animals of both.",
     "cross_pending_note": "You confirmed {{species}} in this event. If it is the only animal, mark this card Rejected.",
-    "cross_conflict_toast": "You confirmed {{species}} in this same event: right only if there are animals of both species. Backspace goes back to that card."
+    "cross_conflict_toast": "You confirmed {{species}} in this same event: right only if there are animals of both species. Press the same button again to go on, or change the decision."
   },
   "help": {
     "title": "Help — CamTrap Verify",
