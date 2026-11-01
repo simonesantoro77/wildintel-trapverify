@@ -424,6 +424,14 @@ export default function GalleryPage() {
     if (!ev) return
     const frameRep = ev.frames[lbIndex]?.burstRepObsId ?? ev.repObsId
     decide(ev.key, frameRep, d)
+    // The lightbox moves on right away, so a conflict with another species
+    // confirmed from this event is also told in a toast (Backspace goes back).
+    const crossHere = (crossByCell[`${ev.siteId}|${ev.occasion}`] ?? [])
+      .filter((c) => c.status === 'cross' && ev.frames.some((f) => f.mediaId === c.mediaID))
+      .map((c) => c.scientificName)
+    if (!completed && d !== 'rejected' && crossHere.length > 0) {
+      showToast(t('gallery.cross_conflict_toast', { species: crossHere.join(', ') }), 'warning', 7000)
+    }
     if (!completed) {
       // decisionsRef mirrors state as of the last render, so it doesn't
       // include the decision just made above (setDecisions hasn't
@@ -980,9 +988,11 @@ export default function GalleryPage() {
                     </button>
                   )
                 })}
-                {(lbDecision === 'unsure' || lbDecision === 'confirmed') && lbCrossHere.length > 0 && (
+                {lbDecision !== 'rejected' && lbCrossHere.length > 0 && (
                   <p role="note" className="mt-1 text-[11px] leading-snug text-amber-300">
-                    {t(lbDecision === 'unsure' ? 'gallery.cross_unsure_note' : 'gallery.cross_confirmed_note',
+                    {t(lbDecision === 'unsure' ? 'gallery.cross_unsure_note'
+                       : lbDecision === 'confirmed' ? 'gallery.cross_confirmed_note'
+                       : 'gallery.cross_pending_note',
                        { species: lbCrossHere.join(', ') })}
                   </p>
                 )}
@@ -1123,7 +1133,8 @@ export default function GalleryPage() {
       />
 
       {toast && (
-        <div className={`fixed bottom-0 right-0 m-3 z-[2000] px-4 py-3 rounded-lg text-white shadow-lg max-w-md ${
+        // above the lightbox (z-index 9999), where most decisions are taken
+        <div style={{ zIndex: 10001 }} className={`fixed bottom-0 right-0 m-3 px-4 py-3 rounded-lg text-white shadow-lg max-w-md ${
           toast.type === 'success' ? 'bg-emerald-600' : toast.type === 'warning' ? 'bg-amber-600' : 'bg-red-600'
         }`}>
           {toast.msg}

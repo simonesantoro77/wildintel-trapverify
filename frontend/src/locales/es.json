@@ -283,7 +283,9 @@
     "cross_unsure_note": "Has confirmado {{species}} en este evento. Si es el único animal, la decisión aquí debería ser No confirmada, no Dudosa.",
     "prev_card": "Anterior",
     "prev_card_tooltip": "Volver a la tarjeta que acabas de decidir (tecla Retroceso)",
-    "cross_confirmed_note": "Has confirmado {{species}} en este evento y también esta especie: solo es correcto si hay animales de las dos."
+    "cross_confirmed_note": "Has confirmado {{species}} en este evento y también esta especie: solo es correcto si hay animales de las dos.",
+    "cross_pending_note": "Has confirmado {{species}} en este evento. Si es el único animal, marca esta tarjeta como No confirmada.",
+    "cross_conflict_toast": "Has confirmado {{species}} en este mismo evento: solo es correcto si hay animales de las dos especies. Retroceso vuelve a esa tarjeta."
   },
   "help": {
     "title": "Ayuda — CamTrap Verify",

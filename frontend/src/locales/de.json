@@ -283,7 +283,9 @@
     "cross_unsure_note": "Du hast {{species}} in diesem Ereignis bestätigt. Wenn es das einzige Tier ist, sollte die Entscheidung hier Abgelehnt sein, nicht Unsicher.",
     "prev_card": "Zurück",
     "prev_card_tooltip": "Zurück zur gerade entschiedenen Karte (Rücktaste)",
-    "cross_confirmed_note": "Du hast {{species}} in diesem Ereignis bestätigt und auch diese Art: nur richtig, wenn Tiere beider Arten zu sehen sind."
+    "cross_confirmed_note": "Du hast {{species}} in diesem Ereignis bestätigt und auch diese Art: nur richtig, wenn Tiere beider Arten zu sehen sind.",
+    "cross_pending_note": "Du hast {{species}} in diesem Ereignis bestätigt. Wenn es das einzige Tier ist, markiere diese Karte als Abgelehnt.",
+    "cross_conflict_toast": "Du hast {{species}} in demselben Ereignis bestätigt: nur richtig, wenn Tiere beider Arten zu sehen sind. Die Rücktaste führt zu dieser Karte zurück."
   },
   "help": {
     "title": "Hilfe — CamTrap Verify",
