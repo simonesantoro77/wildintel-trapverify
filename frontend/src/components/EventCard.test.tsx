@@ -128,4 +128,79 @@ describe('EventCard', () => {
     )
     expect(screen.getByText('Contexto')).toBeInTheDocument()
   })
+
+  it('renders a single image and steps through the frames with the arrows', async () => {
+    const { container } = render(
+      <EventCard
+        event={makeEvent({
+          frames: [
+            { obsId: 'obs-1', mediaId: 'media-1', img: '/img1.jpg', ts: '10:00', prob: 0.9 },
+            { obsId: 'obs-2', mediaId: 'media-2', img: '/img2.jpg', ts: '10:01', prob: 0.5 },
+            { obsId: 'obs-3', mediaId: 'media-3', img: '/img3.jpg', ts: '10:02', prob: 0.4 },
+          ],
+        })}
+        decision={null}
+        needsDecision={false}
+        onDecide={vi.fn()}
+        onOpenLightbox={vi.fn()}
+        eventIdx={0}
+      />,
+    )
+    const imgs = () => container.querySelectorAll('img')
+    expect(imgs()).toHaveLength(1)
+    expect(imgs()[0]).toHaveAttribute('src', '/img1.jpg')
+    expect(screen.getByText('1/3')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Imagen siguiente' }))
+    expect(imgs()[0]).toHaveAttribute('src', '/img2.jpg')
+    await userEvent.click(screen.getByRole('button', { name: 'Imagen anterior' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Imagen anterior' }))
+    expect(imgs()[0]).toHaveAttribute('src', '/img3.jpg')
+  })
+
+  it('only offers the unsure button when allowed', async () => {
+    const onDecide = vi.fn()
+    const { rerender } = render(
+      <EventCard event={makeEvent()} decision={null} needsDecision={false}
+        onDecide={onDecide} onOpenLightbox={vi.fn()} eventIdx={0} />,
+    )
+    expect(screen.queryByRole('button', { name: /dudosa/i })).not.toBeInTheDocument()
+    rerender(
+      <EventCard event={makeEvent()} decision={null} needsDecision={false}
+        onDecide={onDecide} onOpenLightbox={vi.fn()} eventIdx={0} allowUnsure />,
+    )
+    await userEvent.click(screen.getByRole('button', { name: /dudosa/i }))
+    expect(onDecide).toHaveBeenCalledWith('site1|1', 'obs-1', 'unsure')
+  })
+
+  it('marks unsure events with a dashed amber border', () => {
+    const { container } = render(
+      <EventCard event={makeEvent()} decision="unsure" needsDecision={false}
+        onDecide={vi.fn()} onOpenLightbox={vi.fn()} eventIdx={0} allowUnsure />,
+    )
+    expect(container.firstChild).toHaveClass('border-dashed')
+  })
+
+  it('on pending cards, confirms the event of the frame being viewed', async () => {
+    const onDecide = vi.fn()
+    render(
+      <EventCard
+        event={makeEvent({
+          repObsId: 'rep-a',
+          frames: [
+            { obsId: 'a1', mediaId: 'm1', img: '/a1.jpg', ts: '10:00', prob: 0.9, burstRepObsId: 'rep-a', rank: 1 },
+            { obsId: 'b1', mediaId: 'm2', img: '/b1.jpg', ts: '12:00', prob: 0.6, burstRepObsId: 'rep-b', rank: 3 },
+          ],
+        })}
+        decision={null}
+        needsDecision={false}
+        onDecide={onDecide}
+        onOpenLightbox={vi.fn()}
+        eventIdx={0}
+        allowUnsure
+      />,
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Imagen siguiente' }))
+    await userEvent.click(screen.getByRole('button', { name: /^✓/ }))
+    expect(onDecide).toHaveBeenCalledWith('site1|1', 'rep-b', 'confirmed')
+  })
 })

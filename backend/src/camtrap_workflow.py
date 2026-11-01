@@ -9,6 +9,7 @@ import json
 import logging
 import os
 import re
+import sys
 from datetime import date, timedelta
 from functools import lru_cache
 from pathlib import Path
@@ -110,6 +111,20 @@ def normalise_ts(x: str) -> str:
     return _TZ_OFFSET_RE.sub("", s)
 
 
+def parse_timestamps(values: pd.Series) -> pd.Series:
+    """Vectorised equivalent of ``pd.to_datetime(values.apply(normalise_ts))``.
+
+    Same normalisation as :func:`normalise_ts` (EXIF date separators, trailing
+    UTC offset stripped) but done with pandas string methods instead of one
+    Python call per row, which matters for a ``media.csv`` with hundreds of
+    thousands of rows. Unparseable values become ``NaT``.
+    """
+    s = values.astype("string")
+    s = s.str.replace(r"^(\d{4}):(\d{2}):(\d{2})", r"\1-\2-\3", regex=True)
+    s = s.str.replace(_TZ_OFFSET_RE.pattern, "", regex=True)
+    return pd.to_datetime(s, errors="coerce", utc=False)
+
+
 # ─── CamtrapDP I/O ────────────────────────────────────────────────────────────
 
 def find_datapackage(camtrap_dir: Path) -> Optional[Path]:
@@ -168,7 +183,19 @@ def resolve_camtrapdp_resource(camtrap_dir: Path, name: str) -> Optional[Path]:
     return None
 
 
-def load_camtrapdp(camtrap_dir: Path) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+# Columns the review workflow actually needs from the two big tables. Reading
+# only these (instead of every column as ``str``) roughly halves load time and
+# memory on large exports (e.g. 1.4 M observations / 550 k media rows).
+WORKFLOW_MEDIA_COLUMNS = ("mediaID", "deploymentID", "timestamp", "filePath", "fileName")
+WORKFLOW_OBS_COLUMNS = (
+    "observationID", "deploymentID", "mediaID", "observationLevel",
+    "observationType", "scientificName", "classificationProbability",
+)
+
+
+def load_camtrapdp(
+    camtrap_dir: Path, minimal: bool = False,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Read the three core CamtrapDP tables from a directory.
 
     All columns are kept as ``str`` to avoid silent type coercions on IDs.
@@ -181,32 +208,50 @@ def load_camtrapdp(camtrap_dir: Path) -> tuple[pd.DataFrame, pd.DataFrame, pd.Da
         camtrap_dir: Path to the directory containing ``deployments.csv``,
             ``media.csv`` and ``observations.csv`` (or a ``datapackage.json``
             pointing at differently-named equivalents).
+        minimal: When True, ``media`` and ``observations`` are read with only
+            the columns the review workflow uses (``WORKFLOW_*_COLUMNS``).
+            ``deployments`` is always read in full (it is small). Use the
+            default (False) whenever the tables are written back out.
 
     Returns:
         Tuple of ``(deployments, media, observations)`` DataFrames.
     """
-    def _load(name: str) -> pd.DataFrame:
+    def _load(name: str, columns: Optional[tuple[str, ...]] = None) -> pd.DataFrame:
         path = resolve_camtrapdp_resource(camtrap_dir, name)
         if path is None:
             path = camtrap_dir / f"{name}.csv"  # let pandas raise a familiar error
-        return pd.read_csv(path, dtype=str)
+        if columns is None:
+            return pd.read_csv(path, dtype=str)
+        header = pd.read_csv(path, dtype=str, nrows=0).columns
+        return pd.read_csv(path, dtype=str, usecols=[c for c in header if c in columns])
 
     dep = _load("deployments")
-    med = _load("media")
-    obs = _load("observations")
+    med = _load("media", WORKFLOW_MEDIA_COLUMNS if minimal else None)
+    obs = _load("observations", WORKFLOW_OBS_COLUMNS if minimal else None)
     if "fileName" not in med.columns:
-        med["fileName"] = med["filePath"].apply(
-            lambda x: Path(str(x)).name if pd.notna(x) else ""
-        )
+        med["fileName"] = basename_series(med["filePath"])
     return dep, med, obs
 
 
-def validate_camtrapdp_datapackage(datapackage_path: Path) -> list[str]:
+def basename_series(paths: pd.Series) -> pd.Series:
+    """Vectorised file-name extraction for a column of paths or URLs.
+
+    Splits on both ``/`` and ``\\`` so Windows paths in a CSV produced on
+    another OS still yield the bare file name. Missing values become ``""``.
+    """
+    return paths.fillna("").astype(str).str.extract(r"([^/\\]*)$", expand=False).fillna("")
+
+
+def validate_camtrapdp_datapackage(
+    datapackage_path: Path, limit_rows: Optional[int] = None,
+) -> list[str]:
     """Validate a ``datapackage.json`` with ``frictionless``, as its own CLI does.
 
     Checks the descriptor is well-formed and that each declared resource's
     data matches its own schema (types, required fields, missing files).
-    Returns a list of human-readable error strings (empty when valid). This
+    Returns a list of human-readable error strings (empty when valid).
+    ``limit_rows`` caps how many rows of each table are checked (the whole
+    table by default; row validation is slow on large archives). This
     only applies to a *pre-existing* CamtrapDP package (e.g. from Trapper or
     another tool) that already ships a ``datapackage.json`` -- packages this
     app generates itself from a DeepFaune/generic CSV don't have one yet, so
@@ -214,7 +259,7 @@ def validate_camtrapdp_datapackage(datapackage_path: Path) -> list[str]:
     """
     import frictionless
 
-    report = frictionless.validate(str(datapackage_path))
+    report = frictionless.validate(str(datapackage_path), limit_rows=limit_rows)
     if report.valid:
         return []
 
@@ -393,6 +438,41 @@ def is_remote_path(file_path: str) -> bool:
     return file_path.startswith("http://") or file_path.startswith("https://")
 
 
+def _is_file(path: Path) -> bool:
+    try:
+        return path.is_file()
+    except OSError:
+        return False
+
+
+_MAX_SUFFIX_PARTS = 6
+
+
+def _path_parts(file_path: str) -> list[str]:
+    """Components of a path written on any OS (drive letter dropped)."""
+    parts = [p for p in re.split(r"[\\/]+", file_path) if p and p not in (".", "..")]
+    if parts and re.fullmatch(r"[A-Za-z]:", parts[0]):
+        parts = parts[1:]
+    return parts
+
+
+def _suffix_match(file_path: str, base: Path, is_file) -> Optional[Path]:
+    """First existing ``base / <last k parts of file_path>``, longest k first.
+
+    ``file_path`` may come from another OS, so both ``/`` and ``\\`` separate
+    parts; only suffixes of at least two parts (``parent/fileName``) are tried,
+    so a bare file name is never matched at the root of ``base``.
+    """
+    if not file_path or is_remote_path(file_path):
+        return None
+    parts = _path_parts(file_path)
+    for k in range(min(len(parts), _MAX_SUFFIX_PARTS), 1, -1):
+        candidate = base.joinpath(*parts[-k:])
+        if is_file(candidate):
+            return candidate
+    return None
+
+
 def resolve_media_path(
     file_path: str,
     deployment_id: str,
@@ -400,6 +480,9 @@ def resolve_media_path(
     image_base_dir: str,
     fallback_base: Path,
     flat_search: bool = False,
+    exists=None,
+    is_file=None,
+    suffix_lookup=None,
 ) -> Path:
     """Resolve a media record to a local file path.
 
@@ -410,7 +493,14 @@ def resolve_media_path(
     TRAPPER export has a remote ``filePath`` but the files were downloaded
     locally under that layout.
 
-    If that misses and ``flat_search`` is enabled, ``fileName`` is looked up
+    If that misses, the trailing part of ``filePath`` is looked up under
+    ``image_base_dir`` (longest first, down to ``parent/fileName``). This
+    finds photos whose ``filePath`` points at another computer -- e.g.
+    ``/Volumes/Disk/2023/R0025/dep_0011/x.jpg`` exported on a Mac -- when
+    ``image_base_dir`` is the local folder holding ``R0025/``, without having
+    to scan the whole image tree.
+
+    If that misses too and ``flat_search`` is enabled, ``fileName`` is looked up
     case-insensitively anywhere under ``image_base_dir`` (R's "flat" mode).
     Ties are broken by keeping only hits whose path contains
     ``deployment_id``; if more than one candidate remains, the match is
@@ -420,7 +510,10 @@ def resolve_media_path(
 
     Otherwise falls back to the previous rule (``filePath`` used as-is if
     absolute, otherwise joined to ``fallback_base``) when nothing above
-    matched, or when ``image_base_dir`` is not set.
+    matched, or when ``image_base_dir`` is not set. In the latter case, if
+    that file doesn't exist, the ``filePath``-suffix lookup is tried under
+    ``fallback_base`` too (the CamtrapDP folder), so photos stored below the
+    data folder are found even when no images folder was configured.
 
     Args:
         file_path: The record's ``filePath`` value (may be absolute,
@@ -434,14 +527,33 @@ def resolve_media_path(
             ``camtrap_dir`` itself).
         flat_search: If True, search ``image_base_dir`` recursively by
             ``fileName`` when the structured path misses. Defaults to False.
+        exists: Optional existence predicate used for the structured lookup.
+            Defaults to :func:`_exists_or_denied` (one ``stat`` call);
+            :class:`MediaResolver` passes a cached directory-listing check
+            instead so resolving many records doesn't stat every file.
+        is_file: Optional strict predicate (the file exists and is
+            accessible) used for the ``filePath``-suffix lookup.
+        suffix_lookup: Optional replacement for :func:`_suffix_match`,
+            ``(file_path, base) -> Path | None``; :class:`MediaResolver` passes
+            one that caches the matching folders per source folder.
 
     Returns:
         The resolved path (existence is not checked here).
     """
+    if exists is None:
+        exists = _exists_or_denied
+    if is_file is None:
+        is_file = _is_file
+    if suffix_lookup is None:
+        suffix_lookup = lambda fp, base: _suffix_match(fp, base, is_file)  # noqa: E731
     if image_base_dir:
         structured = Path(image_base_dir) / deployment_id / file_name
-        if _exists_or_denied(structured):
+        if exists(structured):
             return structured
+
+        suffix_hit = suffix_lookup(file_path, Path(image_base_dir))
+        if suffix_hit is not None:
+            return suffix_hit
 
         if flat_search and file_name:
             hits = _flat_image_index(str(image_base_dir)).get(file_name.lower(), ())
@@ -460,7 +572,171 @@ def resolve_media_path(
     if not p.is_absolute():
         base = Path(image_base_dir) if image_base_dir else fallback_base
         p = (base / p).resolve()
+    if not image_base_dir and file_path and not is_remote_path(file_path) and not is_file(p):
+        suffix_hit = suffix_lookup(file_path, Path(fallback_base))
+        if suffix_hit is not None:
+            return suffix_hit
     return p
+
+
+# Windows and (by default) macOS file systems are case-insensitive, so a
+# directory-listing lookup must be too, or it would report files as missing
+# that ``Path.exists()`` finds.
+_CASE_INSENSITIVE_FS = sys.platform in ("win32", "darwin")
+
+
+class MediaResolver:
+    """Resolve many media records to local files without ``stat``-ing each one.
+
+    :func:`resolve_media_path` checks the structured
+    ``image_base_dir/deploymentID/fileName`` location with one ``stat`` call
+    per record. That is fine for a single image but slow for hundreds of
+    thousands of records on a Windows or external drive. This class caches
+    one directory listing per folder instead (a few hundred ``listdir`` calls
+    for a typical camera-trap archive) and answers existence checks from
+    memory, with the same permission semantics as :func:`_exists_or_denied`.
+
+    The cache lives as long as the instance: create a new one when the image
+    folders may have changed (new session, relinked folders).
+    """
+
+    def __init__(
+        self,
+        image_base_dir: str,
+        fallback_base: Path,
+        flat_search: bool = False,
+        extra_bases: tuple = (),
+    ):
+        self.image_base_dir = image_base_dir or ""
+        self.fallback_base = Path(fallback_base)
+        self.flat_search = flat_search
+        # Folders also searched by filePath suffix when a photo isn't found
+        # with the configured images folder (e.g. the CamtrapDP folder, or the
+        # parent of an images folder that was set one level too deep).
+        self.extra_bases = tuple(
+            Path(b) for b in extra_bases
+            if b and (not self.image_base_dir or Path(b) != Path(self.image_base_dir))
+        )
+        self._dirs: dict[str, Optional[tuple[frozenset, frozenset]]] = {}
+        self._suffix_dirs: dict[tuple, list[tuple[str, tuple[frozenset, frozenset]]]] = {}
+        self._base_strs: dict[Path, str] = {}
+        self._base_path = Path(self.image_base_dir) if self.image_base_dir else None
+
+    def _listing(self, directory: str) -> Optional[tuple[frozenset, frozenset]]:
+        key = os.path.normcase(directory)
+        if key not in self._dirs:
+            try:
+                names = os.listdir(directory)
+            except PermissionError:
+                logger.warning("Permission denied listing %s", directory)
+                self._dirs[key] = None
+            except OSError:
+                self._dirs[key] = (frozenset(), frozenset())
+            else:
+                self._dirs[key] = (frozenset(names), frozenset(n.lower() for n in names))
+        return self._dirs[key]
+
+    def exists(self, path: Path) -> bool:
+        """Cached equivalent of :func:`_exists_or_denied` for a file path."""
+        parent, name = os.path.split(str(path))
+        listing = self._listing(parent)
+        if listing is None:  # access denied: let the real error surface later
+            return True
+        exact, lower = listing
+        return name in exact or (_CASE_INSENSITIVE_FS and name.lower() in lower)
+
+    def status(self, path: Path) -> str:
+        """``'ok'``, ``'missing'`` or ``'denied'`` for a file path (cached)."""
+        parent, name = os.path.split(str(path))
+        listing = self._listing(parent)
+        if listing is None:
+            return "denied"
+        exact, lower = listing
+        if name in exact or (_CASE_INSENSITIVE_FS and name.lower() in lower):
+            return "ok"
+        return "missing"
+
+    def suffix_lookup(self, file_path: str, base: Path) -> Optional[Path]:
+        """Cached equivalent of :func:`_suffix_match`.
+
+        All files of one source folder share the candidate folders under
+        ``base``, so those are worked out once per source folder (longest
+        suffix first, keeping only folders that exist) and each file is then
+        a lookup in their cached listings.
+        """
+        if not file_path or is_remote_path(file_path):
+            return None
+        parts = _path_parts(file_path)
+        if len(parts) < 2:
+            return None
+        name = parts[-1]
+        base_str = self._base_strs.get(base)
+        if base_str is None:
+            base_str = self._base_strs[base] = str(base)
+        key = (base_str, *parts[-_MAX_SUFFIX_PARTS:-1])
+        dirs = self._suffix_dirs.get(key)
+        if dirs is None:
+            dirs = []
+            for k in range(min(len(parts), _MAX_SUFFIX_PARTS), 1, -1):
+                d = os.path.join(base_str, *parts[-k:-1])
+                listing = self._listing(d)
+                if listing is not None and listing[0]:
+                    dirs.append((d, listing))
+            self._suffix_dirs[key] = dirs
+        for d, (exact, lower) in dirs:
+            if name in exact or (_CASE_INSENSITIVE_FS and name.lower() in lower):
+                return Path(d, name)
+        return None
+
+    def resolve(self, file_path: str, deployment_id: str, file_name: str) -> Path:
+        """Same rules as :func:`resolve_media_path`, using the cached listings."""
+        if self.image_base_dir:
+            # Fast path for the two common hits (structured layout, filePath
+            # suffix) with plain strings: building Path objects dominated the
+            # cost of checking hundreds of thousands of records.
+            d = os.path.join(self.image_base_dir, deployment_id)
+            listing = self._listing(d)
+            if listing is None or file_name in listing[0] or (
+                _CASE_INSENSITIVE_FS and file_name.lower() in listing[1]
+            ):
+                return Path(d, file_name)
+            hit = self.suffix_lookup(file_path, self._base_path)
+            if hit is not None:
+                return hit
+        if self.extra_bases and not self.flat_search and file_path and not is_remote_path(file_path):
+            # A filePath that exists as written still wins over the extra
+            # folders; checked with strings first because building and
+            # resolving Path objects for every miss is what made bulk checks slow.
+            direct = file_path if os.path.isabs(file_path) else os.path.join(
+                self.image_base_dir or str(self.fallback_base), file_path,
+            )
+            if self.status(direct) != "ok":
+                for base in self.extra_bases:
+                    hit = self.suffix_lookup(file_path, base)
+                    if hit is not None:
+                        return hit
+        path = resolve_media_path(
+            file_path, deployment_id, file_name, self.image_base_dir,
+            self.fallback_base, flat_search=self.flat_search, exists=self.exists,
+            is_file=lambda p: self.status(p) == "ok",
+            suffix_lookup=self.suffix_lookup,
+        )
+        if self.extra_bases and self.flat_search and self.status(path) != "ok":
+            for base in self.extra_bases:
+                hit = self.suffix_lookup(file_path, base)
+                if hit is not None:
+                    return hit
+        return path
+
+
+def image_url(media_id: str, token: str = "") -> str:
+    """URL of the local-image endpoint for a media record.
+
+    ``token`` identifies the session (and its image folders) so the browser
+    can cache images aggressively without ever showing a stale picture from
+    another session that happens to reuse the same ``mediaID`` values.
+    """
+    return f"/api/image/{quote(str(media_id), safe='')}" + (f"?v={token}" if token else "")
 
 
 def gallery_frame_img_url(
@@ -471,6 +747,8 @@ def gallery_frame_img_url(
     image_base_dir: str,
     fallback_base: Path,
     flat_search: bool = False,
+    resolver: Optional[MediaResolver] = None,
+    token: str = "",
 ) -> str:
     """Pick the URL a gallery frame should load its image from.
 
@@ -484,14 +762,19 @@ def gallery_frame_img_url(
     """
     if is_remote_path(file_path):
         if image_base_dir:
-            local_path = resolve_media_path(
-                file_path, deployment_id, file_name, image_base_dir, fallback_base,
-                flat_search=flat_search,
-            )
-            if _exists_or_denied(local_path):
-                return f'/api/image/{media_id}'
+            if resolver is not None:
+                local_path = resolver.resolve(file_path, deployment_id, file_name)
+                found = resolver.exists(local_path)
+            else:
+                local_path = resolve_media_path(
+                    file_path, deployment_id, file_name, image_base_dir, fallback_base,
+                    flat_search=flat_search,
+                )
+                found = _exists_or_denied(local_path)
+            if found:
+                return image_url(media_id, token)
         return f'/api/proxy-image?url={quote(file_path, safe="")}'
-    return f'/api/image/{media_id}'
+    return image_url(media_id, token)
 
 
 def find_flat_search_ambiguities(med: pd.DataFrame, image_base_dir: str) -> list[dict]:
@@ -516,26 +799,62 @@ def find_flat_search_ambiguities(med: pd.DataFrame, image_base_dir: str) -> list
         List of dicts with ``mediaID``, ``fileName``, ``deploymentID`` and
         the conflicting candidate paths, one per ambiguous record.
     """
-    if not image_base_dir:
+    if not image_base_dir or med.empty:
         return []
+
+    def _col(name: str) -> pd.Series:
+        if name in med.columns:
+            return med[name].fillna("").astype(str)
+        return pd.Series("", index=med.index, dtype=str)
+
+    # Records already found without the flat search (structured layout or the
+    # filePath suffix) can't be ambiguous. Checking them from cached directory
+    # listings first means the whole image tree is only walked when some
+    # record really depends on the flat search.
+    base = Path(image_base_dir)
+    lister = MediaResolver(str(image_base_dir), base)
+    strict = lambda p: lister.status(p) == "ok"  # noqa: E731
+    found = [
+        strict(base / d / f) or lister.suffix_lookup(fp, base) is not None
+        for fp, d, f in zip(_col("filePath"), _col("deploymentID"), _col("fileName"))
+    ]
+    med = med[[not hit for hit in found]]
+    if med.empty:
+        return []
+
     index = _flat_image_index(str(image_base_dir))
+    # Only names that occur more than once anywhere under the root can ever be
+    # ambiguous, so filter to those first instead of visiting every record.
+    duplicated = {name: hits for name, hits in index.items() if len(hits) > 1}
+    if not duplicated:
+        return []
+
+    file_names = _col("fileName")
+    lower = file_names.str.lower()
+    mask = (file_names != "") & lower.isin(duplicated.keys())
+    if not mask.any():
+        return []
+
+    def _norm(path: str) -> str:
+        path = os.path.normcase(os.path.normpath(path))
+        return path.lower() if _CASE_INSENSITIVE_FS else path
+
+    # A structured path that exists is necessarily under the indexed root, so
+    # existence can be answered from the index instead of one stat per record.
+    indexed_paths = {_norm(h) for hits in duplicated.values() for h in hits}
+    base = str(image_base_dir)
     ambiguous: list[dict] = []
-    for _, row in med.iterrows():
-        dep_id = str(row.get("deploymentID", "") or "")
-        file_name = str(row.get("fileName", "") or "")
-        if not file_name:
+    for media_id, dep_id, file_name, name_lower in zip(
+        _col("mediaID")[mask], _col("deploymentID")[mask], file_names[mask], lower[mask],
+    ):
+        if _norm(os.path.join(base, dep_id, file_name)) in indexed_paths:
             continue
-        structured = Path(image_base_dir) / dep_id / file_name
-        if structured.exists():
-            continue
-        hits = index.get(file_name.lower(), ())
-        if len(hits) <= 1:
-            continue
+        hits = duplicated[name_lower]
         by_dep = [h for h in hits if dep_id and dep_id in h]
         if len(by_dep) == 1:
             continue
         ambiguous.append({
-            "mediaID": str(row.get("mediaID", "")),
+            "mediaID": media_id,
             "fileName": file_name,
             "deploymentID": dep_id,
             "candidates": list(hits),
@@ -756,6 +1075,7 @@ def build_candidates(
     gap_seconds: int = 60,
     include_burst_context: bool = False,
     min_score: float = 0.0,
+    min_score_by_species: Optional[dict[str, float]] = None,
 ) -> pd.DataFrame:
     """Build the verification candidate manifest from CamtrapDP tables.
 
@@ -791,6 +1111,9 @@ def build_candidates(
             reach to remain a candidate. A frame with no score at all is never
             demoted -- only a known score below this excludes it. Defaults to
             0.0 (no filtering).
+        min_score_by_species: Optional per-species thresholds
+            (``scientificName -> min_score``) overriding ``min_score`` for
+            those species; species not listed use ``min_score``.
 
     Returns:
         DataFrame with one row per candidate frame, including columns
@@ -803,13 +1126,9 @@ def build_candidates(
     site_col = detect_site_col(dep)
 
     med = med.copy()
-    med["ts"] = pd.to_datetime(
-        med["timestamp"].apply(normalise_ts), errors="coerce", utc=False
-    )
+    med["ts"] = parse_timestamps(med["timestamp"])
     if "fileName" not in med.columns:
-        med["fileName"] = med["filePath"].apply(
-            lambda x: Path(str(x)).name if pd.notna(x) else ""
-        )
+        med["fileName"] = basename_series(med["filePath"])
 
     target_obs = obs[
         (obs["observationLevel"] == "media")
@@ -835,9 +1154,11 @@ def build_candidates(
     # to_camtrapdp()'s per-frame threshold: a frame with no score at all is never
     # demoted (only a known low score excludes it), and this runs before burst
     # grouping, so a demoted frame no longer counts toward a burst's gap-based grouping.
-    if min_score > 0:
+    overrides = {sp: float(v) for sp, v in (min_score_by_species or {}).items() if v is not None}
+    if min_score > 0 or any(v > 0 for v in overrides.values()):
         target_prob = pd.to_numeric(target_obs["classificationProbability"], errors="coerce")
-        target_obs = target_obs[~(target_prob.notna() & (target_prob < min_score))]
+        threshold = target_obs["scientificName"].map(overrides).fillna(min_score).astype(float)
+        target_obs = target_obs[~(target_prob.notna() & (target_prob < threshold))]
 
     joined = (
         target_obs
@@ -857,25 +1178,17 @@ def build_candidates(
     if joined.empty:
         return pd.DataFrame()
 
-    # Build occasion breaks
-    breaks = []
-    d = study_start
-    while d <= study_end + timedelta(days=1):
-        breaks.append(d)
-        d += timedelta(days=occasion_days)
-    n_occ = len(breaks) - 1
-
-    def assign_occ(ts: pd.Timestamp) -> int:
-        dt = ts.date()
-        for i in range(len(breaks) - 1):
-            if breaks[i] <= dt < breaks[i + 1]:
-                return i + 1
-        return n_occ if dt == breaks[-1] else -1
-
-    joined["occasion"] = joined["ts"].apply(assign_occ)
+    # Occasion j covers [study_start + (j-1)*occasion_days, + occasion_days),
+    # with the last one clipped to study_end: exactly the windows
+    # _occasion_windows() uses for the occupancy matrices, so every candidate
+    # key has a matching column there (a trailing partial window included).
+    day_offset = (joined["ts"].dt.normalize() - pd.Timestamp(study_start)).dt.days
+    joined["occasion"] = (day_offset // occasion_days + 1).astype(int)
     joined = joined[joined["occasion"] >= 1].copy()
 
-    joined["species_safe"] = joined["scientificName"].apply(sanitize)
+    joined["species_safe"] = joined["scientificName"].map(
+        {sp: sanitize(sp) for sp in joined["scientificName"].unique()}
+    )
     joined["site_occasion_key"] = (
         joined["siteID"].astype(str)
         + "_occ" + joined["occasion"].astype(str)
@@ -897,24 +1210,15 @@ def build_candidates(
         ["site_occasion_key", "ts", "capture_seq"], na_position="last"
     )
 
-    # Assign burst IDs (consecutive frames within gap_seconds form one burst)
-    records = []
-    for _, group in joined.groupby("site_occasion_key", sort=False):
-        group = group.copy().reset_index(drop=True)
-        burst_id = 0
-        bids = [0]
-        for i in range(1, len(group)):
-            prev, curr = group["ts"].iloc[i - 1], group["ts"].iloc[i]
-            if pd.isna(prev) or pd.isna(curr) or (curr - prev).total_seconds() > gap_seconds:
-                burst_id += 1
-            bids.append(burst_id)
-        group["burst_id"] = bids
-        records.append(group)
-
-    if not records:
-        return pd.DataFrame()
-
-    joined = pd.concat(records, ignore_index=True)
+    # Assign burst IDs (consecutive frames within gap_seconds form one burst):
+    # a new burst starts at the first frame of each cell and wherever the gap
+    # to the previous frame of the same cell exceeds gap_seconds.
+    joined = joined.reset_index(drop=True)
+    gaps = joined.groupby("site_occasion_key", sort=False)["ts"].diff().dt.total_seconds()
+    starts_burst = (gaps.isna() | (gaps > gap_seconds)).astype(int)
+    joined["burst_id"] = (
+        starts_burst.groupby(joined["site_occasion_key"], sort=False).cumsum() - 1
+    ).astype(int)
 
     # Rank bursts by max prob within each cell (highest prob = rank 1)
     burst_max = (
@@ -942,6 +1246,13 @@ def build_candidates(
         candidate_media_ids = set(candidates["mediaID"].astype(str))
         context_rows: list[dict] = []
 
+        # Pre-split the non-candidate media by deployment, sorted by time, so
+        # each burst's neighbours are found with a binary search instead of a
+        # scan over the whole media table.
+        pool = med[med["ts"].notna() & ~med["mediaID"].astype(str).isin(candidate_media_ids)]
+        pool = pool.assign(_dep=pool["deploymentID"].astype(str)).sort_values("ts", kind="stable")
+        pool_by_dep = {d: g for d, g in pool.groupby("_dep", sort=False)}
+
         for (key, burst_id_val), burst in candidates.groupby(
             ["site_occasion_key", "burst_id"], sort=False
         ):
@@ -954,13 +1265,12 @@ def build_candidates(
             t0 = burst["ts"].min() - pad
             t1 = burst["ts"].max() + pad
 
-            neighbors = med[
-                (med["deploymentID"].astype(str) == dep_id)
-                & med["ts"].notna()
-                & (med["ts"] >= t0)
-                & (med["ts"] <= t1)
-                & (~med["mediaID"].astype(str).isin(candidate_media_ids))
-            ]
+            dep_pool = pool_by_dep.get(dep_id)
+            if dep_pool is None:
+                continue
+            lo = dep_pool["ts"].searchsorted(t0, side="left")
+            hi = dep_pool["ts"].searchsorted(t1, side="right")
+            neighbors = dep_pool.iloc[lo:hi]
 
             for _, row in neighbors.iterrows():
                 ts_val: pd.Timestamp = row["ts"]
@@ -1031,9 +1341,181 @@ def confirmed_keys_set(decisions_dir: Path) -> set[str]:
         Set of confirmed keys, empty if no decisions exist.
     """
     dec = load_all_decisions(decisions_dir)
-    if dec.empty:
-        return set()
-    return set(dec["site_occasion_key"].dropna().unique())
+    keys = set() if dec.empty else set(dec["site_occasion_key"].dropna().unique())
+    return keys | cross_keys_set(decisions_dir)
+
+
+# ─── Confirmations made from another species' gallery ───────────────────────
+#
+# While reviewing species A, the expert may see species B in a photo (e.g. a
+# fallow deer in a red deer sequence). That photo confirms B at the same site
+# and occasion. These confirmations live in ``cross_{species_safe}.csv`` (one
+# file per confirmed species B), separate from the rounds of B: they are not
+# named ``decisions_*`` because their observationID belongs to the species the
+# classifier assigned (A), so they must never be read as a confirmation of an
+# A observation.
+
+CROSS_COLUMNS = [
+    "site_occasion_key", "scientificName", "siteID", "occasion",
+    "mediaID", "observationID", "source_scientificName", "saved_at",
+]
+
+
+def load_cross(decisions_dir: Path, species_safe: Optional[str] = None) -> pd.DataFrame:
+    """Cross-species confirmations (``cross_*.csv``), optionally for one species."""
+    frames = []
+    if decisions_dir.exists():
+        pattern = f"cross_{species_safe}.csv" if species_safe else "cross_*.csv"
+        for f in sorted(decisions_dir.glob(pattern)):
+            df = pd.read_csv(f, dtype=str, keep_default_na=False)
+            if "site_occasion_key" in df.columns:
+                frames.append(df)
+    if not frames:
+        return pd.DataFrame(columns=CROSS_COLUMNS)
+    return pd.concat(frames, ignore_index=True)
+
+
+def cross_keys_set(decisions_dir: Path) -> set[str]:
+    """Cells confirmed from another species' gallery."""
+    cross = load_cross(decisions_dir)
+    return set(cross["site_occasion_key"].replace("", pd.NA).dropna())
+
+
+def cross_key(site_id: str, occasion: int, species_safe: str) -> str:
+    """``site_occasion_key`` of a cell, as built by :func:`build_candidates`."""
+    return f"{site_id}_occ{int(occasion)}_{species_safe}"
+
+
+def set_cross_confirmation(
+    decisions_dir: Path,
+    species: str,
+    site_id: str,
+    occasion: int,
+    media_id: str,
+    observation_id: str,
+    source_species: str,
+) -> str:
+    """Record that a photo shown for ``source_species`` confirms ``species``.
+
+    One confirmation per cell: a new one replaces the previous one.
+    Returns the cell key.
+    """
+    from datetime import datetime as _dt
+
+    sp_safe = sanitize(species)
+    key = cross_key(site_id, occasion, sp_safe)
+    path = decisions_dir / f"cross_{sp_safe}.csv"
+    existing = load_cross(decisions_dir, sp_safe)
+    existing = existing[existing["site_occasion_key"] != key]
+    row = pd.DataFrame([{
+        "site_occasion_key": key, "scientificName": species, "siteID": site_id,
+        "occasion": str(int(occasion)), "mediaID": media_id,
+        "observationID": observation_id or "", "source_scientificName": source_species,
+        "saved_at": _dt.now().astimezone().isoformat(timespec="seconds"),
+    }])
+    decisions_dir.mkdir(parents=True, exist_ok=True)
+    pd.concat([existing, row], ignore_index=True)[CROSS_COLUMNS].to_csv(path, index=False)
+    return key
+
+
+def remove_cross_confirmations(decisions_dir: Path, species_safe: str, keys: set[str]) -> int:
+    """Forget cross-species confirmations of ``species_safe`` for ``keys``."""
+    path = decisions_dir / f"cross_{species_safe}.csv"
+    if not path.exists() or not keys:
+        return 0
+    existing = load_cross(decisions_dir, species_safe)
+    keep = existing[~existing["site_occasion_key"].isin(keys)]
+    removed = len(existing) - len(keep)
+    if keep.empty:
+        path.unlink()
+    elif removed:
+        keep[CROSS_COLUMNS].to_csv(path, index=False)
+    return removed
+
+
+def _cross_observations(
+    obs: pd.DataFrame, med: pd.DataFrame, cross: pd.DataFrame,
+    classified_by_label: str, now_ts: str,
+) -> tuple[pd.Series, pd.DataFrame]:
+    """Observations for the cross-species confirmations of the verified export.
+
+    When the photo already has an observation of the confirmed species, that
+    observation is marked as human-confirmed (returned mask). Otherwise a new
+    observation is added (returned rows), copied from another observation of
+    the same photo (or built from media.csv) with the confirmed species, no
+    bounding box and the human classification fields.
+    """
+    mask = pd.Series(False, index=obs.index)
+    new_rows = []
+    if cross.empty:
+        return mask, pd.DataFrame(columns=obs.columns)
+    pair_index = pd.Series(list(zip(obs["mediaID"].astype(str), obs["scientificName"].astype(str))), index=obs.index)
+    med_by_id = med.drop_duplicates("mediaID").set_index("mediaID") if "mediaID" in med.columns else pd.DataFrame()
+    for row in cross.itertuples(index=False):
+        media_id, species = str(row.mediaID), str(row.scientificName)
+        same = pair_index == (media_id, species)
+        if same.any():
+            mask |= same
+            continue
+        template = obs[obs["mediaID"].astype(str) == media_id]
+        if not template.empty:
+            new = template.iloc[0].copy()
+        else:
+            new = pd.Series({c: "" for c in obs.columns})
+            new["mediaID"] = media_id
+            if media_id in med_by_id.index:
+                m = med_by_id.loc[media_id]
+                for col in ("deploymentID",):
+                    if col in m.index and col in obs.columns:
+                        new[col] = m[col]
+                ts = m.get("timestamp", "")
+                for col in ("eventStart", "eventEnd"):
+                    if col in obs.columns:
+                        new[col] = ts
+            if "observationLevel" in obs.columns:
+                new["observationLevel"] = "media"
+        for col in ("bboxX", "bboxY", "bboxWidth", "bboxHeight", "count", "lifeStage",
+                    "sex", "behavior", "individualID", "individualPositionRadius",
+                    "individualPositionAngle", "individualSpeed", "taxonID"):
+            if col in new.index:
+                new[col] = ""
+        sp_safe = sanitize(species)
+        new["observationID"] = f"{media_id}_{sp_safe}_expert"
+        new["scientificName"] = species
+        if "observationType" in obs.columns:
+            new["observationType"] = "animal"
+        if "observationComments" in obs.columns:
+            new["observationComments"] = (
+                f"Added by expert review (photo classified as {row.source_scientificName})"
+            )
+        new["classificationMethod"] = "human"
+        new["classificationProbability"] = "1.0"
+        new["classifiedBy"] = classified_by_label
+        new["classificationTimestamp"] = now_ts
+        new_rows.append(new)
+    added = pd.DataFrame(new_rows, columns=obs.columns) if new_rows else pd.DataFrame(columns=obs.columns)
+    return mask, added
+
+
+DECISION_COLUMNS = [
+    "observationID", "site_occasion_key", "mediaID",
+    "scientificName", "siteID", "occasion",
+]
+
+_ITER_FILE_RE = re.compile(r"decisions_(.+)_iter(\d+)\.csv")
+_UNSURE_FILE_RE = re.compile(r"unsure_(.+)_iter(\d+)\.csv")
+
+
+def rounds_done_by_species(decisions_dir: Path) -> dict[str, int]:
+    """Highest round number saved per species (``decisions_{sp}_iter{N}.csv``)."""
+    rounds: dict[str, int] = {}
+    if decisions_dir.exists():
+        for f in decisions_dir.glob("decisions_*_iter*.csv"):
+            m = _ITER_FILE_RE.fullmatch(f.name)
+            if m:
+                sp, it = m.group(1), int(m.group(2))
+                rounds[sp] = max(rounds.get(sp, 0), it)
+    return rounds
 
 
 def save_decisions(
@@ -1042,11 +1524,19 @@ def save_decisions(
     species_safe: str,
     iteration: int,
     confirmed_ids: list[str],
+    unsure_ids: Optional[list[str]] = None,
 ) -> pd.DataFrame:
-    """Persist confirmed observation IDs to ``decisions_{species_safe}_iter{N}.csv``.
+    """Persist one round: confirmed IDs to ``decisions_{species_safe}_iter{N}.csv``.
 
     Writes an empty file when ``confirmed_ids`` is empty so the round is
     recorded and the species does not regress to a previous state.
+
+    Detection events the expert marked as *unsure* in this round are written to
+    ``unsure_{species_safe}_iter{N}.csv`` (same columns). For the round logic
+    they count as "not confirmed" (the next-best event of the cell is shown
+    in the following round), but a cell whose events run out without any
+    confirmation stays *pending* (see :func:`cell_states`) instead of becoming
+    a 0, so it can be handed over to another expert.
 
     Args:
         decisions_dir: Directory where decision CSVs are stored.
@@ -1054,20 +1544,144 @@ def save_decisions(
         species_safe: Sanitized species name used in the filename.
         iteration: Round number used in the filename.
         confirmed_ids: List of ``observationID`` values confirmed by the expert.
+        unsure_ids: List of representative ``observationID`` values of the
+            events marked as unsure. Defaults to none.
 
     Returns:
         DataFrame of the confirmed rows that was written to disk.
     """
     decisions_dir.mkdir(parents=True, exist_ok=True)
     path = decisions_dir / f"decisions_{species_safe}_iter{iteration}.csv"
-    cols = ["observationID", "site_occasion_key", "mediaID",
-            "scientificName", "siteID", "occasion"]
+    cols = DECISION_COLUMNS
     if not confirmed_ids:
         df = candidates.iloc[0:0][cols]
     else:
         df = candidates[candidates["observationID"].isin(confirmed_ids)][cols]
     df.to_csv(path, index=False)
+
+    unsure_path = decisions_dir / f"unsure_{species_safe}_iter{iteration}.csv"
+    if unsure_ids:
+        unsure = candidates[candidates["observationID"].isin(unsure_ids)][cols]
+        unsure = unsure.drop_duplicates("site_occasion_key")
+        unsure.to_csv(unsure_path, index=False)
+    elif unsure_path.exists():
+        unsure_path.unlink()
     return df
+
+
+def load_unsure(decisions_dir: Path, species_safe: Optional[str] = None) -> pd.DataFrame:
+    """All events marked as unsure during the rounds (``unsure_*_iter*.csv``)."""
+    frames = []
+    if decisions_dir.exists():
+        for f in sorted(decisions_dir.glob("unsure_*_iter*.csv")):
+            m = _UNSURE_FILE_RE.fullmatch(f.name)
+            if m and (species_safe is None or m.group(1) == species_safe):
+                df = pd.read_csv(f, dtype=str)
+                df["round"] = int(m.group(2))
+                frames.append(df)
+    if not frames:
+        return pd.DataFrame(columns=[*DECISION_COLUMNS, "round"])
+    return pd.concat(frames, ignore_index=True)
+
+
+def cleared_keys_set(decisions_dir: Path) -> set[str]:
+    """Pending cells an expert later resolved as *not detected*."""
+    keys: set[str] = set()
+    if decisions_dir.exists():
+        for f in decisions_dir.glob("unsure_cleared_*.csv"):
+            df = pd.read_csv(f, dtype=str)
+            if "site_occasion_key" in df.columns:
+                keys.update(df["site_occasion_key"].dropna())
+    return keys
+
+
+def cell_states(candidates: pd.DataFrame, decisions_dir: Path) -> pd.DataFrame:
+    """One row per site × occasion × species cell with its review status.
+
+    Status values:
+
+    * ``confirmed``: an expert confirmed one of its detection events.
+    * ``rejected``: every available event was reviewed and none confirmed
+      (the cell becomes a verified 0).
+    * ``pending``: like ``rejected``, but at least one event was marked as
+      unsure and no expert has settled it yet ("pending expert review").
+    * ``unverified``: the rounds have not reached all its events yet.
+
+    Returns:
+        DataFrame with ``site_occasion_key``, ``species_safe``,
+        ``scientificName``, ``siteID``, ``occasion``, ``max_rank`` and
+        ``status``.
+    """
+    cols = ["site_occasion_key", "species_safe", "scientificName", "siteID",
+            "occasion", "max_rank", "status"]
+    if candidates is None or candidates.empty:
+        return pd.DataFrame(columns=cols)
+    cells = (
+        candidates.groupby(["site_occasion_key", "species_safe"], sort=True)
+        .agg(
+            scientificName=("scientificName", "first"),
+            siteID=("siteID", "first"),
+            occasion=("occasion", "first"),
+            max_rank=("rank", "max"),
+        )
+        .reset_index()
+    )
+    conf = confirmed_keys_set(decisions_dir) if decisions_dir.exists() else set()
+    unsure = set(load_unsure(decisions_dir)["site_occasion_key"].dropna()) - cleared_keys_set(decisions_dir)
+    rounds = rounds_done_by_species(decisions_dir)
+
+    done = cells["species_safe"].astype(str).map(rounds).fillna(0)
+    exhausted = cells["max_rank"].astype(int) <= done
+    is_conf = cells["site_occasion_key"].isin(conf)
+    is_unsure = cells["site_occasion_key"].isin(unsure)
+    cells["status"] = "unverified"
+    cells.loc[exhausted, "status"] = "rejected"
+    cells.loc[exhausted & is_unsure, "status"] = "pending"
+    cells.loc[is_conf, "status"] = "confirmed"
+    return cells[cols]
+
+
+def resolve_pending(
+    decisions_dir: Path,
+    candidates: pd.DataFrame,
+    species_safe: str,
+    confirmed_ids: list[str],
+    rejected_keys: list[str],
+) -> tuple[int, int]:
+    """Record an expert's verdict on cells that were pending expert review.
+
+    Confirmed representative observations are appended to
+    ``decisions_{species_safe}_pending.csv`` (picked up like any other
+    decision file, without counting as a new round); cells settled as not
+    detected are appended to ``unsure_cleared_{species_safe}.csv``. Cells
+    left unsure again are simply not mentioned and stay pending.
+
+    Returns:
+        ``(n_confirmed, n_rejected)`` actually recorded.
+    """
+    decisions_dir.mkdir(parents=True, exist_ok=True)
+    sp_cands = candidates[candidates["species_safe"] == species_safe]
+    states = cell_states(sp_cands, decisions_dir)
+    pending = set(states.loc[states["status"] == "pending", "site_occasion_key"])
+
+    conf_rows = sp_cands[
+        sp_cands["observationID"].isin(confirmed_ids)
+        & sp_cands["site_occasion_key"].isin(pending)
+    ][DECISION_COLUMNS].drop_duplicates("site_occasion_key")
+    if not conf_rows.empty:
+        path = decisions_dir / f"decisions_{species_safe}_pending.csv"
+        if path.exists():
+            conf_rows = pd.concat([pd.read_csv(path, dtype=str), conf_rows.astype(str)])
+        conf_rows.drop_duplicates("site_occasion_key").to_csv(path, index=False)
+
+    confirmed_keys = set(conf_rows["site_occasion_key"]) if not conf_rows.empty else set()
+    cleared = sorted((set(rejected_keys) & pending) - confirmed_keys)
+    if cleared:
+        path = decisions_dir / f"unsure_cleared_{species_safe}.csv"
+        existing = pd.read_csv(path, dtype=str) if path.exists() else pd.DataFrame(columns=["site_occasion_key"])
+        merged = pd.concat([existing, pd.DataFrame({"site_occasion_key": cleared})])
+        merged.drop_duplicates("site_occasion_key").to_csv(path, index=False)
+    return len(confirmed_keys), len(cleared)
 
 
 # ─── Species stats for index page ─────────────────────────────────────────────
@@ -1080,8 +1694,14 @@ def species_stats(
     """Compute per-species progress statistics for the index page.
 
     A cell is considered *resolved* when it is confirmed OR all of its available
-    ranks have been reviewed (``max_rank <= rounds_done``). ``n_resolved`` drives
-    the progress bar and the "Completo" badge.
+    ranks have been reviewed (``max_rank <= rounds_done``) without any of them
+    being marked unsure. Exhausted cells with an unsure event are counted in
+    ``n_pending`` instead. ``n_resolved`` drives the progress bar and the
+    "Completo" badge.
+
+    ``phase`` tells the gallery what to show: ``rounds`` while some cell still
+    has unreviewed events, ``pending`` once only pending cells remain, and
+    ``complete`` when everything is settled.
 
     Args:
         candidates: Full candidate manifest DataFrame.
@@ -1091,39 +1711,143 @@ def species_stats(
     Returns:
         List of dicts, one per species, with keys ``species_name``,
         ``species_safe``, ``n_total_combos``, ``n_confirmed_combos``,
-        ``n_resolved`` and ``current_iteration``.
+        ``n_resolved``, ``n_pending``, ``current_iteration`` and ``phase``.
     """
-    conf_keys = confirmed_keys_set(decisions_dir)
-
-    iter_by_sp: dict[str, int] = {}
-    for f in decisions_dir.glob("*.csv"):
-        m = re.match(r"decisions_(.+)_iter(\d+)\.csv", f.name)
-        if m:
-            sp, it = m.group(1), int(m.group(2))
-            iter_by_sp[sp] = max(iter_by_sp.get(sp, 0), it)
+    states = cell_states(candidates, decisions_dir)
+    rounds = rounds_done_by_species(decisions_dir)
 
     result = []
-    for sp_safe, grp in candidates.groupby("species_safe"):
-        sp_name = grp["scientificName"].iloc[0]
-        all_keys = set(grp["site_occasion_key"].unique())
-        max_rank = grp.groupby("site_occasion_key")["rank"].max()
-        R = iter_by_sp.get(str(sp_safe), 0)
-        resolved = sum(
-            1 for k in all_keys
-            if k in conf_keys or max_rank.get(k, 0) <= R
-        )
+    for sp_safe, grp in states.groupby("species_safe", sort=True):
+        counts = grp["status"].value_counts()
+        n_conf = int(counts.get("confirmed", 0))
+        n_rej = int(counts.get("rejected", 0))
+        n_pending = int(counts.get("pending", 0))
+        n_open = int(counts.get("unverified", 0))
+        phase = "rounds" if n_open else ("pending" if n_pending else "complete")
         result.append({
-            "species_name": sp_name,
+            "species_name": grp["scientificName"].iloc[0],
             "species_safe": str(sp_safe),
-            "n_total_combos": len(all_keys),
-            "n_confirmed_combos": sum(1 for k in all_keys if k in conf_keys),
-            "n_resolved": resolved,
-            "current_iteration": R + 1,
+            "n_total_combos": len(grp),
+            "n_confirmed_combos": n_conf,
+            "n_resolved": n_conf + n_rej,
+            "n_pending": n_pending,
+            "current_iteration": rounds.get(str(sp_safe), 0) + 1,
+            "phase": phase,
         })
     return result
 
 
 # ─── Events for gallery ───────────────────────────────────────────────────────
+
+def _context_mask(group: pd.DataFrame) -> pd.Series:
+    if "is_context" not in group.columns:
+        return pd.Series(False, index=group.index)
+    return group["is_context"].fillna(False).astype(bool)
+
+
+_EVENT_COLUMNS = [
+    "site_occasion_key", "observationID", "mediaID", "filePath", "fileName",
+    "deploymentID", "siteID", "occasion", "rank", "burst_id", "timestamp_display",
+]
+
+
+def _event_records(rows: pd.DataFrame) -> dict[str, list[dict]]:
+    """Group candidate rows into plain per-cell record lists, keeping row order.
+
+    Converting once to Python records and grouping by position is much faster
+    than slicing, re-sorting and re-parsing a DataFrame for every card when a
+    species has a thousand cells or more.
+    """
+    recs = rows[_EVENT_COLUMNS].to_dict("records")
+    probs = pd.to_numeric(rows["classificationProbability"], errors="coerce").tolist()
+    ctx = _context_mask(rows).tolist()
+    grouped: dict[str, list[dict]] = {}
+    for rec, prob, is_ctx in zip(recs, probs, ctx):
+        rec["prob"] = prob
+        rec["is_context"] = is_ctx
+        grouped.setdefault(rec["site_occasion_key"], []).append(rec)
+    return grouped
+
+
+def _representative(recs: list[dict]) -> tuple[str, float]:
+    """(observationID, probability) of the most confident non-context frame.
+
+    Missing probabilities count as 0 and ties keep the first frame, matching
+    ``Series.idxmax`` on the probabilities with ``fillna(0)``.
+    """
+    best, best_prob = None, None
+    for rec in recs:
+        if rec["is_context"]:
+            continue
+        prob = rec["prob"] if pd.notna(rec["prob"]) else 0.0
+        if best is None or prob > best_prob:
+            best, best_prob = rec, prob
+    if best is None:  # only context frames: should not happen, be defensive
+        best, best_prob = recs[0], 0.0
+    return best["observationID"], float(best_prob)
+
+
+def _build_event(
+    key: str,
+    recs: list[dict],
+    total_seqs: int,
+    frame_url,
+    with_burst_reps: bool = False,
+) -> dict:
+    """Assemble the JSON payload of one gallery card from its candidate records."""
+    rep_obs, max_prob = _representative(recs)
+
+    burst_reps: dict = {}
+    if with_burst_reps:
+        by_burst: dict = {}
+        for rec in recs:
+            by_burst.setdefault(rec["burst_id"], []).append(rec)
+        burst_reps = {bid: _representative(r)[0] for bid, r in by_burst.items()}
+
+    frames = []
+    for rec in recs:
+        prob = rec["prob"]
+        frame = {
+            "obsId":     rec["observationID"],
+            "mediaId":   str(rec["mediaID"]),
+            "img":       frame_url(rec),
+            "ts":        rec["timestamp_display"] if pd.notna(rec["timestamp_display"]) else "",
+            "prob":      round(float(prob), 3) if pd.notna(prob) else None,
+            "isContext": bool(rec["is_context"]),
+        }
+        if with_burst_reps:
+            frame["burstRepObsId"] = burst_reps.get(rec["burst_id"], rep_obs)
+            frame["rank"] = int(rec["rank"])
+        frames.append(frame)
+
+    first = recs[0]
+    return {
+        "key":       key,
+        "siteId":    str(first["siteID"]),
+        "occasion":  int(first["occasion"]),
+        "rank":      int(first["rank"]),
+        "totalSeqs": int(total_seqs),
+        "repObsId":  rep_obs,
+        "maxProb":   max_prob,
+        "frames":    frames,
+    }
+
+
+def _frame_url_factory(
+    image_base_dir: str,
+    fallback_base: Path,
+    flat_search: bool,
+    resolver: Optional[MediaResolver],
+    token: str,
+):
+    def frame_url(rec: dict) -> str:
+        return gallery_frame_img_url(
+            str(rec["filePath"]), str(rec["mediaID"]), str(rec["deploymentID"]), str(rec["fileName"]),
+            image_base_dir, fallback_base, flat_search=flat_search,
+            resolver=resolver, token=token,
+        )
+    return frame_url
+
 
 def get_events(
     candidates: pd.DataFrame,
@@ -1134,6 +1858,8 @@ def get_events(
     image_base_dir: str = "",
     fallback_base: Path = Path("."),
     flat_search: bool = False,
+    resolver: Optional[MediaResolver] = None,
+    token: str = "",
 ) -> list[dict]:
     """Return pending gallery events for a species in a given verification round.
 
@@ -1154,6 +1880,9 @@ def get_events(
             values when ``image_base_dir`` is not set.
         flat_search: If True, also search ``image_base_dir`` recursively by
             ``fileName`` when the structured path misses.
+        resolver: Optional :class:`MediaResolver` with cached directory
+            listings, used instead of one ``stat`` per remote frame.
+        token: Session token appended to image URLs (browser cache key).
 
     Returns:
         List of event dicts with keys ``key``, ``siteId``, ``occasion``,
@@ -1168,59 +1897,18 @@ def get_events(
         & (candidates["rank"] == iteration)
         & (~candidates["site_occasion_key"].isin(conf_keys))
         & (~candidates["mediaID"].isin(rejected_media))
-    ].copy()
+    ]
 
     # Total de secuencias disponibles por período (sin filtrar por ronda)
     all_sp = candidates[candidates["species_safe"] == species_safe]
     total_seqs_by_key = all_sp.groupby("site_occasion_key")["rank"].max().to_dict()
 
-    events = []
-    for key, group in sp_cands.sort_values(["burst_id", "ts"]).groupby(
-        "site_occasion_key", sort=False
-    ):
-        group = group.sort_values(["burst_id", "ts"])
-
-        # Context frames (is_context=True) are not used for repObsId / maxProb
-        is_ctx = group.get("is_context", pd.Series(False, index=group.index)).fillna(False)
-        decision_rows = group[~is_ctx]
-
-        prob_col = pd.to_numeric(
-            decision_rows["classificationProbability"], errors="coerce"
-        ).fillna(0)
-        rep_idx = prob_col.idxmax()
-        rep_obs = decision_rows.loc[rep_idx, "observationID"]
-        max_prob = float(prob_col.max())
-
-        frames = []
-        for _, row in group.iterrows():
-            fp = str(row["filePath"])
-            img_url = gallery_frame_img_url(
-                fp, str(row["mediaID"]), str(row.get("deploymentID", "")), str(row.get("fileName", "")),
-                image_base_dir, fallback_base, flat_search=flat_search,
-            )
-            row_is_ctx = bool(row.get("is_context", False))
-            row_prob = pd.to_numeric(row.get("classificationProbability"), errors="coerce")
-            frames.append({
-                "obsId":     row["observationID"],
-                "mediaId":   str(row["mediaID"]),
-                "img":       img_url,
-                "ts":        row["timestamp_display"] if pd.notna(row.get("timestamp_display")) else "",
-                "prob":      round(float(row_prob), 3) if pd.notna(row_prob) else None,
-                "isContext": row_is_ctx,
-            })
-
-        events.append({
-            "key":       key,
-            "siteId":    str(group["siteID"].iloc[0]),
-            "occasion":  int(group["occasion"].iloc[0]),
-            "rank":      int(group["rank"].iloc[0]),
-            "totalSeqs": int(total_seqs_by_key.get(key, 1)),
-            "repObsId":  rep_obs,
-            "maxProb":   max_prob,
-            "frames":    frames,
-        })
-
-    return events
+    frame_url = _frame_url_factory(image_base_dir, fallback_base, flat_search, resolver, token)
+    grouped = _event_records(sp_cands.sort_values(["burst_id", "ts"]))
+    return [
+        _build_event(key, recs, total_seqs_by_key.get(key, 1), frame_url)
+        for key, recs in grouped.items()
+    ]
 
 
 def get_review_events(
@@ -1229,6 +1917,8 @@ def get_review_events(
     image_base_dir: str = "",
     fallback_base: Path = Path("."),
     flat_search: bool = False,
+    resolver: Optional[MediaResolver] = None,
+    token: str = "",
 ) -> list[dict]:
     """Return all cells for a completed species with their decision status.
 
@@ -1249,6 +1939,8 @@ def get_review_events(
             values when ``image_base_dir`` is not set.
         flat_search: If True, also search ``image_base_dir`` recursively by
             ``fileName`` when the structured path misses.
+        resolver: Optional :class:`MediaResolver` (see :func:`get_events`).
+        token: Session token appended to image URLs.
 
     Returns:
         List of event dicts (same structure as :func:`get_events`) with an
@@ -1256,55 +1948,59 @@ def get_review_events(
         Sorted by ``siteId`` then ``occasion``.
     """
     conf_keys = confirmed_keys_set(decisions_dir)
-    rank1 = species_cands[species_cands["rank"] == 1].copy()
+    rank1 = species_cands[species_cands["rank"] == 1]
     total_seqs_by_key = species_cands.groupby("site_occasion_key")["rank"].max().to_dict()
 
+    frame_url = _frame_url_factory(image_base_dir, fallback_base, flat_search, resolver, token)
     events = []
-    for key, group in rank1.sort_values(["burst_id", "ts"]).groupby(
-        "site_occasion_key", sort=False
-    ):
-        group = group.sort_values(["burst_id", "ts"])
+    for key, recs in _event_records(rank1.sort_values(["burst_id", "ts"])).items():
+        event = _build_event(key, recs, total_seqs_by_key.get(key, 1), frame_url)
+        event["rank"] = 1
+        event["status"] = "confirmed" if key in conf_keys else "not_confirmed"
+        events.append(event)
 
-        is_ctx = group.get("is_context", pd.Series(False, index=group.index)).fillna(False)
-        decision_rows = group[~is_ctx]
+    events.sort(key=lambda e: (e["siteId"], e["occasion"]))
+    return events
 
-        prob_col = pd.to_numeric(
-            decision_rows["classificationProbability"], errors="coerce"
-        ).fillna(0)
-        rep_idx = prob_col.idxmax()
-        rep_obs = decision_rows.loc[rep_idx, "observationID"]
-        max_prob = float(prob_col.max())
 
-        frames = []
-        for _, row in group.iterrows():
-            fp = str(row["filePath"])
-            img_url = gallery_frame_img_url(
-                fp, str(row["mediaID"]), str(row.get("deploymentID", "")), str(row.get("fileName", "")),
-                image_base_dir, fallback_base, flat_search=flat_search,
-            )
-            row_is_ctx = bool(row.get("is_context", False))
-            row_prob = pd.to_numeric(row.get("classificationProbability"), errors="coerce")
-            frames.append({
-                "obsId":     row["observationID"],
-                "mediaId":   str(row["mediaID"]),
-                "img":       img_url,
-                "ts":        row["timestamp_display"] if pd.notna(row.get("timestamp_display")) else "",
-                "prob":      round(float(row_prob), 3) if pd.notna(row_prob) else None,
-                "isContext": row_is_ctx,
-            })
+def get_pending_events(
+    species_cands: pd.DataFrame,
+    decisions_dir: Path,
+    image_base_dir: str = "",
+    fallback_base: Path = Path("."),
+    flat_search: bool = False,
+    resolver: Optional[MediaResolver] = None,
+    token: str = "",
+) -> list[dict]:
+    """Return the cells of a species that are pending expert review.
 
-        events.append({
-            "key": key,
-            "siteId": str(group["siteID"].iloc[0]),
-            "occasion": int(group["occasion"].iloc[0]),
-            "rank": 1,
-            "totalSeqs": int(total_seqs_by_key.get(key, 1)),
-            "repObsId": rep_obs,
-            "maxProb": max_prob,
-            "frames": frames,
-            "status": "confirmed" if key in conf_keys else "not_confirmed",
-        })
+    Each card carries the frames of every detection event of that cell that
+    was marked as unsure during the rounds (lowest rank first). Every frame
+    also has ``burstRepObsId`` (the representative observation of the event
+    it belongs to), so confirming while looking at a given event records
+    that event, not just the first one.
 
+    Returns:
+        List of event dicts (same structure as :func:`get_events`) with
+        ``status='pending'``, sorted by ``siteId`` then ``occasion``.
+    """
+    states = cell_states(species_cands, decisions_dir)
+    pending = set(states.loc[states["status"] == "pending", "site_occasion_key"])
+    if not pending:
+        return []
+    unsure = load_unsure(decisions_dir)
+    unsure = unsure[unsure["site_occasion_key"].isin(pending)]
+    flagged = species_cands[species_cands["observationID"].isin(set(unsure["observationID"]))]
+    burst_keys = flagged[["site_occasion_key", "burst_id"]].drop_duplicates()
+    rows = species_cands.merge(burst_keys, on=["site_occasion_key", "burst_id"])
+    total_seqs_by_key = species_cands.groupby("site_occasion_key")["rank"].max().to_dict()
+
+    frame_url = _frame_url_factory(image_base_dir, fallback_base, flat_search, resolver, token)
+    events = []
+    for key, recs in _event_records(rows.sort_values(["rank", "ts"], kind="stable")).items():
+        event = _build_event(key, recs, total_seqs_by_key.get(key, 1), frame_url, with_burst_reps=True)
+        event["status"] = "pending"
+        events.append(event)
     events.sort(key=lambda e: (e["siteId"], e["occasion"]))
     return events
 
@@ -1371,12 +2067,12 @@ def export_verified_camtrapdp(
     dep, med, obs = load_camtrapdp(camtrap_dir)
 
     # IDs de observaciones confirmadas (repObsId de cada decisión)
+    # (includes decisions_*_pending.csv: pending cells confirmed afterwards)
     confirmed_ids: set[str] = set()
     if decisions_dir.exists():
-        for f in decisions_dir.glob("decisions_*_iter*.csv"):
-            df = pd.read_csv(f, dtype=str)
-            if "observationID" in df.columns:
-                confirmed_ids.update(df["observationID"].dropna().tolist())
+        dec_all = load_all_decisions(decisions_dir)
+        if "observationID" in dec_all.columns:
+            confirmed_ids.update(dec_all["observationID"].dropna().tolist())
 
     # Modo extendido: expande al resto de observaciones del mismo burst
     if extended_confirmation and candidates is not None and confirmed_ids:
@@ -1402,6 +2098,21 @@ def export_verified_camtrapdp(
         obs.loc[mask, "classificationProbability"] = "1.0"
         obs.loc[mask, "classifiedBy"] = classified_by_label
         obs.loc[mask, "classificationTimestamp"] = now_ts
+
+    # Species confirmed from another species' gallery (see load_cross)
+    cross = load_cross(decisions_dir) if decisions_dir.exists() else pd.DataFrame()
+    if not cross.empty:
+        now_ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S+00:00")
+        for col in ("classificationMethod", "classificationProbability", "classifiedBy", "classificationTimestamp"):
+            if col not in obs.columns:
+                obs[col] = ""
+        cmask, added = _cross_observations(obs, med, cross, classified_by_label, now_ts)
+        obs.loc[cmask, "classificationMethod"] = "human"
+        obs.loc[cmask, "classificationProbability"] = "1.0"
+        obs.loc[cmask, "classifiedBy"] = classified_by_label
+        obs.loc[cmask, "classificationTimestamp"] = now_ts
+        if not added.empty:
+            obs = pd.concat([obs, added], ignore_index=True)
 
     obs.to_csv(out_dir / "observations.csv", index=False)
 
@@ -1455,9 +2166,13 @@ def build_occupancy_inputs(
       falls back to the full occasion length otherwise.
     * ``dethist_naive_<sp>.csv`` — 1/0/NA detection history trusting the classifier.
     * ``dethist_verified_<sp>.csv`` — 1/0/NA detection history using only
-      human-confirmed detections.
+      human-confirmed detections. Cells pending expert review are NA too.
+    * ``cell_status_<sp>.csv``: same shape, telling the NA cells apart:
+      ``1``, ``0``, ``pending`` (pending expert review), ``unreviewed``
+      (rounds not finished; written as 0 in the verified history) or
+      ``inactive`` (camera not operating).
     * ``verification_summary.csv`` — per-species summary with ``psi_obs`` naive
-      vs. verified.
+      vs. verified, plus ``pending_cells`` and ``unreviewed_cells``.
 
     Args:
         candidates: Full candidate manifest DataFrame.
@@ -1526,10 +2241,13 @@ def build_occupancy_inputs(
     op_df.insert(0, "siteID", sites)
     op_df.to_csv(out_dir / "camera_operation.csv", index=False)
 
-    # ── Cargar decisiones ────────────────────────────────────────────────────
-    dec = load_all_decisions(decisions_dir) if decisions_dir.exists() else pd.DataFrame(
-        columns=["observationID", "site_occasion_key", "scientificName"]
-    )
+    # ── Estado de cada celda (confirmada / rechazada / pendiente / sin revisar)
+    states = cell_states(candidates, decisions_dir)
+    status_by_key = dict(zip(states["site_occasion_key"], states["status"]))
+    # Confirmed cells with no candidate of the species (the classifier missed
+    # it; confirmed from another species' gallery) are detections too.
+    for key in cross_keys_set(decisions_dir):
+        status_by_key[key] = "confirmed"
 
     # ── Historiales de detección por especie ─────────────────────────────────
     summary_rows = []
@@ -1539,48 +2257,52 @@ def build_occupancy_inputs(
         sp_cands  = candidates[candidates["scientificName"] == sp]
         naive_keys = set(sp_cands["site_occasion_key"].unique())
 
-        if not dec.empty and "scientificName" in dec.columns:
-            verif_keys: set[str] = set(
-                dec[dec["scientificName"] == sp]["site_occasion_key"].dropna()
-            )
-        else:
-            verif_keys = {k for k in (dec["site_occasion_key"].dropna() if not dec.empty else [])
-                          if k.endswith(f"_{sp_safe}")}
-
+        # Verified history: 1 confirmed, NA where the camera was inactive OR the
+        # cell is pending expert review (unknown, not a true zero), 0 otherwise.
+        # cell_status_<sp>.csv keeps those two kinds of NA apart.
         yN = np.full((n_sites, n_occ), np.nan)
         yV = np.full((n_sites, n_occ), np.nan)
+        status = np.full((n_sites, n_occ), "inactive", dtype=object)
+        n_pending = 0
+        n_unverified = 0
         for i, site in enumerate(sites):
             for j in range(n_occ):
                 if op[i, j] == 0:
                     continue
                 key = f"{site}_occ{j + 1}_{sp_safe}"
                 yN[i, j] = 1.0 if key in naive_keys else 0.0
-                yV[i, j] = 1.0 if key in verif_keys else 0.0
+                cell = status_by_key.get(key)
+                if cell == "confirmed":
+                    yV[i, j] = 1.0
+                    status[i, j] = "1"
+                elif cell == "pending":
+                    status[i, j] = "pending"
+                    n_pending += 1
+                elif cell == "unverified":
+                    yV[i, j] = 0.0
+                    status[i, j] = "unreviewed"
+                    n_unverified += 1
+                else:  # rejected, or no candidate at all
+                    yV[i, j] = 0.0
+                    status[i, j] = "0"
 
         def _to_df(y: "np.ndarray") -> pd.DataFrame:
-            rows = []
-            for si, sname in enumerate(sites):
-                r: dict = {"siteID": sname}
-                for j, col in enumerate(occ_cols):
-                    v = y[si, j]
-                    r[col] = "" if np.isnan(v) else int(v)
-                rows.append(r)
-            return pd.DataFrame(rows)
+            df = pd.DataFrame(y, columns=occ_cols).astype("Int64")
+            df.insert(0, "siteID", sites)
+            return df
 
         _to_df(yN).to_csv(out_dir / f"dethist_naive_{sp_safe}.csv", index=False)
         _to_df(yV).to_csv(out_dir / f"dethist_verified_{sp_safe}.csv", index=False)
+        status_df = pd.DataFrame(status, columns=occ_cols)
+        status_df.insert(0, "siteID", sites)
+        status_df.to_csv(out_dir / f"cell_status_{sp_safe}.csv", index=False)
 
         naive_det = int(np.nansum(yN == 1))
         verif_det = int(np.nansum(yV == 1))
         fp_cells  = int(np.nansum((yN == 1) & (yV == 0)))
-        psi_naive = float(np.mean(
-            [any(yN[i, j] == 1 for j in range(n_occ) if not np.isnan(yN[i, j]))
-             for i in range(n_sites)]
-        )) if n_sites else 0.0
-        psi_verif = float(np.mean(
-            [any(yV[i, j] == 1 for j in range(n_occ) if not np.isnan(yV[i, j]))
-             for i in range(n_sites)]
-        )) if n_sites else 0.0
+        fn_cells  = int(np.nansum((yN == 0) & (yV == 1)))
+        psi_naive = float(np.mean(np.any(yN == 1, axis=1))) if n_sites else 0.0
+        psi_verif = float(np.mean(np.any(yV == 1, axis=1))) if n_sites else 0.0
 
         summary_rows.append({
             "species":              sp,
@@ -1589,11 +2311,52 @@ def build_occupancy_inputs(
             "naive_detections":     naive_det,
             "verified_detections":  verif_det,
             "false_positive_cells": fp_cells,
+            "pending_cells":        n_pending,
+            "unreviewed_cells":     n_unverified,
             "psi_obs_naive":        round(psi_naive, 3),
             "psi_obs_verified":     round(psi_verif, 3),
+            "false_negative_cells": fn_cells,
         })
 
     pd.DataFrame(summary_rows).to_csv(out_dir / "verification_summary.csv", index=False)
+
+
+# ─── Archive statistics ───────────────────────────────────────────────────────
+
+def compute_archive_stats(obs: pd.DataFrame, target_species: list[str]) -> dict:
+    """Size of the classified archive, for the review-effort percentages."""
+    names = obs["scientificName"] if "scientificName" in obs.columns else pd.Series(dtype=str)
+    return {
+        "total_observations": int(len(obs)),
+        "target_assigned": int(names.isin(target_species).sum()),
+    }
+
+
+def archive_stats(config: dict) -> dict:
+    """Archive statistics stored in the session config, computed on demand.
+
+    New sessions store them at setup (the observations are already in memory
+    then). Older sessions (or a config written before this existed) get
+    them computed once from ``observations.csv`` (reading a single column)
+    and cached back into ``config`` by the caller. Returns ``{}`` when the
+    source data can't be read (e.g. its folder is not linked on this computer).
+    """
+    cached = config.get("archive_stats")
+    if isinstance(cached, dict) and "total_observations" in cached:
+        return cached
+    obs_path = resolve_camtrapdp_resource(Path(config.get("camtrap_dir", "")), "observations")
+    if obs_path is None:
+        return {}
+    try:
+        header = pd.read_csv(obs_path, dtype=str, nrows=0).columns
+        usecols = ["scientificName"] if "scientificName" in header else [header[0]]
+        obs = pd.read_csv(obs_path, dtype=str, usecols=usecols)
+    except (OSError, ValueError):
+        logger.warning("Could not read %s for archive statistics", obs_path)
+        return {}
+    stats = compute_archive_stats(obs, config.get("target_species", []))
+    config["archive_stats"] = stats
+    return stats
 
 
 # ─── Review effort ────────────────────────────────────────────────────────────
@@ -1626,39 +2389,42 @@ def build_review_effort(
     out_dir.mkdir(parents=True, exist_ok=True)
 
     dec = load_all_decisions(decisions_dir) if decisions_dir.exists() else pd.DataFrame()
-
-    conf_obs_by_key: dict[str, set[str]] = {}
-    if not dec.empty and "site_occasion_key" in dec.columns:
-        for key, grp in dec.groupby("site_occasion_key"):
-            conf_obs_by_key[str(key)] = set(grp["observationID"].dropna())
-
-    keys = candidates["site_occasion_key"].unique()
-    n_conf = 0; n_rej = 0; ins_conf = 0; ins_rej = 0
-
-    for key in keys:
-        sub  = candidates[candidates["site_occasion_key"] == key]
-        conf = conf_obs_by_key.get(str(key), set())
-        if conf:
-            n_conf += 1
-            confirmed_ranks = sub[sub["observationID"].isin(conf)]["rank"]
-            ins_conf += int(confirmed_ranks.min()) if not confirmed_ranks.empty else 1
-        else:
-            n_rej += 1
-            ins_rej += int(sub["rank"].max())
-
-    inspected = ins_conf + ins_rej
     n_candidates = len(candidates)
-    n_cells = len(keys)
+    real = candidates[~_context_mask(candidates)] if n_candidates else candidates
 
-    total_media: Optional[int] = None
-    target_assigned: Optional[int] = None
-    obs_path = resolve_camtrapdp_resource(Path(config["camtrap_dir"]), "observations")
-    if obs_path is not None:
-        obs_all = pd.read_csv(obs_path, dtype=str)
-        total_media = len(obs_all)
-        target_assigned = int(
-            obs_all["scientificName"].isin(config["target_species"]).sum()
-        )
+    # Per cell: the rank at which it was confirmed (expert stopped at the first
+    # "yes"), else the deepest rank available (all events were inspected).
+    max_rank = candidates.groupby("site_occasion_key")["rank"].max()
+    n_cells = len(max_rank)
+    conf_rank = pd.Series(dtype=float)
+    if not dec.empty and {"site_occasion_key", "observationID"} <= set(dec.columns):
+        pairs = dec[["site_occasion_key", "observationID"]].dropna().drop_duplicates()
+        hits = real.merge(pairs, on=["site_occasion_key", "observationID"])
+        conf_rank = hits.groupby("site_occasion_key")["rank"].min()
+        # A cell with a decision row whose observation isn't a candidate any
+        # more still counts as confirmed at rank 1, as before.
+        missing = set(pairs["site_occasion_key"]) & set(max_rank.index)
+        missing -= set(conf_rank.index)
+        if missing:
+            conf_rank = pd.concat([conf_rank, pd.Series(1, index=sorted(missing))])
+    # Cells confirmed from another species' gallery: no event of this species
+    # had to be inspected for them.
+    cross_only = (cross_keys_set(decisions_dir) & set(max_rank.index)) - set(conf_rank.index)
+    if cross_only:
+        conf_rank = pd.concat([conf_rank, pd.Series(0, index=sorted(cross_only))])
+    conf_rank = conf_rank[conf_rank.index.isin(max_rank.index)]
+    n_conf = len(conf_rank)
+    n_rej = n_cells - n_conf
+    ins_conf = int(conf_rank.sum()) if n_conf else 0
+    ins_rej = int(max_rank[~max_rank.index.isin(conf_rank.index)].sum())
+    inspected = ins_conf + ins_rej
+
+    states = cell_states(candidates, decisions_dir)
+    n_pending = int((states["status"] == "pending").sum())
+
+    archive = archive_stats(config)
+    total_media: Optional[int] = archive.get("total_observations")
+    target_assigned: Optional[int] = archive.get("target_assigned")
 
     def pct(x: int, d: Optional[int]) -> Optional[float]:
         return round(100 * x / d, 1) if d else None
@@ -1667,6 +2433,7 @@ def build_review_effort(
         "candidate_cells":         n_cells,
         "confirmed_cells":         n_conf,
         "rejected_cells":          n_rej,
+        "pending_cells":           n_pending,
         "candidate_images":        n_candidates,
         "images_inspected":        inspected,
         "inspected_in_confirmed":  ins_conf,

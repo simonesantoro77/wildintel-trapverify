@@ -8,9 +8,22 @@ router = APIRouter(prefix="/api/fs", tags=["filesystem"])
 logger = logging.getLogger(__name__)
 
 
-def _read_csv(path: Path) -> "pd.DataFrame":
+# Validating every row of a large package with frictionless takes minutes
+# (pure-Python, ~25 k rows/s): the descriptor and the first rows of each table
+# are enough to catch a malformed export, and keep picking a folder snappy.
+DATAPACKAGE_VALIDATION_ROWS = 50_000
+
+
+def _read_csv(path: Path, columns: tuple[str, ...] | None = None) -> "pd.DataFrame":
+    """Read a CamtrapDP table as strings, optionally only some of its columns."""
     compression = "gzip" if path.name.endswith(".gz") else None
-    return pd.read_csv(path, dtype=str, compression=compression)
+    if columns is None:
+        return pd.read_csv(path, dtype=str, compression=compression)
+    header = pd.read_csv(path, dtype=str, compression=compression, nrows=0).columns
+    return pd.read_csv(
+        path, dtype=str, compression=compression,
+        usecols=[c for c in header if c in columns],
+    )
 
 
 @router.get("/inspect")
@@ -37,7 +50,9 @@ def fs_inspect(path: str) -> dict:
         logger.warning("observations.csv not found in %s", path)
         raise HTTPException(400, f"No se encontró observations.csv en {path}")
 
-    obs = _read_csv(obs_path)
+    obs = _read_csv(obs_path, ("observationType", "scientificName"))
+    if "scientificName" not in obs.columns:
+        obs["scientificName"] = pd.Series(dtype=str)
     species = sorted(
         obs.loc[
             (obs.get("observationType", pd.Series()) == "animal")
@@ -50,11 +65,9 @@ def fs_inspect(path: str) -> dict:
     start_date, end_date = None, None
     med_path = resolve_camtrapdp_resource(p, "media")
     if med_path is not None:
-        from camtrap_workflow import normalise_ts
-        med = _read_csv(med_path)
-        ts = pd.to_datetime(
-            med["timestamp"].apply(normalise_ts), errors="coerce", utc=False
-        ).dropna()
+        from camtrap_workflow import parse_timestamps
+        med = _read_csv(med_path, ("timestamp",))
+        ts = parse_timestamps(med["timestamp"]).dropna() if "timestamp" in med.columns else pd.Series(dtype="datetime64[ns]")
         if not ts.empty:
             start_date = ts.min().date().isoformat()
             end_date = ts.max().date().isoformat()
@@ -64,7 +77,9 @@ def fs_inspect(path: str) -> dict:
     if dp_path is not None:
         from camtrap_workflow import validate_camtrapdp_datapackage
         try:
-            datapackage_errors = validate_camtrapdp_datapackage(dp_path)
+            datapackage_errors = validate_camtrapdp_datapackage(
+                dp_path, limit_rows=DATAPACKAGE_VALIDATION_ROWS,
+            )
         except Exception:
             logger.exception("Failed to validate datapackage.json at %s", dp_path)
             datapackage_errors = None
@@ -95,10 +110,11 @@ def check_images(camtrap_dir: str, image_base_dir: str = "", flat_search: bool =
     not expected to exist locally).
     """
     from camtrap_workflow import (
+        MediaResolver,
+        basename_series,
         find_flat_search_ambiguities,
         is_remote_path,
         resolve_camtrapdp_resource,
-        resolve_media_path,
     )
 
     p = Path(camtrap_dir)
@@ -106,17 +122,23 @@ def check_images(camtrap_dir: str, image_base_dir: str = "", flat_search: bool =
     if med_path is None:
         raise HTTPException(400, f"No se encontró media.csv en {camtrap_dir}")
 
-    med = _read_csv(med_path)
+    med = _read_csv(med_path, ("mediaID", "deploymentID", "filePath", "fileName"))
     if "fileName" in med.columns:
         med["fileName"] = med["fileName"].fillna("")
     else:
-        med["fileName"] = med.get("filePath", pd.Series(dtype=str)).fillna("").apply(
-            lambda x: Path(x).name
-        )
+        med["fileName"] = basename_series(med.get("filePath", pd.Series(dtype=str)))
     file_names = med["fileName"]
     dep_ids = med.get("deploymentID", pd.Series(dtype=str)).fillna("")
     file_paths = med.get("filePath", pd.Series(dtype=str))
     fallback_base = Path(image_base_dir) if image_base_dir else p
+    # One cached directory listing per folder instead of one stat per image:
+    # checking ~500 k photos on an external/Windows drive goes from minutes to
+    # seconds.
+    from services.session_service import media_extra_bases
+    resolver = MediaResolver(
+        image_base_dir, fallback_base, flat_search,
+        extra_bases=media_extra_bases(camtrap_dir, image_base_dir),
+    )
 
     total = 0
     missing = 0
@@ -129,18 +151,13 @@ def check_images(camtrap_dir: str, image_base_dir: str = "", flat_search: bool =
         if is_remote_path(fp) and not image_base_dir:
             continue
         total += 1
-        file_path = resolve_media_path(
-            fp, str(dep_id), str(file_name), image_base_dir, fallback_base,
-            flat_search=flat_search,
-        )
-        try:
-            exists = file_path.exists()
-        except PermissionError:
+        file_path = resolver.resolve(fp, str(dep_id), str(file_name))
+        state = resolver.status(file_path)
+        if state == "denied":
             permission_denied += 1
             if len(examples) < 5:
                 examples.append(str(file_path))
-            continue
-        if not exists:
+        elif state == "missing":
             missing += 1
             if len(examples) < 5:
                 examples.append(str(file_path))

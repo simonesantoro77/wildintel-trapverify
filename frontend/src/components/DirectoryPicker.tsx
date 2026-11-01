@@ -61,10 +61,14 @@ export default function DirectoryPicker({ onSelect, onClose, initialPath, showFi
     browse(manualPath)
   }
 
+  // Windows paths (D:\fotos\2023) use backslashes and start with a drive.
+  const winPath = !!data && /^[A-Za-z]:[\\/]?/.test(data.current)
   const parts = data
-    ? data.current.split('/').filter(Boolean).map((part, i, arr) => ({
+    ? data.current.split(/[\\/]/).filter(Boolean).map((part, i, arr) => ({
         label: part || '/',
-        path: '/' + arr.slice(0, i + 1).join('/'),
+        path: winPath
+          ? arr.slice(0, i + 1).join('\\') + (i === 0 ? '\\' : '')
+          : '/' + arr.slice(0, i + 1).join('/'),
       }))
     : []
 

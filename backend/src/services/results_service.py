@@ -6,12 +6,11 @@ and detection event (burst) level, for the active session.
 """
 import json
 import logging
-import re
 
 import pandas as pd
 from fastapi import HTTPException
 
-from camtrap_workflow import confirmed_keys_set
+from camtrap_workflow import cell_states, load_all_decisions, rounds_done_by_species
 from services import session_service
 
 logger = logging.getLogger(__name__)
@@ -54,65 +53,31 @@ def compute_results() -> dict:
     p = session_service.paths()
     decisions_dir = p["decisions"]
 
-    # ── Rounds completed per species ──────────────────────────────────────────
-    iter_by_sp: dict[str, int] = {}
-    if decisions_dir.exists():
-        for f in decisions_dir.glob("*.csv"):
-            m = re.match(r"decisions_(.+)_iter(\d+)\.csv", f.name)
-            if m:
-                sp, it = m.group(1), int(m.group(2))
-                iter_by_sp[sp] = max(iter_by_sp.get(sp, 0), it)
-
-    # ── Confirmed keys and burst mapping ─────────────────────────────────────
-    conf_keys = confirmed_keys_set(decisions_dir) if decisions_dir.exists() else set()
-
-    confirmed_obs_ids: set[str] = set()
-    if decisions_dir.exists():
-        for f in decisions_dir.glob("decisions_*_iter*.csv"):
-            df_dec = pd.read_csv(f, dtype=str)
-            if "observationID" in df_dec.columns:
-                confirmed_obs_ids.update(df_dec["observationID"].dropna())
-
-    # key → (confirmed_burst_id, confirmed_rank)
-    conf_burst_by_key: dict[str, tuple[int, int]] = {}
-    if confirmed_obs_ids:
-        conf_rows = (
-            candidates[candidates["observationID"].isin(confirmed_obs_ids)][
-                ["site_occasion_key", "burst_id", "rank"]
-            ]
-            .drop_duplicates("site_occasion_key")
-        )
-        for _, r in conf_rows.iterrows():
-            conf_burst_by_key[r["site_occasion_key"]] = (int(r["burst_id"]), int(r["rank"]))
-
-    # ── Period-level stats ────────────────────────────────────────────────────
-    periods = (
-        candidates
-        .groupby(["site_occasion_key", "species_safe"])
-        .agg(scientificName=("scientificName", "first"), max_rank=("rank", "max"))
-        .reset_index()
+    # ── Rounds completed per species and confirmed observations ──────────────
+    iter_by_sp = rounds_done_by_species(decisions_dir)
+    dec = load_all_decisions(decisions_dir) if decisions_dir.exists() else pd.DataFrame()
+    confirmed_obs_ids: set[str] = (
+        set(dec["observationID"].dropna()) if "observationID" in dec.columns else set()
     )
 
-    def _period_status(row) -> str:
-        if row["site_occasion_key"] in conf_keys:
-            return "confirmed"
-        if row["max_rank"] <= iter_by_sp.get(row["species_safe"], 0):
-            return "rejected"
-        return "unverified"
-
-    periods["status"] = periods.apply(_period_status, axis=1)
+    # ── Period-level stats (one row per site × occasion × species cell) ───────
+    periods = cell_states(candidates, decisions_dir)
     p_counts = periods["status"].value_counts().to_dict()
 
-    by_species: list[dict] = [
-        {
-            "species":    grp["scientificName"].iloc[0],
-            "confirmed":  int(c.get("confirmed", 0)),
-            "rejected":   int(c.get("rejected", 0)),
-            "unverified": int(c.get("unverified", 0)),
-        }
-        for _, grp in periods.groupby("species_safe", sort=True)
-        for c in [grp["status"].value_counts().to_dict()]
-    ]
+    def _breakdown(df: pd.DataFrame) -> list[dict]:
+        rows = []
+        for _, grp in df.groupby("species_safe", sort=True):
+            c = grp["status"].value_counts().to_dict()
+            rows.append({
+                "species":    grp["scientificName"].iloc[0],
+                "confirmed":  int(c.get("confirmed", 0)),
+                "rejected":   int(c.get("rejected", 0)),
+                "pending":    int(c.get("pending", 0)),
+                "unverified": int(c.get("unverified", 0)),
+            })
+        return rows
+
+    by_species = _breakdown(periods)
 
     # ── Detection event-level stats ─────────────────────────────────────────────
     seqs = (
@@ -121,36 +86,32 @@ def compute_results() -> dict:
         .agg(scientificName=("scientificName", "first"), rank=("rank", "first"))
         .reset_index()
     )
-
-    def _seq_status(row) -> str:
-        key = row["site_occasion_key"]
-        bid, rank, sp = int(row["burst_id"]), int(row["rank"]), row["species_safe"]
-        if key in conf_burst_by_key:
-            conf_bid, conf_rank = conf_burst_by_key[key]
-            if bid == conf_bid:
-                return "confirmed"
-            return "rejected" if rank < conf_rank else "unverified"
-        return "rejected" if rank <= iter_by_sp.get(sp, 0) else "unverified"
-
-    seqs["status"] = seqs.apply(_seq_status, axis=1)
+    # key → rank of the confirmed burst (and its burst_id)
+    conf = (
+        candidates[candidates["observationID"].isin(confirmed_obs_ids)][
+            ["site_occasion_key", "burst_id", "rank"]
+        ]
+        .drop_duplicates("site_occasion_key")
+        .rename(columns={"burst_id": "conf_bid", "rank": "conf_rank"})
+    )
+    seqs = seqs.merge(conf, on="site_occasion_key", how="left")
+    done = seqs["species_safe"].astype(str).map(iter_by_sp).fillna(0)
+    has_conf = seqs["conf_bid"].notna()
+    seqs["status"] = "unverified"
+    seqs.loc[~has_conf & (seqs["rank"] <= done), "status"] = "rejected"
+    seqs.loc[has_conf & (seqs["rank"] < seqs["conf_rank"]), "status"] = "rejected"
+    seqs.loc[has_conf & (seqs["burst_id"] == seqs["conf_bid"]), "status"] = "confirmed"
     s_counts = seqs["status"].value_counts().to_dict()
-
-    by_species_seqs: list[dict] = [
-        {
-            "species":    grp["scientificName"].iloc[0],
-            "confirmed":  int(c.get("confirmed", 0)),
-            "rejected":   int(c.get("rejected", 0)),
-            "unverified": int(c.get("unverified", 0)),
-        }
-        for _, grp in seqs.groupby("species_safe", sort=True)
-        for c in [grp["status"].value_counts().to_dict()]
+    by_species_seqs = [
+        {k: v for k, v in row.items() if k != "pending"} for row in _breakdown(seqs)
     ]
 
     logger.info(
-        "Results: %d periods (confirmed=%d rejected=%d unverified=%d)",
+        "Results: %d periods (confirmed=%d rejected=%d pending=%d unverified=%d)",
         len(periods),
         int(p_counts.get("confirmed", 0)),
         int(p_counts.get("rejected", 0)),
+        int(p_counts.get("pending", 0)),
         int(p_counts.get("unverified", 0)),
     )
     datapackage_generated, datapackage_fabricated_fields = _datapackage_warning(p["camtrap_out"])
@@ -164,6 +125,7 @@ def compute_results() -> dict:
         "confirmed":       int(p_counts.get("confirmed", 0)),
         "rejected":        int(p_counts.get("rejected", 0)),
         "unverified":      int(p_counts.get("unverified", 0)),
+        "pending":         int(p_counts.get("pending", 0)),
         "by_species":      by_species,
         "seq_total":       len(seqs),
         "seq_confirmed":   int(s_counts.get("confirmed", 0)),

@@ -13,6 +13,8 @@ class SetupRequest(BaseModel):
     total_iterations: int = 100000
     gap_seconds: int = 60
     min_score: float = 0.5
+    # Per-species overrides of min_score (scientificName -> threshold).
+    min_score_by_species: dict[str, float] = {}
     include_burst_context: bool = False
     classified_by: str = "expert_review"
     extended_confirmation: bool = False
@@ -22,6 +24,38 @@ class DecisionsRequest(BaseModel):
     species: str
     iteration: int
     confirmed: list[str]
+    unsure: list[str] = []
+
+
+class CrossRequest(BaseModel):
+    species: str
+    site_id: str
+    occasion: int
+    media_id: str = ""
+    observation_id: str = ""
+    source_species: str = ""
+
+
+class ProgressRequest(BaseModel):
+    mode: str
+    iteration: int
+    decisions: dict[str, str] = {}
+    chosen_rep: dict[str, str] = {}
+
+
+class PendingDecisionsRequest(BaseModel):
+    confirmed: list[str] = []
+    rejected_keys: list[str] = []
+
+
+class RelinkRequest(BaseModel):
+    camtrap_dir: str
+    image_base_dir: str = ""
+    flat_search: bool = False
+
+
+class ImportSessionRequest(BaseModel):
+    zip_path: str
 
 
 class RejectRequest(BaseModel):

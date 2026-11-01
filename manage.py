@@ -20,6 +20,7 @@ Uso:
 """
 import json
 import os
+import shutil
 import subprocess
 import sys
 import threading
@@ -72,8 +73,17 @@ class PackageFormat(str, Enum):
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+def _exe(tool: str) -> str:
+    """Full path of an executable on PATH, or the bare name if not found.
+
+    On Windows ``npm`` is ``npm.cmd``, which subprocess can't start by its bare
+    name; resolving it through ``shutil.which`` works on every OS.
+    """
+    return shutil.which(tool) or tool
+
+
 def _run(*args: str, cwd: Path | None = None, env: dict | None = None) -> None:
-    result = subprocess.run(list(args), cwd=cwd, env=env)
+    result = subprocess.run([_exe(args[0]), *args[1:]], cwd=cwd, env=env)
     if result.returncode != 0:
         raise typer.Exit(result.returncode)
 
@@ -83,7 +93,7 @@ def _pdf_env() -> dict:
 
 
 def _require(tool: str, hint: str) -> None:
-    if subprocess.run(["which", tool], capture_output=True).returncode != 0:
+    if shutil.which(tool) is None:
         console.print(f"[red]✘  '{tool}' no encontrado.[/red]  {hint}")
         raise typer.Exit(1)
 
@@ -333,13 +343,13 @@ def dev(
     ))
 
     backend_proc = subprocess.Popen(
-        ["uvicorn", "main:app", "--reload", "--port", str(effective_port),
+        [_exe("uvicorn"), "main:app", "--reload", "--port", str(effective_port),
          "--log-level", settings.log_level.lower(), "--app-dir", "src"],
         cwd=BACKEND_DIR,
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
     )
     frontend_proc = subprocess.Popen(
-        ["npm", "run", "dev", "--", "--port", str(frontend_port)],
+        [_exe("npm"), "run", "dev", "--", "--port", str(frontend_port)],
         cwd=FRONTEND_DIR,
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
     )

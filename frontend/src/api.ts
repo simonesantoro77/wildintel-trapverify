@@ -1,4 +1,4 @@
-import type { DetectionEvent, OccupancyRow, RecentSession, SpeciesStats, WorkflowConfig } from './types'
+import type { CrossSpecies, DetectionEvent, OccupancyRow, RecentSession, RelinkStatus, SavedProgress, SpeciesStats, WorkflowConfig } from './types'
 
 async function req<T>(url: string, options?: RequestInit): Promise<T> {
   const r = await fetch(url, options)
@@ -29,7 +29,13 @@ function put<T>(url: string, body: unknown): Promise<T> {
 
 export const api = {
   getState: () =>
-    req<{ ready: boolean; config?: WorkflowConfig; default_output_dir?: string }>('/api/state'),
+    req<{
+      ready: boolean
+      config?: WorkflowConfig
+      default_output_dir?: string
+      session_dir?: string
+      relink?: RelinkStatus
+    }>('/api/state'),
 
   setup: (config: WorkflowConfig) =>
     post<{ ok: boolean; n_candidates: number; n_combos: number }>('/api/setup', config),
@@ -50,13 +56,53 @@ export const api = {
     ),
 
   getDecisions: (species: string, iteration: number) =>
-    req<{ confirmed: string[] }>(`/api/decisions?species=${species}&iteration=${iteration}`),
+    req<{ confirmed: string[]; unsure: string[] }>(`/api/decisions?species=${species}&iteration=${iteration}`),
 
-  saveDecisions: (species: string, iteration: number, confirmed: string[]) =>
-    post<{ success: boolean; done: boolean; next_iteration: number | null; remaining: number }>(
+  saveDecisions: (species: string, iteration: number, confirmed: string[], unsure: string[] = []) =>
+    post<{ success: boolean; done: boolean; next_iteration: number | null; remaining: number; pending: number }>(
       '/api/decisions',
-      { species, iteration, confirmed },
+      { species, iteration, confirmed, unsure },
     ),
+
+  getPending: (species: string) =>
+    req<DetectionEvent[]>(`/api/species/${species}/pending`),
+
+  settlePending: (species: string, confirmed: string[], rejectedKeys: string[]) =>
+    post<{ success: boolean; confirmed: number; rejected: number }>(
+      `/api/species/${species}/pending`,
+      { confirmed, rejected_keys: rejectedKeys },
+    ),
+
+  getProgress: (species: string, mode: string, iteration: number) =>
+    req<{ progress: SavedProgress | null }>(
+      `/api/species/${species}/progress?mode=${encodeURIComponent(mode)}&iteration=${iteration}`,
+    ),
+
+  reopenRound: (species: string) =>
+    post<{ success: boolean; iteration: number; restored: number }>(`/api/species/${species}/reopen`, {}),
+
+  getCross: (siteId: string, occasion: number) =>
+    req<{ species: CrossSpecies[] }>(
+      `/api/cross?site_id=${encodeURIComponent(siteId)}&occasion=${occasion}`,
+    ),
+
+  addCross: (body: { species: string; site_id: string; occasion: number; media_id: string; observation_id: string; source_species: string }) =>
+    post<{ success: boolean; key: string }>('/api/cross', body),
+
+  removeCross: (species: string, siteId: string, occasion: number) =>
+    req<{ success: boolean; removed: number }>(
+      `/api/cross?species=${encodeURIComponent(species)}&site_id=${encodeURIComponent(siteId)}&occasion=${occasion}`,
+      { method: 'DELETE' },
+    ),
+
+  /** keepalive lets the request finish while the page is being closed. */
+  saveProgress: (species: string, body: Omit<SavedProgress, 'saved_at'>, keepalive = false) =>
+    req<{ success: boolean; saved_at: string; n: number }>(`/api/species/${species}/progress`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      keepalive,
+    }),
 
   rejectBurst: (mediaId: string) =>
     post<{ success: boolean; removed: string[] }>('/api/reject', { mediaId }),
@@ -94,7 +140,8 @@ export const api = {
       confirmed: number
       rejected: number
       unverified: number
-      by_species: { species: string; confirmed: number; rejected: number; unverified: number }[]
+      pending: number
+      by_species: { species: string; confirmed: number; rejected: number; pending?: number; unverified: number }[]
       datapackage_generated: boolean
       datapackage_fabricated_fields: string[]
     }>('/api/results'),
@@ -103,7 +150,16 @@ export const api = {
     req<OccupancyRow[]>('/api/results/occupancy'),
 
   loadSession: (session_dir: string) =>
-    post<{ ok: boolean; session_dir: string; config: unknown }>('/api/session/load', { session_dir }),
+    post<{ ok: boolean; session_dir: string; config: unknown; relink: RelinkStatus }>('/api/session/load', { session_dir }),
+
+  importSession: (zipPath: string) =>
+    post<{ ok: boolean; session_dir: string; relink: RelinkStatus }>('/api/session/import', { zip_path: zipPath }),
+
+  relinkSession: (camtrapDir: string, imageBaseDir: string, flatSearch: boolean) =>
+    post<{ ok: boolean; relink: RelinkStatus }>(
+      '/api/session/relink',
+      { camtrap_dir: camtrapDir, image_base_dir: imageBaseDir, flat_search: flatSearch },
+    ),
 
   getRecentSessions: () =>
     req<RecentSession[]>('/api/session/recent'),

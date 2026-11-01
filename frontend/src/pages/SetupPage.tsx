@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next'
 import { api } from '../api'
 import DirectoryPicker from '../components/DirectoryPicker'
 import CsvImportForm from '../components/CsvImportForm'
-import type { RecentSession, WorkflowConfig } from '../types'
+import RelinkDialog from '../components/RelinkDialog'
+import type { RecentSession, RelinkStatus, WorkflowConfig } from '../types'
 
 interface Props { onSetup: () => void; ready: boolean }
 
@@ -20,6 +21,7 @@ const DEFAULT: WorkflowConfig = {
   total_iterations: 100000,
   gap_seconds: 60,
   min_score: 0.5,
+  min_score_by_species: {},
   include_burst_context: false,
   classified_by: 'expert_review',
   extended_confirmation: false,
@@ -75,6 +77,8 @@ export default function SetupPage({ onSetup, ready }: Props) {
   const [submitting, setSubmitting] = useState(false)
   const [stepError, setStepError] = useState<string | null>(null)
   const [sessionPickerOpen, setSessionPickerOpen] = useState(false)
+  const [importPickerOpen, setImportPickerOpen] = useState(false)
+  const [importRelink, setImportRelink] = useState<RelinkStatus | null>(null)
   const [loadingSession, setLoadingSession] = useState(false)
   const [sessionError, setSessionError] = useState<string | null>(null)
   const [sessionSummary, setSessionSummary] = useState<{
@@ -262,7 +266,10 @@ export default function SetupPage({ onSetup, ready }: Props) {
     setSubmitting(true)
     setStepError(null)
     try {
-      await api.setup({ ...form, target_species: [...selectedSpecies] })
+      const overrides = Object.fromEntries(
+        Object.entries(form.min_score_by_species ?? {}).filter(([sp, v]) => selectedSpecies.has(sp) && Number.isFinite(v)),
+      )
+      await api.setup({ ...form, target_species: [...selectedSpecies], min_score_by_species: overrides })
       onSetup()
       navigate('/species')
     } catch (e) {
@@ -280,6 +287,24 @@ export default function SetupPage({ onSetup, ready }: Props) {
       await api.loadSession(path)
       onSetup()
       navigate('/species')
+    } catch (e) {
+      setSessionError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setLoadingSession(false)
+    }
+  }
+
+  // A session exported on another computer (see "Export session" on the
+  // species index). Its folders usually need pointing at this computer's.
+  async function handleImportSession(path: string) {
+    setImportPickerOpen(false)
+    setLoadingSession(true)
+    setSessionError(null)
+    try {
+      const r = await api.importSession(path)
+      onSetup()
+      if (r.relink.needs_relink) setImportRelink(r.relink)
+      else navigate('/species')
     } catch (e) {
       setSessionError(e instanceof Error ? e.message : String(e))
     } finally {
@@ -424,6 +449,17 @@ export default function SetupPage({ onSetup, ready }: Props) {
             )}
           </button>
           <button
+            className="px-6 py-2.5 border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors text-base flex items-center gap-2 disabled:opacity-50"
+            onClick={() => setImportPickerOpen(true)}
+            disabled={loadingSession}
+            title={t('welcome.import_session_tooltip')}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            {t('welcome.import_session')}
+          </button>
+          <button
             className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-base flex items-center gap-2"
             onClick={() => setStep(0)}
           >
@@ -484,6 +520,22 @@ export default function SetupPage({ onSetup, ready }: Props) {
       <DirectoryPicker
         onSelect={handleLoadSession}
         onClose={() => { setSessionPickerOpen(false); setSessionError(null) }}
+      />
+    )}
+    {importPickerOpen && (
+      <DirectoryPicker
+        showFiles
+        fileExt=".zip"
+        title={t('welcome.import_session_picker')}
+        onSelect={handleImportSession}
+        onClose={() => { setImportPickerOpen(false); setSessionError(null) }}
+      />
+    )}
+    {importRelink && (
+      <RelinkDialog
+        status={importRelink}
+        onClose={() => { setImportRelink(null); navigate('/species') }}
+        onDone={() => { setImportRelink(null); navigate('/species') }}
       />
     )}
     </>
@@ -1081,6 +1133,47 @@ export default function SetupPage({ onSetup, ready }: Props) {
               </span>
             </div>
             <p className={hintClass}>{t('setup.hint_min_score')}</p>
+
+            {/* Per-species thresholds: empty = use the general value above */}
+            <details className="mt-3 rounded border border-zinc-200 dark:border-zinc-700 px-3 py-2"
+              open={Object.keys(form.min_score_by_species ?? {}).length > 0}>
+              <summary className="cursor-pointer text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                {t('setup.label_min_score_by_species')}
+              </summary>
+              <p className={`${hintClass} mb-2`}>{t('setup.hint_min_score_by_species', { value: form.min_score.toFixed(2) })}</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5">
+                {[...selectedSpecies].sort().map((sp) => {
+                  const v = form.min_score_by_species?.[sp]
+                  return (
+                    <label key={sp} className="flex items-center justify-between gap-3 text-sm">
+                      <span className="italic text-zinc-700 dark:text-zinc-300 truncate">{sp}</span>
+                      <input
+                        type="number" min={0} max={1} step={0.05}
+                        aria-label={`${t('setup.label_min_score')}: ${sp}`}
+                        className="w-24 px-2 py-1 text-sm rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-mono"
+                        placeholder={form.min_score.toFixed(2)}
+                        value={v ?? ''}
+                        onChange={(e) => {
+                          const raw = e.target.value
+                          setForm((f) => {
+                            const next = { ...(f.min_score_by_species ?? {}) }
+                            if (raw === '') delete next[sp]
+                            else next[sp] = Math.min(1, Math.max(0, Number(raw)))
+                            return { ...f, min_score_by_species: next }
+                          })
+                        }}
+                      />
+                    </label>
+                  )
+                })}
+              </div>
+              {Object.keys(form.min_score_by_species ?? {}).length > 0 && (
+                <button type="button" className="mt-2 text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                  onClick={() => set('min_score_by_species', {})}>
+                  {t('setup.reset_min_score_by_species')}
+                </button>
+              )}
+            </details>
           </div>
 
           {/* ── Confirmation parameters ── */}

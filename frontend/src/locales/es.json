@@ -30,10 +30,18 @@
     "new_session": "Nueva sesión",
     "start": "Comenzar a validar →",
     "recent_sessions": "Sesiones recientes",
-    "recent_untitled": "Sesión sin especies"
+    "recent_untitled": "Sesión sin especies",
+    "import_session": "Importar sesión…",
+    "import_session_tooltip": "Abre un .zip exportado en otro ordenador con «Exportar sesión»",
+    "import_session_picker": "Selecciona el .zip de la sesión (doble clic)"
   },
   "setup": {
-    "steps": ["Origen", "Especies", "Período", "Parámetros"],
+    "steps": [
+      "Origen",
+      "Especies",
+      "Período",
+      "Parámetros"
+    ],
     "back": "← Anterior",
     "back_welcome": "← Bienvenida",
     "next": "Siguiente →",
@@ -108,6 +116,9 @@
     "hint_gap": "Imágenes con menos de N segundos de diferencia se agrupan en el mismo evento de detección.",
     "label_min_score": "Score mínimo de detección",
     "hint_min_score": "Se ignoran las detecciones con confianza inferior a este umbral.",
+    "label_min_score_by_species": "Umbral por especie (opcional)",
+    "hint_min_score_by_species": "Deja vacío para usar el umbral general ({{value}}). Útil para especies que el clasificador reconoce peor (umbral más bajo) o que sobran (umbral más alto).",
+    "reset_min_score_by_species": "Usar el umbral general para todas",
     "label_classified_by": "Clasificado por",
     "hint_classified_by": "Valor que se escribirá en el campo classifiedBy del CamtrapDP verificado para las observaciones confirmadas.",
     "label_extended_confirmation": "Confirmación extendida",
@@ -178,7 +189,13 @@
     "reviewed_periods": "Revisado {{resolved}} de {{total}} ocasiones de muestreo ({{pct}}%)",
     "complete": "Completo",
     "round": "Ronda {{n}}",
-    "no_species": "No hay especies con candidatos. Comprueba la configuración."
+    "no_species": "No hay especies con candidatos. Comprueba la configuración.",
+    "pending": "{{n}} pendientes de experto",
+    "pending_badge": "{{n}} pendientes de experto",
+    "see_results_pending": "Ver resultados ({{n}} ocasiones pendientes de experto aparecerán como NA)",
+    "export_session": "Exportar sesión",
+    "exporting": "Exportando…",
+    "export_session_tooltip": "Descarga un .zip con las decisiones de esta sesión (sin fotos) para continuarla en otro ordenador"
   },
   "gallery": {
     "title": "Verificación de detecciones",
@@ -219,7 +236,46 @@
     "updating": "Actualizando…",
     "toast_updated": "Decisiones actualizadas. Resultados regenerados.",
     "context_frame": "Contexto",
-    "image_permission_denied": "Permiso denegado. Revisa los permisos de acceso."
+    "image_permission_denied": "Permiso denegado. Revisa los permisos de acceso.",
+    "prev_frame": "Imagen anterior",
+    "next_frame": "Imagen siguiente",
+    "unsure_btn": "? Dudosa",
+    "unsure_tooltip": "No está claro: en la ronda siguiente se mostrará otro evento de esta ocasión. Si no se llega a confirmar, la ocasión quedará pendiente de experto en lugar de contar como no detectada.",
+    "prev_site": "Localización anterior",
+    "next_site": "Localización siguiente",
+    "site_position": "Localización {{i}} de {{n}}",
+    "decided_progress": "{{done}}/{{total}} decididas en esta ronda",
+    "next_site_cta": "Ir a la siguiente localización ({{site}})",
+    "confirm_all_site": "Confirmar todas (esta localización)",
+    "confirm_all_site_tooltip": "Marca como confirmadas todas las tarjetas de la localización que estás viendo",
+    "needs_decision_count": "Faltan {{n}} eventos de detección por marcar antes de terminar la ronda. Lo que llevas ya está guardado: puedes cerrar y seguir más tarde.",
+    "toast_rounds_done_pending": "Rondas terminadas. {{n}} ocasiones han quedado pendientes de experto: puedes revisarlas ahora o exportar la sesión para que otra persona las termine.",
+    "pending_badge": "Pendientes de experto",
+    "pending_hint": "Estas ocasiones agotaron sus eventos de detección sin confirmarse y al menos uno se marcó como dudoso. Para cada una, confirma la presencia (se registra el evento que estés viendo), márcala como no confirmada o déjala como dudosa para que la revise otra persona. Puedes guardar sin decidirlas todas.",
+    "pending_count": "{{n}} pendientes de experto",
+    "pending_nothing_to_save": "No has confirmado ni rechazado ninguna ocasión pendiente.",
+    "toast_pending_saved": "Guardado. Quedan {{n}} ocasiones pendientes de experto.",
+    "round_hint_unsure": "En la ronda {{n}} cada ocasión de muestreo se representa por el evento de detección con mayor confianza de detección entre los aún no revisados. Si no lo tienes claro, márcalo como «Dudosa»: cuenta como no confirmado para avanzar de ronda, pero la ocasión no se dará por no detectada sin que alguien la revise.",
+    "no_events": "No hay eventos pendientes para esta especie en esta ronda.",
+    "save_progress": "Guardar progreso",
+    "save_progress_tooltip": "Guarda lo que llevas de esta ronda en la carpeta de la sesión para seguir más tarde (también se guarda solo cada pocos segundos). No cambia los resultados hasta terminar la ronda.",
+    "progress_saving": "Guardando progreso…",
+    "progress_saved_at": "Progreso guardado a las {{time}}",
+    "progress_error": "No se pudo guardar el progreso",
+    "progress_saved_toast": "Progreso guardado ({{n}} decisiones). Puedes cerrar y seguir más tarde.",
+    "progress_up_to_date": "El progreso ya estaba guardado.",
+    "finish_round": "Terminar ronda",
+    "finish_round_tooltip": "Cierra la ronda cuando todos los eventos tienen decisión y pasa a la siguiente.",
+    "cross_title": "¿Otra especie en esta foto? Confírmala aquí para esta localización y ocasión:",
+    "cross_tooltip": "Esta foto confirma {{species}} en {{site}}, ocasión {{occasion}}",
+    "cross_undo_tooltip": "Confirmada desde esta galería. Pulsa para deshacer",
+    "cross_already": "{{species}} ya está confirmada en esta localización y ocasión",
+    "cross_added": "{{species}} confirmada en {{site}}, ocasión {{occasion}}",
+    "cross_removed": "Deshecha la confirmación de {{species}} en {{site}}, ocasión {{occasion}}",
+    "reopen_btn": "Volver a la ronda {{n}}",
+    "reopen_tooltip": "Reabre la ronda {{n}} con las decisiones que tomaste para poder corregirlas. Lo que llevas de la ronda actual se conserva.",
+    "reopen_confirm": "¿Volver a la ronda {{n}} para corregir sus decisiones?\n\nVerás las decisiones tal como las dejaste. Lo que llevas en la ronda actual se guarda y lo recuperarás al terminar de nuevo la ronda {{n}}.",
+    "reopen_done": "Ronda {{n}} reabierta: corrige lo que necesites y pulsa «Terminar ronda»."
   },
   "help": {
     "title": "Ayuda — CamTrap Verify",
@@ -237,10 +293,22 @@
     ],
     "concepts_title": "Conceptos clave",
     "concepts": [
-      { "term": "Ocasión de muestreo", "def": "Ventana temporal de N días por localización. Todas las imágenes de un mismo sitio dentro de esa ventana forman una ocasión." },
-      { "term": "Evento de detección", "def": "Grupo de imágenes tomadas en la misma localización con menos de N segundos de diferencia entre ellas (configurado en 'Gap entre eventos de detección')." },
-      { "term": "Ronda", "def": "En cada ronda se muestra el evento de detección con mayor confianza aún no revisado de cada ocasión. Si se rechaza en la ronda 1, en la ronda 2 aparece el siguiente evento de detección con menos confianza." },
-      { "term": "Confianza", "def": "Probabilidad máxima de clasificación entre todas las imágenes de un evento de detección, según el modelo de IA." }
+      {
+        "term": "Ocasión de muestreo",
+        "def": "Ventana temporal de N días por localización. Todas las imágenes de un mismo sitio dentro de esa ventana forman una ocasión."
+      },
+      {
+        "term": "Evento de detección",
+        "def": "Grupo de imágenes tomadas en la misma localización con menos de N segundos de diferencia entre ellas (configurado en 'Gap entre eventos de detección')."
+      },
+      {
+        "term": "Ronda",
+        "def": "En cada ronda se muestra el evento de detección con mayor confianza aún no revisado de cada ocasión. Si se rechaza en la ronda 1, en la ronda 2 aparece el siguiente evento de detección con menos confianza."
+      },
+      {
+        "term": "Confianza",
+        "def": "Probabilidad máxima de clasificación entre todas las imágenes de un evento de detección, según el modelo de IA."
+      }
     ],
     "decisions_title": "Decisiones",
     "decisions_body": "Confirmar significa que la especie está presente en esa ocasión y localización. Rechazar significa que la detección es incorrecta. Una ocasión se cierra en cuanto se confirma un evento de detección."
@@ -256,7 +324,7 @@
     "copied": "✓ Copiado",
     "open_folder": "📂 Abrir carpeta",
     "download": "Descargar resultados",
-    "output_hint": "La carpeta de sesión contiene dos subdirectorios: <code>camtrap_dp_verified/</code> con el CamtrapDP original modificado — las observaciones confirmadas quedan con <code>classificationMethod='human'</code>, <code>classificationProbability=1.0</code> y <code>classifiedBy='expert_review'</code>; y <code>occupancy_inputs/</code> con los historiales de detección naive y verificado por especie (<code>dethist_naive_*.csv</code>, <code>dethist_verified_*.csv</code>), la matriz de operación de cámara, un resumen de verificación y el esfuerzo de revisión.",
+    "output_hint": "La carpeta de sesión contiene dos subdirectorios: <code>camtrap_dp_verified/</code> con el CamtrapDP original modificado — las observaciones confirmadas quedan con <code>classificationMethod='human'</code>, <code>classificationProbability=1.0</code> y <code>classifiedBy='expert_review'</code>; y <code>occupancy_inputs/</code> con los historiales de detección naive y verificado por especie (<code>dethist_naive_*.csv</code>, <code>dethist_verified_*.csv</code>) junto con <code>cell_status_*.csv</code>, que indica el estado de cada celda (<code>1</code>, <code>0</code>, <code>pending</code>, <code>unreviewed</code> o <code>inactive</code>), la matriz de operación de cámara, un resumen de verificación y el esfuerzo de revisión.",
     "confirmed": "Con detección confirmada",
     "rejected": "Sin detección (revisado)",
     "unverified": "Sin revisar",
@@ -273,11 +341,29 @@
     "col_psi_verified": "ψ verificado",
     "col_p_naive": "p naive",
     "col_p_verified": "p verificado",
-    "degenerate": "Degenerado"
+    "degenerate": "Degenerado",
+    "pending_title": "{{n}} ocasiones siguen pendientes de experto",
+    "pending_hint": "Aparecen como NA en <code>dethist_verified_*.csv</code>, igual que las ocasiones con la cámara inactiva. Para distinguirlas, consulta <code>cell_status_*.csv</code> (valores <code>pending</code> e <code>inactive</code>). Puedes exportar la sesión desde el índice de especies para que otra persona las revise."
   },
   "footer": {
     "copyright": "© {{year}} <a href='https://wildintel.eu/' target='_blank' rel='noopener noreferrer' style='color:inherit;text-decoration:underline'>WildINTEL</a>. Todos los derechos reservados.",
     "website": "Web de WildINTEL",
     "github": "Repositorio en GitHub"
+  },
+  "relink": {
+    "title": "¿Dónde están los datos en este ordenador?",
+    "desc": "Esta sesión se creó con otras rutas (por ejemplo, en otro ordenador). Indica dónde están aquí la carpeta CamtrapDP y, si se usaba, la carpeta de imágenes. Las decisiones no cambian.",
+    "data_dir": "Carpeta CamtrapDP (deployments.csv, media.csv, observations.csv)",
+    "images_dir": "Carpeta de imágenes (opcional)",
+    "images_placeholder": "Vacío si las rutas de media.csv son relativas a la carpeta CamtrapDP",
+    "was": "Antes: {{path}}",
+    "browse": "Examinar…",
+    "flat_search": "Buscar las imágenes también en subcarpetas",
+    "later": "Más tarde",
+    "save": "Guardar carpetas",
+    "saving": "Comprobando…",
+    "banner_data": "No se encuentra la carpeta de datos de esta sesión en este ordenador. Indica dónde está para poder generar los resultados.",
+    "banner_images": "No se encuentran las imágenes de esta sesión en este ordenador. Indica la carpeta de imágenes para poder verlas.",
+    "open": "Indicar carpetas"
   }
 }

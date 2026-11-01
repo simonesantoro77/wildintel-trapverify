@@ -11,7 +11,7 @@ from fastapi.responses import FileResponse
 from starlette.background import BackgroundTask
 
 from occupancy_model import fit_naive_vs_verified
-from services import results_service, session_service
+from services import results_service, session_service, workflow_service
 
 router = APIRouter(prefix="/api", tags=["results"])
 logger = logging.getLogger(__name__)
@@ -25,7 +25,14 @@ _OPEN_FOLDER_CMD = {
 
 @router.get("/results")
 def get_results() -> dict:
-    """Aggregate verification results for the active session."""
+    """Aggregate verification results for the active session.
+
+    Also brings the output files up to date: saving a round only marks the
+    verified CamtrapDP export as stale (it rewrites the whole observations
+    table), so it is regenerated here, when the user actually looks at it.
+    """
+    if session_service.get_candidates() is not None:
+        workflow_service.ensure_outputs()
     return results_service.compute_results()
 
 
@@ -37,6 +44,8 @@ def get_occupancy() -> list[dict]:
     """
     p = session_service.paths()
     fit_csv = p["occupancy_out"] / "occupancy_fit.csv"
+    if session_service.get_candidates() is not None:
+        workflow_service.ensure_outputs()
 
     if fit_csv.exists():
         df = pd.read_csv(fit_csv)
@@ -65,6 +74,8 @@ def download_results() -> FileResponse:
     sd = session_service.session_dir()
     if sd is None:
         raise HTTPException(400, "No hay sesión activa.")
+    if session_service.get_candidates() is not None:
+        workflow_service.ensure_outputs()
 
     zip_name = f"wildintel-camtrap-verify-{sd.name}"
     tmp = tempfile.NamedTemporaryFile(suffix=".zip", delete=False)
@@ -73,7 +84,7 @@ def download_results() -> FileResponse:
     try:
         with zipfile.ZipFile(tmp_path, "w", zipfile.ZIP_DEFLATED) as zf:
             for f in sd.rglob("*"):
-                if f.is_file():
+                if f.is_file() and f.name != ".outputs_stale":
                     zf.write(f, f.relative_to(sd))
     except Exception:
         tmp_path.unlink(missing_ok=True)

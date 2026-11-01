@@ -32,9 +32,11 @@ Once the review is complete, **CamTrap Verify** exports a verified CamtrapDP pac
 - Confirming a detection event closes the cell; rejecting it queues the next-best detection event in the following round, minimising total expert effort
 - Optional full-event mode: shows all frames from the same deployment captured between the first and last detection of the target species, including frames not labelled as that species
 - Optional extended confirmation: marks all observations in the confirmed burst — not just the highest-confidence frame — as human-verified in the output
+- "Unsure" decisions: occasions that end the rounds with an unsure event stay pending expert review (NA in the verified history, `pending` in `cell_status_*.csv`) instead of becoming a non-detection
+- Export / import a session to continue the review on another computer (Windows ↔ macOS), with the data and photo folders relinked there
 
 **Image viewer**
-- Interactive carousel with zoom, pan, rotation, tonal inversion and full keyboard navigation
+- Image viewer with frame-by-frame browsing, zoom, pan, rotation, tonal inversion and full keyboard navigation, one location per page so rounds with thousands of cards stay fast
 - Brightness and contrast controls
 - Full-screen lightbox
 

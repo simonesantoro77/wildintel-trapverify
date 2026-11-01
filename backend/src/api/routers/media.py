@@ -1,5 +1,4 @@
 import logging
-from pathlib import Path
 
 import httpx
 from fastapi import APIRouter, HTTPException, Response
@@ -12,29 +11,21 @@ logger = logging.getLogger(__name__)
 
 
 @router.get("/image/{media_id}")
-def serve_image(media_id: str) -> FileResponse:
-    """Serve a camera-trap image from the local filesystem by mediaID."""
-    candidates = session_service.get_candidates()
-    if candidates is None:
+def serve_image(media_id: str, v: str = "") -> FileResponse:
+    """Serve a camera-trap image from the local filesystem by mediaID.
+
+    The same mediaID URL can be reused across sessions, so a bare URL is never
+    cached. URLs handed out by the gallery carry the current session token
+    (``?v=…``, which changes with the session and its image folders): those
+    are cacheable, so re-opening a card or the lightbox doesn't download the
+    photo again.
+    """
+    if session_service.get_candidates() is None:
         raise HTTPException(404, "No data loaded")
-    row = candidates[candidates["mediaID"] == media_id]
-    if row.empty:
+    file_path = session_service.resolve_image_path(media_id)
+    if file_path is None:
         logger.warning("Image not found: mediaId=%s", media_id)
         raise HTTPException(404, f"Media {media_id} not found")
-
-    from camtrap_workflow import resolve_media_path
-
-    config = session_service.get_config()
-    image_base_dir = config.get("image_base_dir", "")
-    fallback_base = Path(image_base_dir) if image_base_dir else Path(config["camtrap_dir"])
-    file_path = resolve_media_path(
-        str(row.iloc[0]["filePath"]),
-        str(row.iloc[0].get("deploymentID", "")),
-        str(row.iloc[0].get("fileName", "")),
-        image_base_dir,
-        fallback_base,
-        flat_search=bool(config.get("flat_search", False)),
-    )
     try:
         stat_result = file_path.stat()
     except FileNotFoundError:
@@ -45,7 +36,11 @@ def serve_image(media_id: str) -> FileResponse:
         raise HTTPException(403, "Permiso denegado. Revisa los permisos de acceso de la aplicación.")
     return FileResponse(
         str(file_path), stat_result=stat_result,
-        headers={"Cache-Control": "no-store"},
+        headers={"Cache-Control": (
+            "private, max-age=86400"
+            if v and v == session_service.image_token()
+            else "no-store"
+        )},
     )
 
 

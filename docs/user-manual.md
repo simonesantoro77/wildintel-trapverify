@@ -26,8 +26,11 @@
    - [Image Controls](#image-controls)
    - [Keyboard Shortcuts](#keyboard-shortcuts)
    - [Saving Decisions](#saving-decisions)
+   - [Unsure Detection Events](#unsure-detection-events)
+   - [Pending Expert Review](#pending-expert-review)
    - [Completed Species](#completed-species)
 8. [Results](#8-results)
+9. [Continuing a Session on Another Computer](#9-continuing-a-session-on-another-computer)
 
 ---
 
@@ -160,6 +163,7 @@ When you open the application, you will see the **Welcome Screen**. Which button
 |---|---|---|
 | **Continue previous session →** | Only if a session is currently active | Resumes the session you were last working on. Shows a progress summary below the button (e.g. *3 species · 12/40 occasions reviewed · 30%*). |
 | **Open a specific session…** | Always | Opens a file browser so you can load any existing session folder. |
+| **Import session…** | Always | Opens a session `.zip` exported on another computer (see [Continuing a Session on Another Computer](#9-continuing-a-session-on-another-computer)). |
 | **Start verifying →** / **New session** | Always — the label depends on state | Starts the Setup Wizard to configure a session. Reads **Start verifying →** if no session is currently active, or **New session** if one is (to start a fresh one alongside it). |
 
 Below the buttons, a **Recent sessions** list appears if you have previously opened sessions on record, letting you jump back into any of them directly — independently of whether a session is active right now.
@@ -306,6 +310,8 @@ These control how the data is segmented into reviewable units.
 | **Gap between detection events (seconds)** | 60 | Images less than N seconds apart at the same site belong to the same detection event. |
 | **Minimum detection score** | 0.5 | Detections below this confidence threshold are excluded from the candidate set. |
 
+Under **Per-species threshold (optional)** you can give some species their own minimum score: for instance a lower one for a species the classifier tends to under-score, or a higher one for a species with many false positives. Leave a species blank to use the general value. The thresholds are fixed when the session is created; an existing session keeps the thresholds it was created with.
+
 #### Confirmation parameters
 
 These control what is recorded in the output when an expert confirms a detection event.
@@ -338,7 +344,10 @@ An information panel at the top shows the session parameters:
 - **Overall progress** — how many sampling occasions have been reviewed out of the total, how many are confirmed, and the percentage complete.
 - **Study period and sampling occasion length** — the date range being reviewed and the N-day window each sampling occasion spans.
 - **← Back** — return to the Welcome Screen.
-- **See results** — navigate to the Results page (only active when all species are complete).
+- **Export session**: download a small `.zip` with the session's decisions (no photos) to continue it on another computer.
+- **See results**: navigate to the Results page. It becomes active once every round of every species is done; occasions still [pending expert review](#pending-expert-review) then appear as NA in the results.
+
+If the session's data or photo folders can't be found on this computer (for example after importing a session made elsewhere), an amber banner offers **Set folders** to point at them.
 
 Each **species card** displays:
 
@@ -348,7 +357,7 @@ Each **species card** displays:
 - A thumbnail strip with representative images.
 - The number of sampling occasions with confirmed detections.
 - A progress bar and percentage of reviewed occasions.
-- A badge: **Complete** (green) or **Round N** (grey) indicating the current review round.
+- A badge: **Complete** (green), **Round N** (grey) indicating the current review round, or **N pending expert review** (amber) once only pending occasions are left. The progress bar shows pending occasions in amber.
 
 Click any card to open the Image Gallery for that species.
 
@@ -356,7 +365,9 @@ Click any card to open the Image Gallery for that species.
 
 ## 7. Image Gallery
 
-The Image Gallery is the main review screen. It shows all sampling occasions for a single species, grouped by location.
+The Image Gallery is the main review screen. It shows the sampling occasions of a single species **one location at a time**: use **‹ Previous location**, **Next location ›** or the location selector (which shows how many cards of each location are already decided) to move between them. Large studies easily have a thousand cards or more per round; showing one location at a time keeps the page fast.
+
+Opening a species always continues at its current round. Decisions you have made but not saved yet are kept by the browser, so closing the tab by mistake does not lose them.
 
 ![Image gallery overview](./img/user_manual/gallery-overview.png)
 *Gallery showing sampling occasion cards grouped by site.*
@@ -379,10 +390,10 @@ Each **sampling occasion card** shows:
 
 - Location and occasion number.
 - Confidence range of the detection events in this occasion.
-- A carousel of the images in the current detection event, with left/right arrows to browse frames.
-- Two decision buttons: **✓ Confirmed** and **✗ Rejected**.
+- The most confident image of the current detection event. The **‹ ›** arrows and the counter (e.g. `3/14`) browse the other frames of the event; the lightbox shows them full size.
+- Three decision buttons: **✓ Confirmed**, **? Unsure** and **✗ Rejected** (see [Unsure Detection Events](#unsure-detection-events)).
 
-If **Show all event frames** is enabled, all frames from the same deployment captured between the first and last detection of the target species are shown in the carousel, including those not labelled as that species. These frames appear dimmed and do not affect the decision.
+If **Show all event frames** is enabled, all frames from the same deployment captured between the first and last detection of the target species are included in the event, even those not labelled as that species. These frames appear dimmed and do not affect the decision.
 
 Click any image to open the [Fullscreen Lightbox](#fullscreen-lightbox).
 
@@ -394,10 +405,22 @@ Click any image thumbnail to open the lightbox for a closer look.
 *Fullscreen lightbox with image controls and decision buttons.*
 
 The lightbox shows:
-- The full-size image with zoom and pan support.
+- The image scaled to fill the screen, with zoom and pan support.
 - Navigation arrows to browse frames within the detection event.
 - The location and sampling occasion in the title bar.
 - Decision buttons and image adjustment controls in the toolbar.
+- On the left, the other target species of the session (see below).
+
+### Another Species in the Photo
+
+If the photo you are looking at shows another target species (for example a fallow deer in a red deer sequence), click that species in the list on the left of the lightbox, or press its number (`1` to `9`). This confirms that species at the same location and sampling occasion, using this photo, without leaving the species you are reviewing:
+
+- The occasion counts as a detection of that species (`1` in its `dethist_verified_<sp>.csv`), also when the classifier never assigned it there; `verification_summary.csv` reports those cells as `false_negative_cells`.
+- If the occasion was still waiting in that species' own rounds, it will not be shown again there.
+- In the verified CamtrapDP, the photo gets a human-confirmed observation of that species (an existing one for the same photo and species is marked, otherwise a new one is added). The observation of the species being reviewed is not changed: decide on it as usual with the buttons below.
+- A species already confirmed at that location and occasion appears in green and cannot be clicked. A species confirmed from this list appears in blue with ✓; click it again to undo.
+
+Confirmations made this way are saved at once (no need to finish the round) and travel in the session export (`decisions/cross_<sp>.csv`).
 
 ### Image Controls
 
@@ -420,22 +443,48 @@ While the lightbox is open:
 | Key | Action |
 |---|---|
 | `Y` | Confirm the current detection event |
+| `U` | Mark the current detection event as unsure |
 | `N` | Reject the current detection event |
+| `1` … `9` | Confirm (or undo) the other species with that number at this location and occasion |
+| `↑` `↓` | Previous / next sampling occasion at the same location |
 | `←` `→` | Navigate between frames in the detection event |
 
 After a decision, the lightbox automatically advances to the next undecided detection event.
 
-### Saving Decisions
+### Saving Progress and Finishing a Round
 
-Once you have reviewed the detection events, click **💾 Save decisions** (floating button, bottom-right).
+You don't have to review a whole round in one sitting. Every decision is saved in the session folder a couple of seconds after you take it (**⤓ Save progress** saves it at once; the time of the last save is shown below that button). Close the app whenever you like: when you open the species again, the gallery continues from the same round with your decisions in place, also from another browser or, after exporting the session, on another computer. Saved progress does not change any result until the round is finished.
+
+When every detection event of the round has a decision, click **💾 Finish round** (floating button, bottom-right).
 
 ![Save button](./img/user_manual/gallery-save.png)
-*Floating action buttons: Confirm all, Save decisions.*
+*Floating action buttons: Confirm all, Save progress, Finish round.*
 
-- If all detection events have been decided, the session advances to the next round (if any occasions were rejected) or marks the species as **Complete**.
-- If some detection events are still undecided, a warning is shown.
+- If all detection events have been decided, the session advances to the next round (if any occasions were rejected or marked unsure) or marks the species as **Complete**.
+- If some detection events are still undecided, a message tells you how many (your progress is already saved), and the gallery jumps to the first one.
 
-The **✓✓ Confirm all** button marks every undecided detection event in the current view as confirmed in one click.
+**‹ Back to round N** (next to the round badge) re-opens the previous round with the decisions you took, for example after realising you were answering for the wrong species. Correct what you need and click **Finish round** again; whatever you had done in the later round is kept and comes back. It is available while the rounds are in progress and in the pending review, but not once pending occasions have been settled or the decisions of a completed species have been edited (use the 🔓 edit for that).
+
+The **✓✓ Confirm all (this location)** button marks every detection event of the location you are viewing as confirmed in one click.
+
+### Unsure Detection Events
+
+When you can't tell whether a detection event shows the species, mark it **? Unsure** (or press `U` in the lightbox) instead of rejecting it.
+
+- For the rounds, *unsure* counts as *not confirmed*: the next most confident detection event of that occasion is shown in the next round. If one of them is confirmed, the occasion is closed as a detection and the doubt no longer matters.
+- If the occasion runs out of detection events without any confirmation and at least one of them was marked unsure, it is **not** recorded as a non-detection: it stays **pending expert review**.
+
+### Pending Expert Review
+
+Once all rounds of a species are done, its pending occasions are shown on their own (amber **Pending expert review** badge). Each card shows the detection events that were marked unsure. For each occasion you can:
+
+- **✓ Confirm** presence. The detection event you are looking at (in the card or the lightbox) is recorded as the confirmed one.
+- **✗ Reject** it: the occasion becomes a verified non-detection.
+- Leave it **? Unsure**, so that someone else can review it.
+
+You can save without deciding every card; whatever is left unsure stays pending. To hand the remaining occasions to a colleague, export the session (see [section 9](#9-continuing-a-session-on-another-computer)).
+
+While an occasion is pending, it appears as **NA** in `dethist_verified_{sp}.csv`. Inactive-camera occasions are NA too, so `cell_status_{sp}.csv` tells them apart (see [Output Files](#output-files)).
 
 ### Completed Species
 
@@ -452,7 +501,7 @@ When all occasions for a species have been decided, the gallery shows a **Comple
 
 ## 8. Results
 
-Once all species are complete, the **See results** button in the Species Index header becomes active.
+Once every round of every species is done, the **See results** button in the Species Index header becomes active. The verified CamtrapDP is regenerated when you open this page or download the results (rather than every time a round is saved), so on a large archive the page may take a few seconds to appear.
 
 ![See results button enabled](./img/user_manual/results-button-enabled.png)
 *The "See results" button turns green when all species have been reviewed.*
@@ -463,6 +512,8 @@ The page first shows the **output directory**:
 
 ![Output directory and download](./img/user_manual/results-output.png)
 *Output directory, with copy/open-folder buttons and the Download results button.*
+
+If some occasions are still pending expert review, an amber box at the top lists how many per species.
 
 This is the path to the generated files (see [Output Files](#output-files) below for what's inside), with a copy button, a shortcut to open the folder, and a **Download results** button to get a `.zip` of the whole session folder. If the exported package's `datapackage.json` had to be auto-generated (the source had none), a warning is shown here listing which fields are placeholders rather than derived from your data.
 
@@ -489,7 +540,7 @@ Each session is saved in a timestamped subfolder inside the output directory (e.
 | `config.json` | Session configuration: data directory, date range, parameters. |
 | `candidate_manifest.csv` | Full list of candidate detection events generated at setup. |
 | `rejected_media.json` | IDs of media files rejected during the review. |
-| `decisions/` | Per-species per-round decision CSVs, named `decisions_{species}_iter{N}.csv` (e.g. `decisions_Vulpes_vulpes_iter1.csv`). |
+| `decisions/` | Per-species per-round decision CSVs, named `decisions_{species}_iter{N}.csv` (e.g. `decisions_Vulpes_vulpes_iter1.csv`). Detection events marked unsure are in `unsure_{species}_iter{N}.csv`; pending occasions settled later are in `decisions_{species}_pending.csv` (confirmed) and `unsure_cleared_{species}.csv` (rejected). |
 
 **`camtrap_dp_verified/`** — verified CamtrapDP package
 
@@ -505,6 +556,26 @@ Each session is saved in a timestamped subfolder inside the output directory (e.
 |---|---|
 | `camera_operation.csv` | Camera operation matrix (sites × sampling occasions). |
 | `dethist_naive_{sp}.csv` | Naive detection history per species (AI detections, not human-validated). One file per species. |
-| `dethist_verified_{sp}.csv` | Verified detection history per species (confirmed by expert). One file per species. |
-| `verification_summary.csv` | Per-species summary: confirmed, rejected and unreviewed counts. |
+| `dethist_verified_{sp}.csv` | Verified detection history per species (confirmed by expert). One file per species. Occasions pending expert review are NA, like inactive-camera occasions. |
+| `cell_status_{sp}.csv` | Same sites × occasions layout, with the status of each cell: `1` (confirmed), `0` (not detected), `pending` (pending expert review), `unreviewed` (rounds not finished) or `inactive` (camera not operating). Use it to tell the two kinds of NA apart. |
+| `verification_summary.csv` | Per-species summary: naive and verified detections, false-positive cells, `pending_cells`, `unreviewed_cells` and observed occupancy. |
 | `review_effort.csv` | Total review effort: number of detection events and images inspected. |
+
+---
+
+## 9. Continuing a Session on Another Computer
+
+A review can be continued by someone else, on another computer and even another operating system (for example from Windows to macOS), as long as that computer has its own copy of the CamtrapDP data and the photos. No photos travel with the session.
+
+1. On the first computer, open the **Species Index** and click **Export session**. A small `.zip` is downloaded (a few MB) with the configuration, the candidate list and every decision, including detection events marked unsure.
+2. Send that `.zip` to the other person.
+3. On the other computer, click **Import session…** on the Welcome Screen and select the `.zip`.
+4. If the session's folders don't exist there (they usually point at the first computer), the app asks **Where is the data on this computer?**: choose the CamtrapDP folder and, if one was used, the images folder. If this computer has already used the same dataset in another session, those folders are reused automatically.
+5. The review continues exactly where it was left: same round, same pending occasions.
+
+To bring the work back, do the same in the other direction: export on the second computer and import on the first. The imported session is a new session folder; the original one is left untouched.
+
+If `media.csv` stores absolute paths from the computer where it was exported (for example `/Volumes/…/2023_optimized/R0025/…/photo.jpg` from a Mac), choose as images folder the local folder that contains the same sub-folders (`R0025/`, …): the app matches the end of each path, so the photos are found on Windows or another Mac without the subfolder search.
+
+The app checks that the folder you choose contains the same dataset (its `deployments.csv` must match), so a session can't be pointed at the wrong data by mistake.
+

@@ -107,21 +107,29 @@ def test_check_images_all_missing_by_default(client, camtrap_dir):
     assert len(data["examples"]) == 5
 
 def test_check_images_reports_permission_denied_separately_from_missing(client, camtrap_dir, monkeypatch):
-    """A PermissionError while checking a file must be counted as permission_denied,
-    not lumped in with genuinely missing files."""
+    """A folder the app may not read must count its images as permission_denied,
+    not lump them in with genuinely missing files. (Existence is checked from
+    one cached listing per folder, so access is denied at folder level.)"""
+    import os
+
+    med = pd.read_csv(camtrap_dir / "media.csv", dtype=str)
+    med.loc[med["mediaID"] == "m001", "filePath"] = "locked/frame0.jpg"
+    med.to_csv(camtrap_dir / "media.csv", index=False)
+    (camtrap_dir / "locked").mkdir()
+    (camtrap_dir / "locked" / "frame0.jpg").write_bytes(b"\xff\xd8\xff\xe0")
     img_dir = camtrap_dir / "img"
     img_dir.mkdir()
-    for i in range(5):
+    for i in range(1, 5):
         (img_dir / f"frame{i}.jpg").write_bytes(b"\xff\xd8\xff\xe0")
 
-    real_exists = Path.exists
+    real_listdir = os.listdir
 
-    def fake_exists(self):
-        if self.name == "frame0.jpg":
+    def fake_listdir(path="."):
+        if Path(path).name == "locked":
             raise PermissionError("denied")
-        return real_exists(self)
+        return real_listdir(path)
 
-    monkeypatch.setattr(Path, "exists", fake_exists)
+    monkeypatch.setattr(os, "listdir", fake_listdir)
     resp = client.get("/api/fs/check-images", params={
         "camtrap_dir": str(camtrap_dir), "image_base_dir": str(camtrap_dir),
     })
@@ -545,10 +553,14 @@ def test_setup_creates_session_dir(setup_session):
     assert (session_dir / "config.json").exists()
     assert (session_dir / "candidate_manifest.csv").exists()
 
-def test_setup_creates_output_dirs(setup_session):
+def test_setup_creates_output_dirs(client, setup_session):
     session_dir = Path(setup_session["session_dir"])
-    assert (session_dir / "camtrap_dp_verified").exists()
     assert (session_dir / "occupancy_inputs").exists()
+    # The verified CamtrapDP export is the slow one: built on demand.
+    assert (session_dir / ".outputs_stale").exists()
+    client.get("/api/results")
+    assert (session_dir / "camtrap_dp_verified").exists()
+    assert not (session_dir / ".outputs_stale").exists()
 
 def test_setup_min_score_filters_low_confidence_events(client, camtrap_dir, tmp_path):
     """min_score from the setup wizard must actually reach build_candidates and
@@ -683,7 +695,7 @@ def test_get_events_unknown_species_returns_empty(client, setup_session):
 def test_get_decisions_empty(client, setup_session):
     resp = client.get("/api/decisions", params={"species": "Vulpes_vulpes", "iteration": 1})
     assert resp.status_code == 200
-    assert resp.json() == {"confirmed": []}
+    assert resp.json() == {"confirmed": [], "unsure": []}
 
 def test_post_decisions_save_and_retrieve(client, setup_session):
     # Get events to find a valid observationID
@@ -1189,6 +1201,18 @@ def test_serve_image_sets_no_store_cache_control(client, setup_session_with_imag
     resp = client.get("/api/image/m001")
     assert resp.status_code == 200
     assert resp.headers["cache-control"] == "no-store"
+
+def test_serve_image_cacheable_with_session_token(client, setup_session_with_image_base_dir):
+    """URLs the backend hands out carry the session token (?v=...): those can
+    be cached, since another session or relinked folders get another token."""
+    events = client.get("/api/species/Vulpes_vulpes/events", params={"iteration": 1}).json()
+    url = events[0]["frames"][0]["img"]
+    assert "?v=" in url
+    resp = client.get(url)
+    assert resp.status_code == 200
+    assert resp.headers["cache-control"].startswith("private, max-age=")
+    stale = client.get(url.split("?v=")[0] + "?v=someothersession")
+    assert stale.headers["cache-control"] == "no-store"
 
 def test_serve_image_permission_denied_returns_403(client, setup_session_with_image_base_dir, monkeypatch):
     """A PermissionError reading the resolved file returns 403, not a generic 500 or 404."""

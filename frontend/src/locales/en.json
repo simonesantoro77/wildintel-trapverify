@@ -30,10 +30,18 @@
     "new_session": "New session",
     "start": "Start verifying →",
     "recent_sessions": "Recent sessions",
-    "recent_untitled": "Session without species"
+    "recent_untitled": "Session without species",
+    "import_session": "Import session…",
+    "import_session_tooltip": "Open a .zip exported on another computer with «Export session»",
+    "import_session_picker": "Select the session .zip (double-click)"
   },
   "setup": {
-    "steps": ["Source", "Species", "Period", "Parameters"],
+    "steps": [
+      "Source",
+      "Species",
+      "Period",
+      "Parameters"
+    ],
     "back": "← Back",
     "back_welcome": "← Welcome",
     "next": "Next →",
@@ -108,6 +116,9 @@
     "hint_gap": "Images less than N seconds apart are grouped into the same detection event.",
     "label_min_score": "Minimum detection score",
     "hint_min_score": "Detections with confidence below this threshold are ignored.",
+    "label_min_score_by_species": "Per-species threshold (optional)",
+    "hint_min_score_by_species": "Leave blank to use the general threshold ({{value}}). Useful for species the classifier recognises poorly (lower threshold) or over-detects (higher threshold).",
+    "reset_min_score_by_species": "Use the general threshold for all",
     "label_classified_by": "Classified by",
     "hint_classified_by": "Value written to the classifiedBy field in the verified CamtrapDP for confirmed observations.",
     "label_extended_confirmation": "Extended confirmation",
@@ -178,7 +189,13 @@
     "reviewed_periods": "Reviewed {{resolved}} of {{total}} sampling occasions ({{pct}}%)",
     "complete": "Complete",
     "round": "Round {{n}}",
-    "no_species": "No species with candidates. Check your configuration."
+    "no_species": "No species with candidates. Check your configuration.",
+    "pending": "{{n}} pending expert review",
+    "pending_badge": "{{n}} pending expert review",
+    "see_results_pending": "See results ({{n}} occasions pending expert review will appear as NA)",
+    "export_session": "Export session",
+    "exporting": "Exporting…",
+    "export_session_tooltip": "Download a .zip with this session's decisions (no photos) to continue it on another computer"
   },
   "gallery": {
     "title": "Detection verification",
@@ -219,7 +236,46 @@
     "updating": "Updating…",
     "toast_updated": "Decisions updated. Results regenerated.",
     "context_frame": "Context",
-    "image_permission_denied": "Permission denied. Check the access permissions."
+    "image_permission_denied": "Permission denied. Check the access permissions.",
+    "prev_frame": "Previous image",
+    "next_frame": "Next image",
+    "unsure_btn": "? Unsure",
+    "unsure_tooltip": "Not clear: another detection event of this occasion will be shown in the next round. If none gets confirmed, the occasion stays pending expert review instead of counting as not detected.",
+    "prev_site": "Previous location",
+    "next_site": "Next location",
+    "site_position": "Location {{i}} of {{n}}",
+    "decided_progress": "{{done}}/{{total}} decided in this round",
+    "next_site_cta": "Go to the next location ({{site}})",
+    "confirm_all_site": "Confirm all (this location)",
+    "confirm_all_site_tooltip": "Mark every card of the location you are viewing as confirmed",
+    "needs_decision_count": "{{n}} detection events still need a decision before the round can be finished. Your progress is already saved: you can close and continue later.",
+    "toast_rounds_done_pending": "Rounds finished. {{n}} occasions are pending expert review: review them now, or export the session so someone else can finish them.",
+    "pending_badge": "Pending expert review",
+    "pending_hint": "These occasions ran out of detection events without a confirmation, and at least one was marked unsure. For each one, confirm presence (the event you are viewing is recorded), mark it as rejected, or leave it unsure for someone else to review. You can save without deciding all of them.",
+    "pending_count": "{{n}} pending expert review",
+    "pending_nothing_to_save": "You have not confirmed or rejected any pending occasion.",
+    "toast_pending_saved": "Saved. {{n}} occasions still pending expert review.",
+    "round_hint_unsure": "In round {{n}}, each sampling occasion is represented by the detection event with the highest detection confidence among those not yet reviewed. If you are not sure, mark it «Unsure»: it counts as not confirmed for the next round, but the occasion will not be set to not detected until someone reviews it.",
+    "no_events": "No pending detection events for this species in this round.",
+    "save_progress": "Save progress",
+    "save_progress_tooltip": "Keeps what you have done in this round in the session folder so you can continue later (it is also saved automatically every few seconds). Results do not change until the round is finished.",
+    "progress_saving": "Saving progress…",
+    "progress_saved_at": "Progress saved at {{time}}",
+    "progress_error": "Progress could not be saved",
+    "progress_saved_toast": "Progress saved ({{n}} decisions). You can close the app and continue later.",
+    "progress_up_to_date": "Progress was already saved.",
+    "finish_round": "Finish round",
+    "finish_round_tooltip": "Closes the round once every event has a decision and moves on to the next one.",
+    "cross_title": "Another species in this photo? Confirm it here for this location and occasion:",
+    "cross_tooltip": "This photo confirms {{species}} at {{site}}, occasion {{occasion}}",
+    "cross_undo_tooltip": "Confirmed from this gallery. Click to undo",
+    "cross_already": "{{species}} is already confirmed at this location and occasion",
+    "cross_added": "{{species}} confirmed at {{site}}, occasion {{occasion}}",
+    "cross_removed": "Confirmation of {{species}} at {{site}}, occasion {{occasion}} undone",
+    "reopen_btn": "Back to round {{n}}",
+    "reopen_tooltip": "Re-opens round {{n}} with the decisions you took so you can correct them. Your progress in the current round is kept.",
+    "reopen_confirm": "Go back to round {{n}} to correct its decisions?\n\nYou will see the decisions as you left them. Your progress in the current round is saved and comes back when you finish round {{n}} again.",
+    "reopen_done": "Round {{n}} re-opened: correct what you need and click “Finish round”."
   },
   "help": {
     "title": "Help — CamTrap Verify",
@@ -237,10 +293,22 @@
     ],
     "concepts_title": "Key concepts",
     "concepts": [
-      { "term": "Sampling occasion", "def": "A time window of N days per location. All images from the same site within that window form one occasion." },
-      { "term": "Detection event", "def": "A group of images taken at the same location less than N seconds apart (configured under 'Gap between detection events')." },
-      { "term": "Round", "def": "Each round shows the highest-confidence unreviewed detection event for each occasion. If rejected in round 1, the next lower-confidence detection event appears in round 2." },
-      { "term": "Confidence", "def": "The maximum classification probability across all images in a detection event, as assigned by the AI model." }
+      {
+        "term": "Sampling occasion",
+        "def": "A time window of N days per location. All images from the same site within that window form one occasion."
+      },
+      {
+        "term": "Detection event",
+        "def": "A group of images taken at the same location less than N seconds apart (configured under 'Gap between detection events')."
+      },
+      {
+        "term": "Round",
+        "def": "Each round shows the highest-confidence unreviewed detection event for each occasion. If rejected in round 1, the next lower-confidence detection event appears in round 2."
+      },
+      {
+        "term": "Confidence",
+        "def": "The maximum classification probability across all images in a detection event, as assigned by the AI model."
+      }
     ],
     "decisions_title": "Decisions",
     "decisions_body": "Confirming means the species is present in that occasion and location. Rejecting means the detection is incorrect. An occasion closes as soon as one detection event is confirmed."
@@ -256,7 +324,7 @@
     "copied": "✓ Copied",
     "open_folder": "📂 Open folder",
     "download": "Download results",
-    "output_hint": "The session folder contains two subdirectories: <code>camtrap_dp_verified/</code> with the original CamtrapDP modified — confirmed observations have <code>classificationMethod='human'</code>, <code>classificationProbability=1.0</code> and <code>classifiedBy='expert_review'</code>; and <code>occupancy_inputs/</code> with per-species naive and verified detection histories (<code>dethist_naive_*.csv</code>, <code>dethist_verified_*.csv</code>), a camera operation matrix, a verification summary and a review effort report.",
+    "output_hint": "The session folder contains two subdirectories: <code>camtrap_dp_verified/</code> with the original CamtrapDP modified — confirmed observations have <code>classificationMethod='human'</code>, <code>classificationProbability=1.0</code> and <code>classifiedBy='expert_review'</code>; and <code>occupancy_inputs/</code> with per-species naive and verified detection histories (<code>dethist_naive_*.csv</code>, <code>dethist_verified_*.csv</code>) plus <code>cell_status_*.csv</code>, giving the status of each cell (<code>1</code>, <code>0</code>, <code>pending</code>, <code>unreviewed</code> or <code>inactive</code>), a camera operation matrix, a verification summary and a review effort report.",
     "confirmed": "Confirmed detection",
     "rejected": "No detection (reviewed)",
     "unverified": "Not reviewed",
@@ -273,11 +341,29 @@
     "col_psi_verified": "ψ verified",
     "col_p_naive": "p naive",
     "col_p_verified": "p verified",
-    "degenerate": "Degenerate"
+    "degenerate": "Degenerate",
+    "pending_title": "{{n}} occasions are still pending expert review",
+    "pending_hint": "They appear as NA in <code>dethist_verified_*.csv</code>, just like occasions with an inactive camera. To tell them apart, see <code>cell_status_*.csv</code> (values <code>pending</code> and <code>inactive</code>). You can export the session from the species index so that someone else reviews them."
   },
   "footer": {
     "copyright": "© {{year}} <a href='https://wildintel.eu/' target='_blank' rel='noopener noreferrer' style='color:inherit;text-decoration:underline'>WildINTEL</a>. All rights reserved.",
     "website": "WildINTEL website",
     "github": "GitHub repository"
+  },
+  "relink": {
+    "title": "Where is the data on this computer?",
+    "desc": "This session was created with other paths (for example on another computer). Point to the CamtrapDP folder here and, if one was used, the images folder. Decisions are not changed.",
+    "data_dir": "CamtrapDP folder (deployments.csv, media.csv, observations.csv)",
+    "images_dir": "Images folder (optional)",
+    "images_placeholder": "Leave empty if media.csv paths are relative to the CamtrapDP folder",
+    "was": "Previously: {{path}}",
+    "browse": "Browse…",
+    "flat_search": "Also search for images in subfolders",
+    "later": "Later",
+    "save": "Save folders",
+    "saving": "Checking…",
+    "banner_data": "This session's data folder can't be found on this computer. Point to it to generate the results.",
+    "banner_images": "This session's images can't be found on this computer. Point to the images folder to see them.",
+    "open": "Set folders"
   }
 }

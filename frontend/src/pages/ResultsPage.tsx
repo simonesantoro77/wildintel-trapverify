@@ -9,6 +9,7 @@ interface SpeciesRow {
   species: string
   confirmed: number
   rejected: number
+  pending?: number
   unverified: number
 }
 
@@ -19,6 +20,7 @@ interface Results {
   confirmed: number
   rejected: number
   unverified: number
+  pending: number
   by_species: SpeciesRow[]
   seq_total: number
   seq_confirmed: number
@@ -220,6 +222,20 @@ export default function ResultsPage() {
           {results.datapackage_fabricated_fields.length > 0 && (
             <ul className="list-disc list-inside mt-1">
               {results.datapackage_fabricated_fields.map((f) => <li key={f}>{f}</li>)}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {results.pending > 0 && (
+        <div className="px-4 py-3 rounded bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-sm mb-4">
+          <p className="font-medium mb-1">{t('results.pending_title', { n: results.pending })}</p>
+          <p dangerouslySetInnerHTML={{ __html: t('results.pending_hint') }} />
+          {results.by_species.filter((r) => (r.pending ?? 0) > 0).length > 0 && (
+            <ul className="list-disc list-inside mt-1">
+              {results.by_species.filter((r) => (r.pending ?? 0) > 0).map((r) => (
+                <li key={r.species}><span className="italic">{r.species}</span>: {r.pending}</li>
+              ))}
             </ul>
           )}
         </div>

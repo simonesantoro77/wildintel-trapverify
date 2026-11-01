@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 
 from settings import configure_logging, settings
 from services.session_service import on_startup
-from api.routers import health, fs, session, species, decisions, media, results, trapper, convert
+from api.routers import health, fs, session, species, decisions, media, results, trapper, convert, cross
 
 configure_logging()
 
@@ -43,6 +43,7 @@ for _router in [
     results.router,
     trapper.router,
     convert.router,
+    cross.router,
 ]:
     app.include_router(_router)
 

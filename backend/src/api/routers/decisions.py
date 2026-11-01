@@ -4,9 +4,9 @@ import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException
 
 from api.deps import require_candidates
-from camtrap_workflow import confirmed_keys_set, save_decisions
+from camtrap_workflow import confirmed_keys_set, save_decisions, species_stats
 from schemas.requests import DecisionsRequest, RejectRequest, UnrejectRequest
-from services import session_service, workflow_service
+from services import progress_service, session_service, workflow_service
 
 router = APIRouter(prefix="/api", tags=["decisions"])
 logger = logging.getLogger(__name__)
@@ -17,25 +17,34 @@ def get_decisions(species: str, iteration: int) -> dict:
     """Return confirmed observationID values for a species and round."""
     p = session_service.paths()
     path = p["decisions"] / f"decisions_{species}_iter{iteration}.csv"
-    if not path.exists():
-        return {"confirmed": []}
-    df = pd.read_csv(path, dtype=str)
-    return {"confirmed": df["observationID"].tolist()}
+    unsure_path = p["decisions"] / f"unsure_{species}_iter{iteration}.csv"
+    confirmed = pd.read_csv(path, dtype=str)["observationID"].tolist() if path.exists() else []
+    unsure = pd.read_csv(unsure_path, dtype=str)["observationID"].tolist() if unsure_path.exists() else []
+    return {"confirmed": confirmed, "unsure": unsure}
 
 
 @router.post("/decisions", dependencies=[Depends(require_candidates)])
 def post_decisions(req: DecisionsRequest) -> dict:
-    """Save confirmed observations for one round and regenerate all output files."""
+    """Save one round (confirmed and unsure events) and refresh the outputs.
+
+    Unsure events count as "not confirmed" for the next round. Only the cheap
+    outputs are rebuilt here; the verified CamtrapDP is regenerated when the
+    results are opened or downloaded.
+    """
     p = session_service.paths()
     p["decisions"].mkdir(parents=True, exist_ok=True)
     candidates = session_service.get_candidates()
     config = session_service.get_config()
 
     logger.info(
-        "Saving decisions: species=%s iteration=%d confirmed=%d",
-        req.species, req.iteration, len(req.confirmed),
+        "Saving decisions: species=%s iteration=%d confirmed=%d unsure=%d",
+        req.species, req.iteration, len(req.confirmed), len(req.unsure),
     )
-    save_decisions(p["decisions"], candidates, req.species, req.iteration, req.confirmed)
+    save_decisions(
+        p["decisions"], candidates, req.species, req.iteration, req.confirmed,
+        unsure_ids=req.unsure,
+    )
+    progress_service.clear_progress(req.species, "rounds", req.iteration)
 
     conf_keys = confirmed_keys_set(p["decisions"])
     rejected = session_service.get_rejected_media()
@@ -50,6 +59,14 @@ def post_decisions(req: DecisionsRequest) -> dict:
     logger.info("Decisions saved: done=%s next_iteration=%s remaining=%d", done, next_iter if not done else None, int(next_cands["site_occasion_key"].nunique()) if not done else 0)
 
     workflow_service.rebuild_outputs()
+    pending = 0
+    if done:
+        sp_stats = next(
+            (s for s in species_stats(candidates, p["decisions"], config["total_iterations"])
+             if s["species_safe"] == req.species),
+            None,
+        )
+        pending = sp_stats["n_pending"] if sp_stats else 0
 
     return {
         "success": True,
@@ -57,6 +74,7 @@ def post_decisions(req: DecisionsRequest) -> dict:
         "done": done,
         "next_iteration": next_iter if not done else None,
         "remaining": int(next_cands["site_occasion_key"].nunique()) if not done else 0,
+        "pending": pending,
     }
 
 

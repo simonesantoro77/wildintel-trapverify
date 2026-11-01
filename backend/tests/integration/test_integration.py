@@ -144,6 +144,7 @@ def test_setup_creates_session_on_disk(http, camtrap_dir, tmp_path):
 def test_setup_generates_verified_camtrapdp(http, camtrap_dir, tmp_path):
     out = tmp_path / "session_verified"
     data = _do_setup(http, camtrap_dir, out)
+    http.get("/api/results")  # the verified export is rebuilt lazily, on demand
     verified = Path(data["session_dir"]) / "camtrap_dp_verified"
     assert (verified / "deployments.csv").is_file()
     assert (verified / "media.csv").is_file()
@@ -245,6 +246,8 @@ def test_decisions_regenerate_verified_camtrapdp(http, camtrap_dir, tmp_path):
         "species": "Vulpes_vulpes", "iteration": 1, "confirmed": all_ids,
     })
 
+    http.get("/api/results")  # the verified export is rebuilt lazily, on demand
+
     obs = pd.read_csv(session_dir / "camtrap_dp_verified" / "observations.csv", dtype=str)
     human_rows = obs[obs["classificationMethod"] == "human"]
     assert len(human_rows) == 3
@@ -336,6 +339,8 @@ def test_put_decisions_updates_outputs_on_disk(http, camtrap_dir, tmp_path):
     })
     assert resp.status_code == 200
 
+    http.get("/api/results")  # the verified export is rebuilt lazily, on demand
+
     obs = pd.read_csv(session_dir / "camtrap_dp_verified" / "observations.csv", dtype=str)
     assert (obs["classificationMethod"] == "human").sum() == 1
 
@@ -415,6 +420,8 @@ def test_classified_by_custom_label_in_verified_camtrapdp(http, camtrap_dir, tmp
     rep_id = events[0]["repObsId"]
     http.post("/api/decisions", json={"species": "Vulpes_vulpes", "iteration": 1, "confirmed": [rep_id]})
 
+    http.get("/api/results")  # the verified export is rebuilt lazily, on demand
+
     obs = pd.read_csv(session_dir / "camtrap_dp_verified" / "observations.csv", dtype=str)
     assert obs[obs["observationID"] == rep_id].iloc[0]["classifiedBy"] == "wildlife_expert"
 
@@ -426,6 +433,8 @@ def test_classified_by_default_is_expert_review(http, camtrap_dir, tmp_path):
     events = http.get("/api/species/Vulpes_vulpes/events", params={"iteration": 1}).json()
     rep_id = events[0]["repObsId"]
     http.post("/api/decisions", json={"species": "Vulpes_vulpes", "iteration": 1, "confirmed": [rep_id]})
+
+    http.get("/api/results")  # the verified export is rebuilt lazily, on demand
 
     obs = pd.read_csv(session_dir / "camtrap_dp_verified" / "observations.csv", dtype=str)
     assert obs[obs["observationID"] == rep_id].iloc[0]["classifiedBy"] == "expert_review"
@@ -455,6 +464,8 @@ def test_extended_confirmation_false_marks_only_rep(http, camtrap_dir, tmp_path)
     rank1_a = next(e for e in events if e["rank"] == 1 and "SITE_A" in e["key"])
     http.post("/api/decisions", json={"species": "Vulpes_vulpes", "iteration": 1, "confirmed": [rank1_a["repObsId"]]})
 
+    http.get("/api/results")  # the verified export is rebuilt lazily, on demand
+
     obs = pd.read_csv(session_dir / "camtrap_dp_verified" / "observations.csv", dtype=str)
     assert (obs["classificationMethod"] == "human").sum() == 1
 
@@ -483,6 +494,8 @@ def test_extended_confirmation_true_marks_all_burst_obs(http, camtrap_dir, tmp_p
     rank1_a = next(e for e in events if e["rank"] == 1 and "SITE_A" in e["key"])
     http.post("/api/decisions", json={"species": "Vulpes_vulpes", "iteration": 1, "confirmed": [rank1_a["repObsId"]]})
 
+    http.get("/api/results")  # the verified export is rebuilt lazily, on demand
+
     obs = pd.read_csv(session_dir / "camtrap_dp_verified" / "observations.csv", dtype=str)
     human_rows = obs[obs["classificationMethod"] == "human"]
     assert len(human_rows) == 2  # o001 (rep) + o002 (burst mate)
@@ -507,6 +520,8 @@ def test_extended_confirmation_does_not_mark_other_bursts(http, camtrap_dir, tmp
     events = http.get("/api/species/Vulpes_vulpes/events", params={"iteration": 1}).json()
     rank1_a = next(e for e in events if e["rank"] == 1 and "SITE_A" in e["key"])
     http.post("/api/decisions", json={"species": "Vulpes_vulpes", "iteration": 1, "confirmed": [rank1_a["repObsId"]]})
+
+    http.get("/api/results")  # the verified export is rebuilt lazily, on demand
 
     obs = pd.read_csv(session_dir / "camtrap_dp_verified" / "observations.csv", dtype=str)
     human_obs = set(obs[obs["classificationMethod"] == "human"]["observationID"])

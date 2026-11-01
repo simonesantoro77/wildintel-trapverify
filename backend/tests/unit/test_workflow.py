@@ -1561,3 +1561,33 @@ def test_burst_context_excludes_frames_beyond_gap_seconds(camtrap_dir: Path):
     )
     ctx_ids = set(cands[cands["is_context"] == True]["mediaID"])  # noqa: E712
     assert "m_far_before" not in ctx_ids
+
+
+def test_build_candidates_min_score_by_species_overrides_general(camtrap_dir):
+    """A per-species threshold replaces the general min_score for that species
+    only; species without an override keep the general value."""
+    dep, med, obs = load_camtrapdp(camtrap_dir)
+    common = dict(
+        target_species=["Vulpes vulpes"],
+        study_start=date(2025, 11, 1),
+        study_end=date(2025, 11, 10),
+        occasion_days=5,
+        total_iterations=100_000,
+        gap_seconds=60,
+    )
+    # General 0.5 would keep everything; the fox override (0.75) drops m003/m005.
+    stricter = build_candidates(dep, med, obs, min_score=0.5,
+                                min_score_by_species={"Vulpes vulpes": 0.75}, **common)
+    assert "m005" not in set(stricter["mediaID"])
+    assert "m003" not in set(stricter["mediaID"])
+    assert {"m001", "m002", "m004"} <= set(stricter["mediaID"])
+    # General 0.95 would drop everything; a lower fox override (0.0) keeps them.
+    looser = build_candidates(dep, med, obs, min_score=0.95,
+                              min_score_by_species={"Vulpes vulpes": 0.0}, **common)
+    plain = build_candidates(dep, med, obs, min_score=0.0, **common)
+    assert set(looser["mediaID"]) == set(plain["mediaID"])
+    # An override for another species leaves this one on the general value.
+    other = build_candidates(dep, med, obs, min_score=0.75,
+                             min_score_by_species={"Meles meles": 0.1}, **common)
+    general = build_candidates(dep, med, obs, min_score=0.75, **common)
+    assert set(other["mediaID"]) == set(general["mediaID"])

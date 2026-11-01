@@ -30,10 +30,18 @@
     "new_session": "Neue Sitzung",
     "start": "Überprüfung starten →",
     "recent_sessions": "Letzte Sitzungen",
-    "recent_untitled": "Sitzung ohne Arten"
+    "recent_untitled": "Sitzung ohne Arten",
+    "import_session": "Sitzung importieren…",
+    "import_session_tooltip": "Eine auf einem anderen Computer mit «Sitzung exportieren» erstellte .zip-Datei öffnen",
+    "import_session_picker": "Sitzungs-.zip auswählen (Doppelklick)"
   },
   "setup": {
-    "steps": ["Quelle", "Arten", "Zeitraum", "Parameter"],
+    "steps": [
+      "Quelle",
+      "Arten",
+      "Zeitraum",
+      "Parameter"
+    ],
     "back": "← Zurück",
     "back_welcome": "← Startseite",
     "next": "Weiter →",
@@ -108,6 +116,9 @@
     "hint_gap": "Bilder mit weniger als N Sekunden Abstand werden zum selben Detektionsereignis gruppiert.",
     "label_min_score": "Mindest-Erkennungsscore",
     "hint_min_score": "Erkennungen mit einer Konfidenz unterhalb dieses Schwellenwerts werden ignoriert.",
+    "label_min_score_by_species": "Schwellenwert pro Art (optional)",
+    "hint_min_score_by_species": "Leer lassen, um den allgemeinen Schwellenwert ({{value}}) zu verwenden. Nützlich für Arten, die der Klassifikator schlecht erkennt (niedriger) oder zu oft meldet (höher).",
+    "reset_min_score_by_species": "Allgemeinen Schwellenwert für alle verwenden",
     "label_classified_by": "Klassifiziert von",
     "hint_classified_by": "Wert, der in das Feld classifiedBy des verifizierten CamtrapDP für bestätigte Beobachtungen geschrieben wird.",
     "label_extended_confirmation": "Erweiterte Bestätigung",
@@ -178,7 +189,13 @@
     "reviewed_periods": "{{resolved}} von {{total}} Stichprobenanlässen überprüft ({{pct}}%)",
     "complete": "Abgeschlossen",
     "round": "Runde {{n}}",
-    "no_species": "Keine Arten mit Kandidaten. Überprüfen Sie Ihre Konfiguration."
+    "no_species": "Keine Arten mit Kandidaten. Überprüfen Sie Ihre Konfiguration.",
+    "pending": "{{n}} zur Expertenprüfung offen",
+    "pending_badge": "{{n}} zur Expertenprüfung offen",
+    "see_results_pending": "Ergebnisse anzeigen ({{n}} offene Stichprobenanlässe erscheinen als NA)",
+    "export_session": "Sitzung exportieren",
+    "exporting": "Wird exportiert…",
+    "export_session_tooltip": "Lädt eine .zip-Datei mit den Entscheidungen dieser Sitzung (ohne Fotos) herunter, um sie auf einem anderen Computer fortzusetzen"
   },
   "gallery": {
     "title": "Erkennungsüberprüfung",
@@ -219,7 +236,46 @@
     "updating": "Aktualisierung…",
     "toast_updated": "Entscheidungen aktualisiert. Ergebnisse neu generiert.",
     "context_frame": "Kontext",
-    "image_permission_denied": "Zugriff verweigert. Überprüfen Sie die Zugriffsberechtigungen."
+    "image_permission_denied": "Zugriff verweigert. Überprüfen Sie die Zugriffsberechtigungen.",
+    "prev_frame": "Vorheriges Bild",
+    "next_frame": "Nächstes Bild",
+    "unsure_btn": "? Unsicher",
+    "unsure_tooltip": "Nicht eindeutig: In der nächsten Runde wird ein weiteres Detektionsereignis dieses Stichprobenanlasses gezeigt. Wird keines bestätigt, bleibt der Stichprobenanlass zur Expertenprüfung offen, statt als nicht nachgewiesen zu gelten.",
+    "prev_site": "Vorheriger Standort",
+    "next_site": "Nächster Standort",
+    "site_position": "Standort {{i}} von {{n}}",
+    "decided_progress": "{{done}}/{{total}} in dieser Runde entschieden",
+    "next_site_cta": "Zum nächsten Standort ({{site}})",
+    "confirm_all_site": "Alle bestätigen (dieser Standort)",
+    "confirm_all_site_tooltip": "Alle Karten des angezeigten Standorts als bestätigt markieren",
+    "needs_decision_count": "Für {{n}} Erkennungsereignisse fehlt noch eine Entscheidung, bevor die Runde abgeschlossen werden kann. Ihr Fortschritt ist bereits gespeichert: Sie können schließen und später weitermachen.",
+    "toast_rounds_done_pending": "Runden abgeschlossen. {{n}} Stichprobenanlässe warten auf Expertenprüfung: Prüfen Sie sie jetzt oder exportieren Sie die Sitzung, damit jemand anderes sie abschließt.",
+    "pending_badge": "Expertenprüfung offen",
+    "pending_hint": "Bei diesen Stichprobenanlässen sind alle Detektionsereignisse ohne Bestätigung aufgebraucht, und mindestens eines wurde als unsicher markiert. Bestätigen Sie jeweils das Vorkommen (das angezeigte Ereignis wird gespeichert), lehnen Sie ab oder lassen Sie es unsicher, damit jemand anderes es prüft. Sie können speichern, ohne alle zu entscheiden.",
+    "pending_count": "{{n}} zur Expertenprüfung offen",
+    "pending_nothing_to_save": "Sie haben keinen offenen Stichprobenanlass bestätigt oder abgelehnt.",
+    "toast_pending_saved": "Gespeichert. {{n}} Stichprobenanlässe sind noch zur Expertenprüfung offen.",
+    "round_hint_unsure": "In Runde {{n}} wird jeder Stichprobenanlass durch das Detektionsereignis mit der höchsten Erkennungskonfidenz unter den noch nicht überprüften repräsentiert. Wenn Sie unsicher sind, markieren Sie es als «Unsicher»: Es zählt für die nächste Runde als nicht bestätigt, aber der Stichprobenanlass gilt erst als nicht nachgewiesen, wenn jemand ihn geprüft hat.",
+    "no_events": "Keine offenen Detektionsereignisse für diese Art in dieser Runde.",
+    "save_progress": "Fortschritt speichern",
+    "save_progress_tooltip": "Speichert den bisherigen Stand dieser Runde im Sitzungsordner, um später weiterzumachen (wird auch alle paar Sekunden automatisch gespeichert). Die Ergebnisse ändern sich erst, wenn die Runde abgeschlossen ist.",
+    "progress_saving": "Fortschritt wird gespeichert…",
+    "progress_saved_at": "Fortschritt gespeichert um {{time}}",
+    "progress_error": "Fortschritt konnte nicht gespeichert werden",
+    "progress_saved_toast": "Fortschritt gespeichert ({{n}} Entscheidungen). Sie können die App schließen und später weitermachen.",
+    "progress_up_to_date": "Der Fortschritt war bereits gespeichert.",
+    "finish_round": "Runde abschließen",
+    "finish_round_tooltip": "Schließt die Runde ab, sobald jedes Ereignis eine Entscheidung hat, und geht zur nächsten.",
+    "cross_title": "Eine andere Art auf diesem Foto? Hier für diesen Standort und diese Erfassungsperiode bestätigen:",
+    "cross_tooltip": "Dieses Foto bestätigt {{species}} an {{site}}, Periode {{occasion}}",
+    "cross_undo_tooltip": "Aus dieser Galerie bestätigt. Klicken zum Rückgängigmachen",
+    "cross_already": "{{species}} ist an diesem Standort und in dieser Periode bereits bestätigt",
+    "cross_added": "{{species}} bestätigt an {{site}}, Periode {{occasion}}",
+    "cross_removed": "Bestätigung von {{species}} an {{site}}, Periode {{occasion}} rückgängig gemacht",
+    "reopen_btn": "Zurück zu Runde {{n}}",
+    "reopen_tooltip": "Öffnet Runde {{n}} mit Ihren Entscheidungen erneut, um sie zu korrigieren. Der Fortschritt der aktuellen Runde bleibt erhalten.",
+    "reopen_confirm": "Zurück zu Runde {{n}}, um ihre Entscheidungen zu korrigieren?\n\nSie sehen die Entscheidungen so, wie Sie sie hinterlassen haben. Ihr Fortschritt in der aktuellen Runde wird gespeichert und kehrt zurück, wenn Sie Runde {{n}} erneut abschließen.",
+    "reopen_done": "Runde {{n}} wieder geöffnet: korrigieren Sie, was nötig ist, und klicken Sie auf „Runde abschließen“."
   },
   "help": {
     "title": "Hilfe — CamTrap Verify",
@@ -237,10 +293,22 @@
     ],
     "concepts_title": "Schlüsselkonzepte",
     "concepts": [
-      { "term": "Stichprobenanlass", "def": "Ein N-Tage-Zeitfenster pro Standort. Alle Bilder desselben Standorts innerhalb dieses Fensters bilden einen Anlass." },
-      { "term": "Detektionsereignis", "def": "Eine Gruppe von Bildern, die am selben Standort mit weniger als N Sekunden Abstand aufgenommen wurden (konfiguriert unter 'Pause zwischen Detektionsereignissen')." },
-      { "term": "Runde", "def": "In jeder Runde wird das Detektionsereignis mit der höchsten Konfidenz angezeigt, das noch nicht für jeden Anlass überprüft wurde. Bei Ablehnung in Runde 1 erscheint das nächste Detektionsereignis in Runde 2." },
-      { "term": "Konfidenz", "def": "Die maximale Klassifizierungswahrscheinlichkeit aller Bilder eines Detektionsereignisses, wie vom KI-Modell zugewiesen." }
+      {
+        "term": "Stichprobenanlass",
+        "def": "Ein N-Tage-Zeitfenster pro Standort. Alle Bilder desselben Standorts innerhalb dieses Fensters bilden einen Anlass."
+      },
+      {
+        "term": "Detektionsereignis",
+        "def": "Eine Gruppe von Bildern, die am selben Standort mit weniger als N Sekunden Abstand aufgenommen wurden (konfiguriert unter 'Pause zwischen Detektionsereignissen')."
+      },
+      {
+        "term": "Runde",
+        "def": "In jeder Runde wird das Detektionsereignis mit der höchsten Konfidenz angezeigt, das noch nicht für jeden Anlass überprüft wurde. Bei Ablehnung in Runde 1 erscheint das nächste Detektionsereignis in Runde 2."
+      },
+      {
+        "term": "Konfidenz",
+        "def": "Die maximale Klassifizierungswahrscheinlichkeit aller Bilder eines Detektionsereignisses, wie vom KI-Modell zugewiesen."
+      }
     ],
     "decisions_title": "Entscheidungen",
     "decisions_body": "Bestätigen bedeutet, dass die Art bei diesem Anlass und an diesem Standort vorhanden ist. Ablehnen bedeutet, dass die Detektion falsch ist. Ein Anlass schließt sich, sobald ein Detektionsereignis bestätigt wird."
@@ -273,11 +341,29 @@
     "col_psi_verified": "ψ verifiziert",
     "col_p_naive": "p naiv",
     "col_p_verified": "p verifiziert",
-    "degenerate": "Entartet"
+    "degenerate": "Entartet",
+    "pending_title": "{{n}} Stichprobenanlässe sind noch zur Expertenprüfung offen",
+    "pending_hint": "Sie erscheinen in <code>dethist_verified_*.csv</code> als NA, genau wie Stichprobenanlässe mit inaktiver Kamera. Zur Unterscheidung siehe <code>cell_status_*.csv</code> (Werte <code>pending</code> und <code>inactive</code>). Sie können die Sitzung im Artenindex exportieren, damit jemand anderes sie prüft."
   },
   "footer": {
     "copyright": "© {{year}} <a href='https://wildintel.eu/' target='_blank' rel='noopener noreferrer' style='color:inherit;text-decoration:underline'>WildINTEL</a>. Alle Rechte vorbehalten.",
     "website": "WildINTEL-Website",
     "github": "GitHub-Repository"
+  },
+  "relink": {
+    "title": "Wo liegen die Daten auf diesem Computer?",
+    "desc": "Diese Sitzung wurde mit anderen Pfaden erstellt (zum Beispiel auf einem anderen Computer). Geben Sie hier den CamtrapDP-Ordner und, falls verwendet, den Bildordner an. Die Entscheidungen bleiben unverändert.",
+    "data_dir": "CamtrapDP-Ordner (deployments.csv, media.csv, observations.csv)",
+    "images_dir": "Bildordner (optional)",
+    "images_placeholder": "Leer lassen, wenn die Pfade in media.csv relativ zum CamtrapDP-Ordner sind",
+    "was": "Vorher: {{path}}",
+    "browse": "Durchsuchen…",
+    "flat_search": "Bilder auch in Unterordnern suchen",
+    "later": "Später",
+    "save": "Ordner speichern",
+    "saving": "Wird geprüft…",
+    "banner_data": "Der Datenordner dieser Sitzung wurde auf diesem Computer nicht gefunden. Geben Sie ihn an, um die Ergebnisse zu erzeugen.",
+    "banner_images": "Die Bilder dieser Sitzung wurden auf diesem Computer nicht gefunden. Geben Sie den Bildordner an, um sie zu sehen.",
+    "open": "Ordner angeben"
   }
 }

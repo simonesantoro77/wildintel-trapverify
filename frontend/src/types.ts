@@ -5,6 +5,10 @@ export interface Frame {
   ts: string
   prob: number | null
   isContext?: boolean
+  /** Pending cards only: representative observation of this frame's event. */
+  burstRepObsId?: string
+  /** Pending cards only: rank of this frame's detection event. */
+  rank?: number
 }
 
 export interface DetectionEvent {
@@ -16,7 +20,7 @@ export interface DetectionEvent {
   repObsId: string
   maxProb: number
   frames: Frame[]
-  status?: 'confirmed' | 'not_confirmed'
+  status?: 'confirmed' | 'not_confirmed' | 'pending'
 }
 
 export interface SpeciesStats {
@@ -25,7 +29,11 @@ export interface SpeciesStats {
   n_total_combos: number
   n_confirmed_combos: number
   n_resolved: number
+  /** Cells whose events ran out with at least one marked unsure. */
+  n_pending: number
   current_iteration: number
+  /** rounds: review in progress · pending: only pending cells left · complete */
+  phase: 'rounds' | 'pending' | 'complete'
   thumbnails: string[]
 }
 
@@ -41,12 +49,24 @@ export interface WorkflowConfig {
   total_iterations: number
   gap_seconds: number
   min_score: number
+  /** Per-species overrides of min_score (scientificName -> threshold). */
+  min_score_by_species?: Record<string, number>
   include_burst_context: boolean
   classified_by: string
   extended_confirmation: boolean
 }
 
-export type Decision = 'confirmed' | 'rejected' | null
+export type DecisionValue = 'confirmed' | 'rejected' | 'unsure'
+export type Decision = DecisionValue | null
+
+export interface RelinkStatus {
+  camtrap_dir_ok: boolean
+  images_ok: boolean
+  needs_relink: boolean
+  camtrap_dir: string
+  image_base_dir: string
+  flat_search: boolean
+}
 
 export interface OccupancyRow {
   species: string
@@ -68,4 +88,24 @@ export interface RecentSession {
   target_species: string[]
   study_start: string | null
   study_end: string | null
+}
+
+/** Decisions of an unfinished round kept in the session folder. */
+export interface SavedProgress {
+  mode: 'rounds' | 'pending'
+  iteration: number
+  saved_at: string
+  decisions: Record<string, DecisionValue>
+  chosen_rep: Record<string, string>
+}
+
+/** State of a target species at one site and occasion (lightbox side panel). */
+export interface CrossSpecies {
+  scientificName: string
+  species_safe: string
+  /** cross: confirmed from a photo of another species; confirmed: in its own review */
+  status: 'none' | 'cross' | 'confirmed'
+  mediaID?: string
+  observationID?: string
+  source?: string
 }

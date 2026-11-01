@@ -19,7 +19,6 @@
     "react-dom": "^19.2.7",
     "react-i18next": "^17.0.8",
     "react-router-dom": "^7.18.0",
-    "swiper": "^12.2.0",
     "yet-another-react-lightbox": "^3.32.0"
   },
   "devDependencies": {
