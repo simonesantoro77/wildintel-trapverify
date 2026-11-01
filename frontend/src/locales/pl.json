@@ -280,7 +280,10 @@
     "reopen_tooltip": "Ponownie otwiera rundę {{n}} z podjętymi decyzjami, aby można je było poprawić. Postęp bieżącej rundy zostaje zachowany.",
     "reopen_confirm": "Wrócić do rundy {{n}}, aby poprawić jej decyzje?\n\nZobaczysz decyzje tak, jak je zostawiłeś. Postęp bieżącej rundy zostanie zapisany i wróci po ponownym zakończeniu rundy {{n}}.",
     "reopen_done": "Runda {{n}} ponownie otwarta: popraw, co trzeba, i kliknij „Zakończ rundę”.",
-    "cross_unsure_note": "Potwierdzono {{species}} w tym zdarzeniu. Jeśli to jedyne zwierzę, decyzja tutaj powinna brzmieć Odrzucone, a nie Niepewne."
+    "cross_unsure_note": "Potwierdzono {{species}} w tym zdarzeniu. Jeśli to jedyne zwierzę, decyzja tutaj powinna brzmieć Odrzucone, a nie Niepewne.",
+    "prev_card": "Wstecz",
+    "prev_card_tooltip": "Wróć do właśnie ocenionej karty (Backspace)",
+    "cross_confirmed_note": "Potwierdzono {{species}} w tym zdarzeniu oraz ten gatunek: poprawne tylko, jeśli są zwierzęta obu gatunków."
   },
   "help": {
     "title": "Pomoc — CamTrap Verify",

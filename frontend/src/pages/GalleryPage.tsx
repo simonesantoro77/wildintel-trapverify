@@ -51,6 +51,10 @@ export default function GalleryPage() {
   const [siteIdx, setSiteIdx] = useState(0)
   const [lbOpen, setLbOpen] = useState(false)
   const [lbEvIdx, setLbEvIdx] = useState(0)   // which event is shown in the lightbox
+  // Events left behind by deciding (the lightbox jumps to the next undecided
+  // one): "previous card" walks back through them to correct a mistake.
+  const [lbHistory, setLbHistory] = useState<number[]>([])
+  const lbBackRef = useRef<() => void>(() => {})
   const [lbIndex, setLbIndex] = useState(0)   // frame index within that event
   const [lbInverted, setLbInverted] = useState(false)
   const [lbBrightness, setLbBrightness] = useState(100)
@@ -295,6 +299,7 @@ export default function GalleryPage() {
       if (e.key === 'n' || e.key === 'N') decideInLbRef.current('rejected')
       if ((e.key === 'u' || e.key === 'U') && mode !== 'review') decideInLbRef.current('unsure')
       if (/^[1-9]$/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) toggleCrossRef.current(Number(e.key) - 1)
+      if (e.key === 'Backspace') { e.preventDefault(); lbBackRef.current() }
       if (e.key === 'ArrowUp') {
         e.preventDefault()
         e.stopPropagation()
@@ -389,6 +394,7 @@ export default function GalleryPage() {
   toggleCrossRef.current = (i) => { toggleCross(i) }
 
   const openLightbox = useCallback((evIdx: number, frIdx: number) => {
+    setLbHistory([])
     setLbEvIdx(evIdx)
     setLbIndex(frIdx)
     setLbInverted(false)
@@ -434,9 +440,11 @@ export default function GalleryPage() {
         .map((e, i) => ({ i, siteId: e.siteId }))
         .filter((x) => x.siteId === ev.siteId)
       const posInSite = siteIndices.findIndex((x) => x.i === lbEvIdx)
+      const from = lbEvIdx
       for (let p = posInSite + 1; p < siteIndices.length; p++) {
         const i = siteIndices[p].i
         if (!updated[events[i].key]) {
+          setLbHistory((h) => [...h, from])
           setLbEvIdx(i)
           setLbIndex(0)
           return
@@ -444,6 +452,7 @@ export default function GalleryPage() {
       }
       for (let i = 0; i < events.length; i++) {
         if (!updated[events[i].key]) {
+          setLbHistory((h) => [...h, from])
           setLbEvIdx(i)
           setLbIndex(0)
           return
@@ -453,6 +462,22 @@ export default function GalleryPage() {
     }
   }
   decideInLbRef.current = decideInLb
+
+  // Back to the card decided just before (or, with no history, the previous one in the list).
+  const lbCanGoBack = lbHistory.length > 0 || lbEvIdx > 0
+  function lbGoBack() {
+    if (lbHistory.length) {
+      const prev = lbHistory[lbHistory.length - 1]
+      setLbHistory((h) => h.slice(0, -1))
+      setLbEvIdx(prev)
+    } else if (lbEvIdx > 0) {
+      setLbEvIdx(lbEvIdx - 1)
+    } else {
+      return
+    }
+    setLbIndex(0)
+  }
+  lbBackRef.current = lbGoBack
 
   function confirmAllInSite() {
     setDecisions((prev) => {
@@ -906,10 +931,22 @@ export default function GalleryPage() {
         // Use the whole screen: photos are scaled up to fill it (see the
         // .yarl__slide_image rule), leaving room for the title, the decision
         // buttons and, on the left, the other species.
-        styles={{ slide: { padding: `44px 56px 118px ${otherSpecies.length ? 252 : 56}px` } }}
+        styles={{ slide: { padding: `44px 56px 118px ${otherSpecies.length ? 312 : 116}px` } }}
         render={{
           controls: () => lbCurrentEv && (
             <>
+            <button
+              type="button"
+              onClick={lbGoBack}
+              disabled={!lbCanGoBack}
+              title={t('gallery.prev_card_tooltip')}
+              aria-label={t('gallery.prev_card')}
+              className="absolute top-1/2 -translate-y-1/2 flex flex-col items-center gap-1 px-2 py-3 rounded-lg border border-white/40 bg-black/50 text-white/90 hover:bg-white/15 disabled:opacity-30 disabled:hover:bg-black/50"
+              style={{ zIndex: 10000, left: otherSpecies.length ? 252 : 56 }}
+            >
+              <span aria-hidden="true" className="text-2xl leading-none">↶</span>
+              <span className="text-[10px] leading-tight w-12 text-center">{t('gallery.prev_card')}</span>
+            </button>
             {otherSpecies.length > 0 && (
               <div
                 className="absolute left-12 top-1/2 -translate-y-1/2 flex flex-col gap-1.5 w-48"
@@ -943,9 +980,10 @@ export default function GalleryPage() {
                     </button>
                   )
                 })}
-                {lbDecision === 'unsure' && lbCrossHere.length > 0 && (
+                {(lbDecision === 'unsure' || lbDecision === 'confirmed') && lbCrossHere.length > 0 && (
                   <p role="note" className="mt-1 text-[11px] leading-snug text-amber-300">
-                    {t('gallery.cross_unsure_note', { species: lbCrossHere.join(', ') })}
+                    {t(lbDecision === 'unsure' ? 'gallery.cross_unsure_note' : 'gallery.cross_confirmed_note',
+                       { species: lbCrossHere.join(', ') })}
                   </p>
                 )}
               </div>
