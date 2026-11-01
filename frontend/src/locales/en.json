@@ -279,7 +279,8 @@
     "reopen_btn": "Back to round {{n}}",
     "reopen_tooltip": "Re-opens round {{n}} with the decisions you took so you can correct them. Your progress in the current round is kept.",
     "reopen_confirm": "Go back to round {{n}} to correct its decisions?\n\nYou will see the decisions as you left them. Your progress in the current round is saved and comes back when you finish round {{n}} again.",
-    "reopen_done": "Round {{n}} re-opened: correct what you need and click “Finish round”."
+    "reopen_done": "Round {{n}} re-opened: correct what you need and click “Finish round”.",
+    "cross_unsure_note": "You confirmed {{species}} in this event. If it is the only animal, the decision here should be Rejected, not Unsure."
   },
   "help": {
     "title": "Help — CamTrap Verify",

@@ -279,7 +279,8 @@
     "reopen_btn": "Volver a la ronda {{n}}",
     "reopen_tooltip": "Reabre la ronda {{n}} con las decisiones que tomaste para poder corregirlas. Lo que llevas de la ronda actual se conserva.",
     "reopen_confirm": "¿Volver a la ronda {{n}} para corregir sus decisiones?\n\nVerás las decisiones tal como las dejaste. Lo que llevas en la ronda actual se guarda y lo recuperarás al terminar de nuevo la ronda {{n}}.",
-    "reopen_done": "Ronda {{n}} reabierta: corrige lo que necesites y pulsa «Terminar ronda»."
+    "reopen_done": "Ronda {{n}} reabierta: corrige lo que necesites y pulsa «Terminar ronda».",
+    "cross_unsure_note": "Has confirmado {{species}} en este evento. Si es el único animal, la decisión aquí debería ser No confirmada, no Dudosa."
   },
   "help": {
     "title": "Ayuda — CamTrap Verify",

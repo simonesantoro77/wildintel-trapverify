@@ -279,7 +279,8 @@
     "reopen_btn": "Zurück zu Runde {{n}}",
     "reopen_tooltip": "Öffnet Runde {{n}} mit Ihren Entscheidungen erneut, um sie zu korrigieren. Der Fortschritt der aktuellen Runde bleibt erhalten.",
     "reopen_confirm": "Zurück zu Runde {{n}}, um ihre Entscheidungen zu korrigieren?\n\nSie sehen die Entscheidungen so, wie Sie sie hinterlassen haben. Ihr Fortschritt in der aktuellen Runde wird gespeichert und kehrt zurück, wenn Sie Runde {{n}} erneut abschließen.",
-    "reopen_done": "Runde {{n}} wieder geöffnet: korrigieren Sie, was nötig ist, und klicken Sie auf „Runde abschließen“."
+    "reopen_done": "Runde {{n}} wieder geöffnet: korrigieren Sie, was nötig ist, und klicken Sie auf „Runde abschließen“.",
+    "cross_unsure_note": "Du hast {{species}} in diesem Ereignis bestätigt. Wenn es das einzige Tier ist, sollte die Entscheidung hier Abgelehnt sein, nicht Unsicher."
   },
   "help": {
     "title": "Hilfe — CamTrap Verify",

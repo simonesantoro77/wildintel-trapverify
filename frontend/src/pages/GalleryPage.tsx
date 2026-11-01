@@ -577,6 +577,14 @@ export default function GalleryPage() {
 
   const lbCurrentEv = events[lbEvIdx]
   const lbDecision  = lbCurrentEv ? decisions[lbCurrentEv.key] : undefined
+  // Another species confirmed from a photo of this event while the card is
+  // "unsure": consistent only if the photo has more than one animal, so the
+  // reviewer gets a reminder (not a block).
+  const lbCrossHere = lbCurrentEv
+    ? (crossByCell[`${lbCurrentEv.siteId}|${lbCurrentEv.occasion}`] ?? [])
+        .filter((c) => c.status === 'cross' && lbCurrentEv.frames.some((f) => f.mediaId === c.mediaID))
+        .map((c) => c.scientificName)
+    : []
   const lbReadOnly  = completed && locked
   const allowUnsure = mode !== 'review'
 
@@ -935,6 +943,11 @@ export default function GalleryPage() {
                     </button>
                   )
                 })}
+                {lbDecision === 'unsure' && lbCrossHere.length > 0 && (
+                  <p role="note" className="mt-1 text-[11px] leading-snug text-amber-300">
+                    {t('gallery.cross_unsure_note', { species: lbCrossHere.join(', ') })}
+                  </p>
+                )}
               </div>
             )}
             <div className="absolute bottom-0 left-0 right-0 flex flex-col items-center gap-3 px-4 pb-6" style={{ zIndex: 10000 }}>
