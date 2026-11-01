@@ -1345,6 +1345,25 @@ def confirmed_keys_set(decisions_dir: Path) -> set[str]:
     return keys | cross_keys_set(decisions_dir)
 
 
+def confirmed_observations(decisions_dir: Path, species_cands: pd.DataFrame) -> dict[str, str]:
+    """``site_occasion_key`` -> confirmed ``observationID`` for one species' cells.
+
+    Only confirmations recorded in this species' decision files are returned
+    (rounds, pending review, edits), and only when the observation belongs to
+    the species' candidates. Cells confirmed from another species' gallery
+    (``cross_*.csv``) are left out: their photo is not one of this species'
+    detection events.
+    """
+    dec = load_all_decisions(decisions_dir)
+    if dec.empty:
+        return {}
+    keys = set(species_cands["site_occasion_key"])
+    obs = set(species_cands["observationID"].astype(str))
+    dec = dec[dec["site_occasion_key"].isin(keys) & dec["observationID"].astype(str).isin(obs)]
+    dec = dec.drop_duplicates("site_occasion_key", keep="last")
+    return dict(zip(dec["site_occasion_key"], dec["observationID"].astype(str)))
+
+
 # ─── Confirmations made from another species' gallery ───────────────────────
 #
 # While reviewing species A, the expert may see species B in a photo (e.g. a
@@ -1948,15 +1967,29 @@ def get_review_events(
         Sorted by ``siteId`` then ``occasion``.
     """
     conf_keys = confirmed_keys_set(decisions_dir)
-    rank1 = species_cands[species_cands["rank"] == 1]
     total_seqs_by_key = species_cands.groupby("site_occasion_key")["rank"].max().to_dict()
+
+    # A confirmed cell is shown with the detection event that was confirmed
+    # (which may come from a later round), not with its rank-1 event.
+    confirmed_obs = confirmed_observations(decisions_dir, species_cands)
+    conf_bursts = (
+        species_cands[species_cands["observationID"].astype(str).isin(set(confirmed_obs.values()))]
+        [["site_occasion_key", "burst_id"]].drop_duplicates("site_occasion_key")
+    )
+    rank1_bursts = species_cands.loc[species_cands["rank"] == 1, ["site_occasion_key", "burst_id"]] \
+        .drop_duplicates("site_occasion_key")
+    rank1_bursts = rank1_bursts[~rank1_bursts["site_occasion_key"].isin(set(conf_bursts["site_occasion_key"]))]
+    bursts = pd.concat([conf_bursts, rank1_bursts], ignore_index=True)
+    rows = species_cands.merge(bursts, on=["site_occasion_key", "burst_id"])
 
     frame_url = _frame_url_factory(image_base_dir, fallback_base, flat_search, resolver, token)
     events = []
-    for key, recs in _event_records(rank1.sort_values(["burst_id", "ts"])).items():
+    for key, recs in _event_records(rows.sort_values(["burst_id", "ts"])).items():
         event = _build_event(key, recs, total_seqs_by_key.get(key, 1), frame_url)
-        event["rank"] = 1
         event["status"] = "confirmed" if key in conf_keys else "not_confirmed"
+        obs = confirmed_obs.get(key)
+        if obs is not None and any(str(f["obsId"]) == obs for f in event["frames"]):
+            event["repObsId"] = obs
         events.append(event)
 
     events.sort(key=lambda e: (e["siteId"], e["occasion"]))

@@ -26,6 +26,22 @@ function makeEvent(overrides: Partial<DetectionEvent> = {}): DetectionEvent {
 }
 
 describe('EventCard', () => {
+  it('opens a confirmed card at the confirmed photo, not the most confident one', () => {
+    const event = makeEvent({
+      status: 'confirmed',
+      repObsId: 'obs-2',
+      frames: [
+        { obsId: 'obs-1', mediaId: 'media-1', img: '/img1.jpg', ts: '', prob: 0.95 },
+        { obsId: 'obs-2', mediaId: 'media-2', img: '/img2.jpg', ts: '', prob: 0.6 },
+      ],
+    })
+    const { container } = render(
+      <EventCard event={event} decision="confirmed" needsDecision={false}
+        onDecide={vi.fn()} onOpenLightbox={vi.fn()} eventIdx={0} readOnly />,
+    )
+    expect(container.querySelector('img')?.getAttribute('src')).toBe('/img2.jpg')
+  })
+
   it('marks pending events that need a decision', () => {
     const { container } = render(
       <EventCard

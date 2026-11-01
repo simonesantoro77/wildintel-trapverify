@@ -34,6 +34,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - The lightbox switches between frames and detection events instantly (no slide or fade animation), and a gallery card preloads the neighbouring frames once the pointer is over it, so ‹ › don't flash an empty frame.
 
 #### Fixed
+- Once a species is complete, the review screen showed every confirmed cell with its rank-1 detection event (the one of the first round), even when the event actually confirmed came from a later round. Confirmed cells now show the confirmed event, opened at the confirmed photo. Editing the decisions of a completed species (**Update decisions**) also kept rank 1 as the confirmed record of every cell; cells that stay confirmed now keep the event that was confirmed.
 - Opening a species in the gallery always showed round 1 again, so leaving a species mid-review and coming back re-presented the occasions already rejected in earlier rounds. The gallery now opens at the species' current round.
 - Editing decisions of a completed species (🔓, **Update decisions**) reset its round count, which re-opened for review every unconfirmed occasion with more than one detection event. The number of rounds done is now preserved.
 - When the study period is not a multiple of the occasion length, detections on the last, shorter occasion were dropped (and those on its first day merged into the previous occasion), although the occupancy matrices did include that occasion. Candidates now use the same occasion windows as the occupancy inputs.

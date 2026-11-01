@@ -782,6 +782,46 @@ def test_get_review_events_sorted_by_site_occasion(decisions_dir, candidates):
     assert sites == sorted(sites) or occasions == sorted(occasions)
 
 
+def test_get_review_events_shows_event_confirmed_in_later_round(tmp_path, candidates):
+    """A cell confirmed in round 2 is shown with its rank-2 event, not rank 1."""
+    from camtrap_workflow import save_decisions
+    d = tmp_path / "decisions"
+    d.mkdir()
+    key = "SITE_A_occ1_Vulpes_vulpes"
+    save_decisions(d, candidates, "Vulpes_vulpes", 1, [])
+    rank2 = candidates[(candidates["site_occasion_key"] == key) & (candidates["rank"] == 2)]
+    obs2 = str(rank2.iloc[0]["observationID"])
+    save_decisions(d, candidates, "Vulpes_vulpes", 2, [obs2])
+
+    sp_cands = candidates[candidates["species_safe"] == "Vulpes_vulpes"]
+    ev = next(e for e in get_review_events(sp_cands, d) if e["key"] == key)
+    assert ev["status"] == "confirmed"
+    assert ev["rank"] == 2
+    assert ev["repObsId"] == obs2
+    assert obs2 in [str(f["obsId"]) for f in ev["frames"]]
+    rank1_obs = set(candidates.loc[(candidates["site_occasion_key"] == key) & (candidates["rank"] == 1),
+                                   "observationID"].astype(str))
+    assert not rank1_obs & {str(f["obsId"]) for f in ev["frames"]}
+
+
+def test_get_review_events_unconfirmed_cell_keeps_rank1(decisions_dir, candidates):
+    sp_cands = candidates[candidates["species_safe"] == "Vulpes_vulpes"]
+    ev = next(e for e in get_review_events(sp_cands, decisions_dir) if e["key"] == "SITE_B_occ1_Vulpes_vulpes")
+    assert ev["status"] == "not_confirmed"
+    assert ev["rank"] == 1
+
+
+def test_confirmed_observations_maps_cell_to_confirmed_obs(tmp_path, candidates):
+    from camtrap_workflow import confirmed_observations, save_decisions
+    d = tmp_path / "decisions"
+    d.mkdir()
+    key = "SITE_A_occ1_Vulpes_vulpes"
+    obs2 = str(candidates[(candidates["site_occasion_key"] == key) & (candidates["rank"] == 2)].iloc[0]["observationID"])
+    save_decisions(d, candidates, "Vulpes_vulpes", 2, [obs2])
+    sp_cands = candidates[candidates["species_safe"] == "Vulpes_vulpes"]
+    assert confirmed_observations(d, sp_cands) == {key: obs2}
+
+
 # ─── validate_camtrapdp_datapackage ───────────────────────────────────────────
 
 def _write_datapackage(tmp_path: Path, deployments_required: bool) -> Path:

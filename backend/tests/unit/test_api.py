@@ -807,6 +807,33 @@ def test_put_decisions_regenerates_outputs(client, setup_session):
     assert human_count == 1
 
 
+def test_review_and_edit_keep_event_confirmed_in_later_round(client, setup_session):
+    """The review screen shows the event confirmed in round 2, also after editing."""
+    key = "SITE_A_occ1_Vulpes_vulpes"
+    r1 = client.get("/api/species/Vulpes_vulpes/events", params={"iteration": 1}).json()
+    client.post("/api/decisions", json={
+        "species": "Vulpes_vulpes", "iteration": 1,
+        "confirmed": [e["repObsId"] for e in r1 if e["key"] != key],
+    })
+    r2 = client.get("/api/species/Vulpes_vulpes/events", params={"iteration": 2}).json()
+    ev2 = next(e for e in r2 if e["key"] == key)
+    assert ev2["rank"] == 2
+    client.post("/api/decisions", json={
+        "species": "Vulpes_vulpes", "iteration": 2, "confirmed": [ev2["repObsId"]],
+    })
+
+    def reviewed():
+        return next(e for e in client.get("/api/species/Vulpes_vulpes/review").json() if e["key"] == key)
+
+    ev = reviewed()
+    assert ev["status"] == "confirmed" and ev["rank"] == 2 and ev["repObsId"] == ev2["repObsId"]
+
+    keys = [e["key"] for e in client.get("/api/species/Vulpes_vulpes/review").json()]
+    client.put("/api/species/Vulpes_vulpes/decisions", json={"confirmed_keys": keys})
+    ev = reviewed()
+    assert ev["rank"] == 2 and ev["repObsId"] == ev2["repObsId"]
+
+
 # ─── /api/rejected ────────────────────────────────────────────────────────────
 
 def test_get_rejected_empty(client, setup_session):

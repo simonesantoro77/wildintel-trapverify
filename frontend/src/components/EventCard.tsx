@@ -11,6 +11,15 @@ function bestFrameIndex(frames: DetectionEvent['frames']): number {
   return best
 }
 
+/** Frame shown first: the confirmed photo on a confirmed card, else the most confident one. */
+function initialFrameIndex(event: DetectionEvent): number {
+  if (event.status === 'confirmed') {
+    const i = event.frames.findIndex(f => f.obsId === event.repObsId)
+    if (i >= 0) return i
+  }
+  return bestFrameIndex(event.frames)
+}
+
 interface Props {
   event: DetectionEvent
   decision: Decision
@@ -45,7 +54,7 @@ function EventCard({
 }: Props) {
   const { t, i18n } = useTranslation()
   const imgError = i18n.language.startsWith('es') ? '/img-error-es.svg' : '/img-error-en.svg'
-  const [activeIndex, setActiveIndex] = useState(() => bestFrameIndex(event.frames))
+  const [activeIndex, setActiveIndex] = useState(() => initialFrameIndex(event))
   const n = event.frames.length
   const frame = event.frames[Math.min(activeIndex, n - 1)]
   const repObsId = frame?.burstRepObsId ?? event.repObsId

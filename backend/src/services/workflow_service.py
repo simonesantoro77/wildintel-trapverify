@@ -24,6 +24,7 @@ from camtrap_workflow import (
     compute_archive_stats,
     export_verified_camtrapdp,
     confirmed_keys_set,
+    confirmed_observations,
     cross_key,
     find_flat_search_ambiguities,
     load_all_decisions,
@@ -190,7 +191,8 @@ def replace_species_decisions(species_safe: str, confirmed_keys: list[str]) -> i
     """Replace all decisions for a species with a corrected set and regenerate outputs.
 
     Deletes existing decision CSVs for the species, writes a fresh iter1.csv
-    from confirmed_keys (using the rank-1 representative per key), then
+    from confirmed_keys (keeping the detection event already confirmed for a
+    cell, or the rank-1 representative for a newly confirmed one), then
     regenerates all output files.
 
     The number of rounds already done is preserved (an empty file for the last
@@ -209,6 +211,8 @@ def replace_species_decisions(species_safe: str, confirmed_keys: list[str]) -> i
     candidates = session_service.get_candidates()
     sp_cands = candidates[candidates["species_safe"] == species_safe]
     rounds_done = rounds_done_by_species(p["decisions"]).get(species_safe, 0)
+    # Cells already confirmed keep the detection event that was confirmed.
+    previous = confirmed_observations(p["decisions"], sp_cands)
 
     # Cells pending review before the edit are settled by it.
     states = cell_states(sp_cands, p["decisions"])
@@ -222,7 +226,13 @@ def replace_species_decisions(species_safe: str, confirmed_keys: list[str]) -> i
     if confirmed_keys:
         rank1 = sp_cands[sp_cands["rank"] == 1]
         confirmed_rows = []
+        obs_ids = sp_cands["observationID"].astype(str)
         for key in confirmed_keys:
+            if key in previous:
+                kept = sp_cands[obs_ids == previous[key]]
+                if not kept.empty:
+                    confirmed_rows.append(kept.iloc[0])
+                    continue
             key_cands = rank1[rank1["site_occasion_key"] == key]
             if not key_cands.empty:
                 prob_col = pd.to_numeric(
