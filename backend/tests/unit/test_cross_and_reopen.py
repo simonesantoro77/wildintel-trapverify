@@ -104,6 +104,28 @@ def test_cross_confirmed_cell_leaves_that_species_rounds(client, session2):
     assert _stats(client)["n_confirmed_combos"] == 1
 
 
+def test_undone_cross_confirmation_leaves_no_trace(client, session2):
+    """Marking another species and clicking it again leaves that cell as it was."""
+    ev = _events(client, 1)
+    frame = ev[B1]["frames"][0]
+    body = {"species": "Vulpes vulpes", "site_id": "SITE_B", "occasion": 1,
+            "media_id": frame["mediaId"], "observation_id": frame["obsId"], "source_species": "Meles meles"}
+    assert client.post("/api/cross", json=body).status_code == 200
+    assert set(_events(client, 1)) == {A1, A2}
+    resp = client.delete("/api/cross", params={"species": "Vulpes vulpes", "site_id": "SITE_B", "occasion": 1})
+    assert resp.json()["removed"] == 1
+
+    # back in the fox rounds, not counted as confirmed
+    assert set(_events(client, 1)) == {A1, A2, B1}
+    assert _stats(client)["n_confirmed_combos"] == 0
+    # and nothing of it in the outputs
+    zf = _download(client)
+    ver = _read(zf, "dethist_verified_Vulpes_vulpes.csv").set_index("siteID")
+    assert ver.loc["SITE_B", "occ1"] != "1"
+    obs = _read(zf, "camtrap_dp_verified/observations.csv")
+    assert (obs["classificationMethod"] != "human").all()
+
+
 # ─── Going back to the previous round ────────────────────────────────────────
 
 def _progress(client, iteration):
