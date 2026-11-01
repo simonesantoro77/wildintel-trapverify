@@ -109,3 +109,84 @@ export interface CrossSpecies {
   observationID?: string
   source?: string
 }
+
+// ── Combine several classifiers (multiclassifier) ──────────────────────────
+
+export interface McClassifier {
+  name: string
+  path: string
+  role: 'ai' | 'reference'
+}
+
+export interface McLabels {
+  date_min: string | null
+  date_max: string | null
+  n_photos: number
+  labels: { classifier: string; label: string; photos: number }[]
+  families: string[]
+}
+
+export interface McRunRequest {
+  classifiers: McClassifier[]
+  groups: Record<string, string[]>
+  date_start: string
+  date_end: string
+  occasion_days: number
+  gap_seconds: number
+  filter_mode: 'cells' | 'events' | 'none'
+  retention: number
+  tie_break: 'ambiguous' | 'simple' | 'none'
+  use_reference_in_output: boolean
+}
+
+export interface McStrategyRow {
+  strategy: string
+  rounds: number
+  cell_retention: number
+  eligible: boolean
+  diff_ci_low: number | null
+  diff_ci_high: number | null
+  tie: boolean
+  ambiguous_photos: number | null
+  best: boolean
+  chosen: boolean
+}
+
+export interface McSpeciesRow {
+  species: string
+  events_before: number
+  events_after: number
+  removed: number
+  saving: number
+  cells_before: number
+  cells_after: number
+  reference_cells: number | null
+  threshold: number | null
+}
+
+export interface McResult {
+  camtrap_dir: string
+  strategy: string
+  has_reference: boolean
+  filter_mode: string
+  events_before: number
+  events_after: number
+  photos_high_in_two_before: number
+  photos_high_in_two_after: number
+  by_species: McSpeciesRow[]
+  strategies: McStrategyRow[]
+  study_start: string
+  study_end: string
+  occasion_days: number
+  gap_seconds: number
+  warnings: string[]
+}
+
+export interface McJob {
+  status: 'running' | 'done' | 'error'
+  log: string[]
+  out_dir: string
+  result?: McResult
+  error?: string
+  unmapped?: string[]
+}

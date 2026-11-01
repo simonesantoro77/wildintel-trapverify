@@ -16,6 +16,7 @@
      - [Option B — DeepFaune CSV](#option-b--deepfaune-csv)
      - [Option C — Custom CSV](#option-c--custom-csv)
      - [Option D — Trapper instance](#option-d--trapper-instance)
+     - [Option E — Several classifiers](#option-e--several-classifiers)
    - [Step 2 — Species](#step-2--species)
    - [Step 3 — Study Period](#step-3--study-period)
    - [Step 4 — Parameters](#step-4--parameters)
@@ -194,7 +195,7 @@ First choose where your data comes from: **Local filesystem** or a **Trapper ins
 ![Setup — Step 1: Data source](./img/user_manual/setup-step1-source.png)
 *Data source selector.*
 
-If you select **Local filesystem**, a second selector appears asking for the **data format**. Three formats are supported:
+If you select **Local filesystem**, a second selector appears asking for the **data format**. Four formats are supported (the fourth, **Several classifiers**, is described in [Option E](#option-e--several-classifiers)):
 
 ![Setup — Step 1: Format selector](./img/user_manual/setup-step1-format.png)
 *Format selector: CamtrapDP directory, DeepFaune CSV or Custom CSV.*
@@ -272,6 +273,25 @@ Connect to a [Trapper](https://trapper-project.readthedocs.io/) installation to 
 3. Click **Generate CamtrapDP** — the package is downloaded and loaded automatically.
 
 > **Note:** Trapper integration is currently under active development. Some features may not yet be available.
+
+#### Option E — Several classifiers
+
+When the same photos have been processed by several classifiers (for example DeepFaune and a YOLO model) and, optionally, part of them has been labelled by people (for example the volunteers of a Zooniverse project), choose **Several classifiers**. The application combines them into a single CamtrapDP whose `classificationProbability` is recalculated, and removes the detection events that are not worth reviewing. The review then continues with that dataset as with any CamtrapDP.
+
+1. **Classifiers.** Add one row per classifier: a short name, its CamtrapDP folder and its role. **AI classifier** rows propose detections. A **Reference (humans)** row is taken as truth: it is used to measure the AI classifiers, to learn how much to trust each of them and to choose the scoring method. Photos are matched by `mediaID`, so every folder must use the same IDs. Click **Read labels**.
+2. **Study period and occasions.** Start and end dates, occasion length and the gap that separates detection events. The session created afterwards uses the same values (they are filled in for you), because the method is chosen on those very cells and events.
+3. **Target species and groups.** Tick the target species. A *group* is what a classifier can say without naming the species, e.g. *Cervidae* for red and fallow deer, or *Leporidae* for hare and rabbit. When a classifier uses a family label, its species are proposed as one group; you can change the group of each species.
+4. **Advanced options** (optional): which events are removed, the share to keep, how ties between methods are broken and whether the reference's verdict is used on the photos it reviewed.
+
+Click **Combine**. On large archives it takes a minute or two. The result shows the method chosen, how many events are left per species and the comparison between methods. Click **Use this dataset** to continue the wizard: the data directory, period, occasion length and event gap are filled in, and the minimum score is set to 0 because the events have already been filtered.
+
+**How the probability is calculated.** For each photo and group, *presence* (is there an animal of this group?) comes from what each AI classifier says, with what probability, whether they agree and, when they don't, what the other says (empty, another animal, a person). For groups with several species, the *species* is decided animal by animal: boxes of different classifiers that overlap (IoU ≥ 0.3) are taken as the same animal, and the photo gets each species with the probability of the animal where it is clearest, so a photo with red and fallow deer can be high for both. The score is presence × species. With a reference, five methods are compared, from "highest probability of any classifier" (the previous behaviour) to a model learnt from the reference.
+
+**How the method is chosen.** Each method is evaluated out of sample (cross-validation by camera: every photo is scored by a model that never saw its camera). For each species, the threshold is the highest one that still leaves a true event in 99 % of the cells (site × occasion) where the reference confirms the species. The method that leaves the fewest events to look at wins; if others are not distinguishable from it (bootstrap by site), the one with fewest photos split between two species is chosen. Events are never removed when the reference confirmed them or marked an animal it could not identify, and the best event of every cell is always kept. Species with fewer than 100 reference cells are not filtered.
+
+> **Note:** filtering by cells keeps the presence in each cell, not every true event. If the verified events will be used for counts or detection rates, choose **By events** in the advanced options.
+
+The dataset is written to `~/Documents/camtrap_verify/conversions/multiclassifier_<date>/`, with a `multiclassifier/` subfolder holding the diagnostics: labels of each classifier, precision of each AI classifier against the reference, comparison and choice of methods, thresholds, and every detection event with its new and previous score and whether it was kept. Each observation's `observationComments` records the breakdown (presence, species, what each classifier said and the reference's verdict).
 
 ### Step 2 — Species
 

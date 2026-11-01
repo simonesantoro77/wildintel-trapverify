@@ -1,4 +1,4 @@
-import type { CrossSpecies, DetectionEvent, OccupancyRow, RecentSession, RelinkStatus, SavedProgress, SpeciesStats, WorkflowConfig } from './types'
+import type { CrossSpecies, McClassifier, McJob, McLabels, McRunRequest, DetectionEvent, OccupancyRow, RecentSession, RelinkStatus, SavedProgress, SpeciesStats, WorkflowConfig } from './types'
 
 async function req<T>(url: string, options?: RequestInit): Promise<T> {
   const r = await fetch(url, options)
@@ -210,6 +210,18 @@ export const api = {
     col_site?: string | null
     species_map: Record<string, string>
   }) => post<{ camtrap_dir: string }>('/api/convert/csv', body),
+
+  mcLabels: (body: { classifiers: McClassifier[]; date_start?: string | null; date_end?: string | null }) =>
+    post<McLabels>('/api/multiclassifier/labels', body),
+
+  mcGroups: (species: string[], labels: string[]) =>
+    post<{ groups: Record<string, string[]> }>('/api/multiclassifier/groups', { species, labels }),
+
+  mcRun: (body: McRunRequest) =>
+    post<{ job_id: string; out_dir: string }>('/api/multiclassifier/run', body),
+
+  mcJob: (jobId: string) =>
+    req<McJob>(`/api/multiclassifier/jobs/${jobId}`),
 
   openFolder: () =>
     req<{ ok: boolean; path: string }>('/api/open-folder', { method: 'POST' }),

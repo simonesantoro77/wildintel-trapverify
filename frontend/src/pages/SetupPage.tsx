@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { api } from '../api'
 import DirectoryPicker from '../components/DirectoryPicker'
 import CsvImportForm from '../components/CsvImportForm'
+import MultiClassifierForm, { type McParams } from '../components/MultiClassifierForm'
 import RelinkDialog from '../components/RelinkDialog'
 import type { RecentSession, RelinkStatus, WorkflowConfig } from '../types'
 
@@ -66,7 +67,7 @@ export default function SetupPage({ onSetup, ready }: Props) {
   const [loadingClassProjects, setLoadingClassProjects] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [genError, setGenError] = useState<string | null>(null)
-  const [localFormat, setLocalFormat] = useState<'camtrapdp' | 'deepfaune' | 'csv' | null>(null)
+  const [localFormat, setLocalFormat] = useState<'camtrapdp' | 'deepfaune' | 'csv' | 'multiclassifier' | null>(null)
   const [deepfauneForm, setDeepfauneForm] = useState({ csvPath: '' })
   const [converting, setConverting] = useState(false)
   const [convertError, setConvertError] = useState<string | null>(null)
@@ -185,6 +186,24 @@ export default function SetupPage({ onSetup, ready }: Props) {
     finally { setInspecting(false) }
     setStepError(null)
     setLocalFormat('camtrapdp')
+  }
+
+  // The multi-classifier dataset was scored with its own study period,
+  // occasion length and event gap: the session must use the same ones, and
+  // its probabilities are already filtered, so no minimum score is applied.
+  async function afterMcConversion(camtrap_dir: string, p: McParams) {
+    await afterConversion(camtrap_dir)
+    setForm((f) => ({
+      ...f,
+      study_start: p.study_start,
+      study_end: p.study_end,
+      occasion_days: p.occasion_days,
+      gap_seconds: p.gap_seconds,
+      min_score: 0,
+      min_score_by_species: {},
+    }))
+    setDataRange({ min: p.study_start, max: p.study_end })
+    setSelectedSpecies(new Set(p.species))
   }
 
   async function handleDeepfauneConvert() {
@@ -805,7 +824,7 @@ export default function SetupPage({ onSetup, ready }: Props) {
         <div>
           <h4 className="text-lg font-semibold mb-1">{t('setup.local_format_title')}</h4>
           <p className="text-zinc-500 dark:text-zinc-400 mb-6 text-sm">{t('setup.local_format_desc')}</p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <button
               className="flex flex-col items-center gap-3 p-6 rounded-xl border-2 border-zinc-300 dark:border-zinc-700 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors text-center group"
               onClick={() => setLocalFormat('camtrapdp')}
@@ -835,6 +854,16 @@ export default function SetupPage({ onSetup, ready }: Props) {
                 {t('setup.local_format_csv')}
               </strong>
               <span className="text-zinc-500 dark:text-zinc-400 text-sm">{t('setup.local_format_csv_desc')}</span>
+            </button>
+            <button
+              className="flex flex-col items-center gap-3 p-6 rounded-xl border-2 border-zinc-300 dark:border-zinc-700 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors text-center group"
+              onClick={() => setLocalFormat('multiclassifier')}
+            >
+              <span className="text-4xl">🧩</span>
+              <strong className="text-zinc-900 dark:text-zinc-100 group-hover:text-blue-600 dark:group-hover:text-blue-300 transition-colors">
+                {t('setup.local_format_mc')}
+              </strong>
+              <span className="text-zinc-500 dark:text-zinc-400 text-sm">{t('setup.local_format_mc_desc')}</span>
             </button>
           </div>
         </div>
@@ -997,6 +1026,11 @@ export default function SetupPage({ onSetup, ready }: Props) {
       {/* ── Step 0f: CSV personalizado ── */}
       {step === 0 && sourceType === 'local' && localFormat === 'csv' && (
         <CsvImportForm onConverted={afterConversion} onBack={goBack} />
+      )}
+
+      {/* ── Step 0g: combine several classifiers ── */}
+      {step === 0 && sourceType === 'local' && localFormat === 'multiclassifier' && (
+        <MultiClassifierForm onConverted={afterMcConversion} onBack={goBack} />
       )}
 
       {/* ── Step 1 ── */}
@@ -1254,13 +1288,13 @@ export default function SetupPage({ onSetup, ready }: Props) {
 
       {/* Navigation */}
       <div className="flex justify-between mt-10">
-        {step === 0 && sourceType === 'local' && (localFormat === 'deepfaune' || localFormat === 'csv')
+        {step === 0 && sourceType === 'local' && (localFormat === 'deepfaune' || localFormat === 'csv' || localFormat === 'multiclassifier')
           ? <div />
           : <button type="button" className={btnOutline} onClick={goBack}>
               {step === 0 && sourceType === null ? t('setup.back_welcome') : t('setup.back')}
             </button>
         }
-        {(step === 0 && sourceType === null) || (step === 0 && sourceType === 'local' && localFormat === null) || (step === 0 && sourceType === 'local' && localFormat === 'deepfaune') || (step === 0 && sourceType === 'local' && localFormat === 'csv') || (step === 0 && sourceType === 'trapper') ? (
+        {(step === 0 && sourceType === null) || (step === 0 && sourceType === 'local' && localFormat === null) || (step === 0 && sourceType === 'local' && localFormat === 'deepfaune') || (step === 0 && sourceType === 'local' && localFormat === 'csv') || (step === 0 && sourceType === 'local' && localFormat === 'multiclassifier') || (step === 0 && sourceType === 'trapper') ? (
           <div />
         ) : step < STEP_LABELS.length - 1 ? (
           <button type="button" className={btnPrimary} onClick={goNext}>
