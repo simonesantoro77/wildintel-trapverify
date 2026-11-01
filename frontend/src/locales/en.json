@@ -179,7 +179,9 @@
     "err_dates_order": "Start date must be before end date.",
     "err_start_too_early": "Start date ({{date}}) is before the first record in the CamtrapDP ({{min}}).",
     "err_end_too_late": "End date ({{date}}) is after the last record in the CamtrapDP ({{max}}).",
-    "err_unknown": "Unknown error"
+    "err_unknown": "Unknown error",
+    "mc_locked": "Set by the classifier combination. To change it, run the combination again with other values.",
+    "mc_locked_score": "None: the detection events were already filtered per species when the classifiers were combined."
   },
   "index": {
     "title": "Detection verification",
@@ -439,6 +441,8 @@
     "strategy_levels_calibrated": "Agreement levels, calibrated",
     "strategy_learned": "Learned from the reference",
     "strategy_learned_context": "Learned, with neighbouring photos",
-    "opening": "Opening the dataset… (it is read again: this can take a minute)"
+    "opening": "Opening the dataset… (it is read again: this can take a minute)",
+    "media_source": "CamtrapDP with the photo paths",
+    "media_source_hint": "Use it when the classifiers' media.csv don't point to the photos on this computer (e.g. Trapper URLs or a different file extension): filePath and fileName are taken from this CamtrapDP's media.csv, matched by mediaID."
   }
 }

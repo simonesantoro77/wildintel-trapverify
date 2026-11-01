@@ -179,7 +179,9 @@
     "err_dates_order": "Data rozpoczęcia musi być wcześniejsza niż data zakończenia.",
     "err_start_too_early": "Data rozpoczęcia ({{date}}) jest wcześniejsza niż pierwszy rekord w CamtrapDP ({{min}}).",
     "err_end_too_late": "Data zakończenia ({{date}}) jest późniejsza niż ostatni rekord w CamtrapDP ({{max}}).",
-    "err_unknown": "Nieznany błąd"
+    "err_unknown": "Nieznany błąd",
+    "mc_locked": "Ustalone przez połączenie klasyfikatorów. Aby to zmienić, powtórz łączenie z innymi wartościami.",
+    "mc_locked_score": "Brak: zdarzenia zostały już przefiltrowane dla każdego gatunku podczas łączenia klasyfikatorów."
   },
   "index": {
     "title": "Weryfikacja wykryć",
@@ -439,6 +441,8 @@
     "strategy_levels_calibrated": "Poziomy zgodności, skalibrowane",
     "strategy_learned": "Nauczone z referencji",
     "strategy_learned_context": "Nauczone, z sąsiednimi zdjęciami",
-    "opening": "Otwieranie zbioru danych… (jest wczytywany ponownie: może to potrwać minutę)"
+    "opening": "Otwieranie zbioru danych… (jest wczytywany ponownie: może to potrwać minutę)",
+    "media_source": "CamtrapDP ze ścieżkami zdjęć",
+    "media_source_hint": "Użyj, jeśli media.csv klasyfikatorów nie wskazuje zdjęć na tym komputerze (np. adresy URL Trappera lub inne rozszerzenie pliku): filePath i fileName są pobierane z media.csv tego CamtrapDP, dopasowując po mediaID."
   }
 }

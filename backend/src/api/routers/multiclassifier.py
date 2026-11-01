@@ -60,6 +60,7 @@ class RunRequest(BaseModel):
     tie_break: Literal["ambiguous", "simple", "none"] = "ambiguous"
     use_reference_in_output: bool = True
     strict_taxonomy: bool = False
+    media_source: Optional[str] = None
 
 
 def _sources(items: list[ClassifierIn]) -> list[ClassifierSource]:
@@ -80,6 +81,19 @@ def _sources(items: list[ClassifierIn]) -> list[ClassifierSource]:
     if any(not n for n in names) or len(set(names)) != len(names):
         raise HTTPException(400, "Each classifier needs a different, non-empty name.")
     return out
+
+
+def _media_source(path: Optional[str]) -> Optional[str]:
+    if not path or not path.strip():
+        return None
+    p = Path(path.strip())
+    if p.is_file():
+        return str(p)
+    try:
+        find_table(p, "media")
+    except FileNotFoundError:
+        raise HTTPException(400, f"media.csv not found in {path}")
+    return str(p)
 
 
 @router.post("/labels")
@@ -132,6 +146,7 @@ def start(req: RunRequest) -> dict:
         filter_mode=req.filter_mode, cell_retention=req.retention, event_retention=req.retention,
         tie_break=req.tie_break, use_reference_in_output=req.use_reference_in_output,
         strict_taxonomy=req.strict_taxonomy,
+        media_source=_media_source(req.media_source),
     )
     try:
         cfg.validate()

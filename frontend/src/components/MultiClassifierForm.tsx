@@ -54,7 +54,8 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
     { name: '', path: '', role: 'ai' },
     { name: '', path: '', role: 'ai' },
   ])
-  const [picker, setPicker] = useState<number | null>(null)
+  const [picker, setPicker] = useState<number | null>(null)   // classifier row, or -1 for the photo paths
+  const [mediaSource, setMediaSource] = useState('')
   const [inv, setInv] = useState<McLabels | null>(null)
   const [loadingLabels, setLoadingLabels] = useState(false)
   const [dates, setDates] = useState({ start: '', end: '' })
@@ -161,6 +162,7 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
         retention: retention / 100,
         tie_break: tieBreak,
         use_reference_in_output: refVerdict,
+        media_source: mediaSource.trim() || null,
       })
       setJobId(job_id)
     } catch (e) {
@@ -245,6 +247,17 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
           </button>
         </div>
         <p className={hintClass}>{t('mc.reference_hint')}</p>
+        <div className="mt-4">
+          <label htmlFor="mc-media" className={labelClass}>
+            {t('mc.media_source')} <span className="text-zinc-400 font-normal">{t('setup.label_output_optional')}</span>
+          </label>
+          <div className="flex">
+            <input id="mc-media" className={inputClass} placeholder={t('mc.folder_placeholder')}
+              value={mediaSource} onChange={e => setMediaSource(e.target.value)} />
+            <button type="button" className={browseBtn} onClick={() => setPicker(-1)}>{t('setup.browse')}</button>
+          </div>
+          <p className={hintClass}>{t('mc.media_source_hint')}</p>
+        </div>
       </div>
 
       {inv && (
@@ -440,9 +453,10 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
       {picker !== null && (
         <DirectoryPicker
           title={t('mc.folder_picker_title')}
-          initialPath={classifiers[picker]?.path || undefined}
+          initialPath={(picker < 0 ? mediaSource : classifiers[picker]?.path) || undefined}
           onSelect={path => {
             const i = picker
+            if (i < 0) { setMediaSource(path); setPicker(null); return }
             const auto = classifiers[i].name.trim() ? {} : { name: path.split(/[\\/]/).filter(Boolean).pop() ?? '' }
             update(i, { path, ...auto })
             setPicker(null)

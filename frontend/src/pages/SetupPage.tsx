@@ -59,6 +59,9 @@ export default function SetupPage({ onSetup, ready }: Props) {
   const [availableSpecies, setAvailableSpecies] = useState<string[]>([])
   const [selectedSpecies, setSelectedSpecies] = useState<Set<string>>(new Set())
   const [dataRange, setDataRange] = useState<{ min: string; max: string } | null>(null)
+  // Dataset made by "Several classifiers": period, occasions, gap and minimum
+  // score were fixed when it was scored and can't change here.
+  const [mcLocked, setMcLocked] = useState(false)
   const [sourceType, setSourceType] = useState<'local' | 'trapper' | null>(null)
   const [trapperForm, setTrapperForm] = useState({ url: '', user: '', password: '', researchProject: '', classificationProject: '' })
   const [trapperConn, setTrapperConn] = useState<{ status: 'idle' | 'testing' | 'ok' | 'error'; message: string }>({ status: 'idle', message: '' })
@@ -134,6 +137,7 @@ export default function SetupPage({ onSetup, ready }: Props) {
   async function handleDirSelected(path: string) {
     if (picker === 'camtrap_dir') {
       set('camtrap_dir', path)
+      setMcLocked(false)
       setPicker(null)
       setInspecting(true)
       try {
@@ -169,6 +173,7 @@ export default function SetupPage({ onSetup, ready }: Props) {
   // from there exactly like a CamtrapDP directory picked directly.
   async function afterConversion(camtrap_dir: string) {
     set('camtrap_dir', camtrap_dir)
+    setMcLocked(false)
     setInspecting(true)
     try {
       const info = await api.inspectDir(camtrap_dir)
@@ -204,6 +209,7 @@ export default function SetupPage({ onSetup, ready }: Props) {
     }))
     setDataRange({ min: p.study_start, max: p.study_end })
     setSelectedSpecies(new Set(p.species))
+    setMcLocked(true)
   }
 
   async function handleDeepfauneConvert() {
@@ -273,9 +279,11 @@ export default function SetupPage({ onSetup, ready }: Props) {
     if (step === 0 && sourceType === 'local' && localFormat !== null) {
       setLocalFormat(null)
       setConvertError(null)
+      setMcLocked(false)
     } else if (step === 0 && sourceType !== null) {
       setSourceType(null)
       setLocalFormat(null)
+      setMcLocked(false)
     } else {
       setStep((s) => s - 1)
     }
@@ -360,6 +368,7 @@ export default function SetupPage({ onSetup, ready }: Props) {
         if (taskStatus.status === 'done' && taskStatus.path) {
           const extractedPath = taskStatus.path
           set('camtrap_dir', extractedPath)
+          setMcLocked(false)
 
           // Inspect the extracted CamtrapDP to pre-fill species and dates
           setInspecting(true)
@@ -882,7 +891,7 @@ export default function SetupPage({ onSetup, ready }: Props) {
                 className={`${inputClass} rounded-r-none`}
                 placeholder={t('setup.placeholder_data_dir')}
                 value={form.camtrap_dir}
-                onChange={(e) => set('camtrap_dir', e.target.value)}
+                onChange={(e) => { set('camtrap_dir', e.target.value); setMcLocked(false) }}
               />
               <button type="button" className={browseBtn}
                 onClick={() => setPicker('camtrap_dir')} disabled={inspecting}>
@@ -1093,17 +1102,18 @@ export default function SetupPage({ onSetup, ready }: Props) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>{t('setup.label_start')}</label>
-              <input type="date" className={inputClass} value={form.study_start}
+              <input type="date" className={inputClass} value={form.study_start} disabled={mcLocked}
                 min={dataRange?.min} max={dataRange?.max}
                 onChange={(e) => set('study_start', e.target.value)} />
             </div>
             <div>
               <label className={labelClass}>{t('setup.label_end')}</label>
-              <input type="date" className={inputClass} value={form.study_end}
+              <input type="date" className={inputClass} value={form.study_end} disabled={mcLocked}
                 min={dataRange?.min} max={dataRange?.max}
                 onChange={(e) => set('study_end', e.target.value)} />
             </div>
           </div>
+          {mcLocked && <p className={hintClass}>{t('setup.mc_locked')}</p>}
         </div>
       )}
 
@@ -1144,18 +1154,26 @@ export default function SetupPage({ onSetup, ready }: Props) {
 
           <div className="mb-6">
             <label className={labelClass}>{t('setup.label_occasion_days')}</label>
-            <input type="number" className={inputClass} min={1} value={form.occasion_days}
+            <input type="number" className={inputClass} min={1} value={form.occasion_days} disabled={mcLocked}
               onChange={(e) => set('occasion_days', Number(e.target.value))} />
             <p className={hintClass}>{t('setup.hint_occasion_days')}</p>
+            {mcLocked && <p className={hintClass}>{t('setup.mc_locked')}</p>}
           </div>
 
           <div className="mb-6">
             <label className={labelClass}>{t('setup.label_gap')}</label>
-            <input type="number" className={inputClass} min={1} value={form.gap_seconds}
+            <input type="number" className={inputClass} min={1} value={form.gap_seconds} disabled={mcLocked}
               onChange={(e) => set('gap_seconds', Number(e.target.value))} />
             <p className={hintClass}>{t('setup.hint_gap')}</p>
+            {mcLocked && <p className={hintClass}>{t('setup.mc_locked')}</p>}
           </div>
 
+          {mcLocked ? (
+          <div className="mb-6">
+            <label className={labelClass}>{t('setup.label_min_score')}</label>
+            <p className="text-sm text-zinc-700 dark:text-zinc-300">{t('setup.mc_locked_score')}</p>
+          </div>
+          ) : (
           <div className="mb-6">
             <label className={labelClass}>{t('setup.label_min_score')}</label>
             <div className="flex items-center gap-3">
@@ -1209,6 +1227,7 @@ export default function SetupPage({ onSetup, ready }: Props) {
               )}
             </details>
           </div>
+          )}
 
           {/* ── Confirmation parameters ── */}
           <div className="border-t border-zinc-200 dark:border-zinc-700 mt-2 mb-5" />

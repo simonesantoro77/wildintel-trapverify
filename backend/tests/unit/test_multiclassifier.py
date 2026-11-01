@@ -205,6 +205,19 @@ def test_run_writes_a_camtrapdp_the_app_can_load(archive, tmp_path):
     assert len(cands[["site_occasion_key", "burst_id"]].drop_duplicates()) == int(ev["keep"].sum())
 
 
+def test_media_source_gives_local_photo_paths(archive, tmp_path):
+    src = tmp_path / "local"
+    src.mkdir()
+    med = pd.read_csv(archive / "A" / "media.csv", dtype=str)
+    med["filePath"] = "D:/photos/" + med["deploymentID"] + "/" + med["mediaID"] + ".jpg"
+    med["fileName"] = med["mediaID"] + ".jpg"
+    med.iloc[:-10].to_csv(src / "media.csv", index=False)   # 10 photos missing
+    res = run(_cfg(archive, filter_mode="none", media_source=str(src)), tmp_path / "out4")
+    out = pd.read_csv(Path(res["camtrap_dir"]) / "media.csv", dtype=str)
+    assert out["filePath"].str.startswith("D:/photos/").sum() == len(out) - 10
+    assert any("10 of" in w for w in res["warnings"])
+
+
 def test_learned_strategy_beats_raw_on_fallow_deer_mistakes(archive, tmp_path):
     res = run(_cfg(archive, strategy="learned", filter_mode="none"), tmp_path / "out2")
     assert res["photos_high_in_two_after"] < res["photos_high_in_two_before"]

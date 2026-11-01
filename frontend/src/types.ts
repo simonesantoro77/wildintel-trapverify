@@ -137,6 +137,7 @@ export interface McRunRequest {
   retention: number
   tie_break: 'ambiguous' | 'simple' | 'none'
   use_reference_in_output: boolean
+  media_source?: string | null
 }
 
 export interface McStrategyRow {

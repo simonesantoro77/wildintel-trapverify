@@ -179,7 +179,9 @@
     "err_dates_order": "Das Startdatum muss vor dem Enddatum liegen.",
     "err_start_too_early": "Das Startdatum ({{date}}) liegt vor dem ersten Eintrag im CamtrapDP ({{min}}).",
     "err_end_too_late": "Das Enddatum ({{date}}) liegt nach dem letzten Eintrag im CamtrapDP ({{max}}).",
-    "err_unknown": "Unbekannter Fehler"
+    "err_unknown": "Unbekannter Fehler",
+    "mc_locked": "Durch die Kombination der Klassifizierer festgelegt. Um es zu ändern, die Kombination mit anderen Werten wiederholen.",
+    "mc_locked_score": "Keine: Die Ereignisse wurden beim Kombinieren der Klassifizierer bereits pro Art gefiltert."
   },
   "index": {
     "title": "Erkennungsüberprüfung",
@@ -439,6 +441,8 @@
     "strategy_levels_calibrated": "Übereinstimmungsstufen, kalibriert",
     "strategy_learned": "Aus der Referenz gelernt",
     "strategy_learned_context": "Gelernt, mit Nachbarfotos",
-    "opening": "Datensatz wird geöffnet… (er wird erneut gelesen: das kann eine Minute dauern)"
+    "opening": "Datensatz wird geöffnet… (er wird erneut gelesen: das kann eine Minute dauern)",
+    "media_source": "CamtrapDP mit den Fotopfaden",
+    "media_source_hint": "Verwenden, wenn die media.csv der Klassifizierer nicht auf die Fotos auf diesem Computer zeigt (z. B. Trapper-URLs oder eine andere Dateiendung): filePath und fileName werden über die mediaID aus der media.csv dieses CamtrapDP übernommen."
   }
 }

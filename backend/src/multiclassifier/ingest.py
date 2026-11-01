@@ -134,6 +134,26 @@ def review_taxonomy(labels: pd.DataFrame, cfg: PipelineConfig) -> pd.DataFrame:
     return et[cols].sort_values(["clf", "observationType", "rows"], ascending=[True, True, False]).reset_index(drop=True)
 
 
+def apply_media_source(media: pd.DataFrame, src: Path, log: Log) -> tuple[pd.DataFrame, list[str]]:
+    """Take filePath / fileName (and fileMediatype) from another media table, by mediaID."""
+    path = src if src.is_file() else find_table(src, "media")
+    cols = ("mediaID", "filePath", "fileName", "fileMediatype")
+    other = read_table(path, cols).drop_duplicates("mediaID").set_index("mediaID")
+    hit = media["mediaID"].isin(other.index)
+    media = media.copy()
+    for c in ("filePath", "fileName", "fileMediatype"):
+        if c in other.columns:
+            if c not in media:
+                media[c] = np.nan
+            media.loc[hit, c] = media.loc[hit, "mediaID"].map(other[c]).to_numpy()
+    n, k = len(media), int(hit.sum())
+    log(f"Photo paths taken from {path}: {k:,} of {n:,} photos")
+    warnings = []
+    if k < n:
+        warnings.append(f"{n - k:,} of {n:,} photos are not in {path}: they keep the classifiers' file paths.")
+    return media, warnings
+
+
 @dataclass
 class Ingested:
     media: pd.DataFrame
@@ -181,6 +201,10 @@ def ingest(cfg: PipelineConfig, log: Log = lambda _m: None) -> Ingested:
     media = media[keep.to_numpy()].reset_index(drop=True)
     universe = set(media["mediaID"])
     log(f"Study photos: {len(universe):,}")
+    warnings: list[str] = []
+    if cfg.media_source:
+        media, w = apply_media_source(media, Path(cfg.media_source), log)
+        warnings += w
 
     deps = pd.concat([read_table(find_table(Path(c.path), "deployments")) for c in ai_sources],
                      ignore_index=True).drop_duplicates("deploymentID")
@@ -268,6 +292,7 @@ def ingest(cfg: PipelineConfig, log: Log = lambda _m: None) -> Ingested:
         others=pd.concat(others, ignore_index=True) if others else pd.DataFrame(),
         summary=pd.DataFrame(summary), datapackage=dp,
     )
+    ing.warnings += warnings
     flagged = lab_all[lab_all["proposal"] != ""]
     if len(flagged):
         msg = ("Some labels look like a target group but are not mapped: "

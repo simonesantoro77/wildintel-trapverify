@@ -129,6 +129,11 @@ class PipelineConfig:
     tie_break: Literal["ambiguous", "simple", "none"] = "ambiguous"
     not_eligible: tuple[str, ...] = ("raw",)
 
+    # Optional CamtrapDP folder (or media.csv) whose filePath / fileName are
+    # used for the output, matched by mediaID: classifiers often store a
+    # remote URL or a renamed file, while the photos are on a local disk.
+    media_source: Optional[str] = None
+
     export_rows: Literal["target", "all"] = "target"
     title: str = "MULTICLASSIFIER_SCORED"
 
