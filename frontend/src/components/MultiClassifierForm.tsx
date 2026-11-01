@@ -21,7 +21,7 @@ export interface McParams {
 }
 
 interface Props {
-  onConverted: (camtrapDir: string, params: McParams) => void
+  onConverted: (camtrapDir: string, params: McParams) => void | Promise<void>
   onBack?: () => void
 }
 
@@ -70,6 +70,7 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
   const [job, setJob] = useState<McJob | null>(null)
   const [jobId, setJobId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [opening, setOpening] = useState(false)
   const pollRef = useRef<number | null>(null)
 
   const hasReference = classifiers.some(c => c.role === 'reference' && c.path)
@@ -189,14 +190,21 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
   const result: McResult | undefined = job?.status === 'done' ? job.result : undefined
   const canRun = ready && !!inv && selected.size > 0 && !!dates.start && !!dates.end && dates.start <= dates.end && !running
 
-  function chooseResult(r: McResult) {
-    onConverted(r.camtrap_dir, {
-      study_start: r.study_start,
-      study_end: r.study_end,
-      occasion_days: r.occasion_days,
-      gap_seconds: r.gap_seconds,
-      species: [...selected],
-    })
+  // Opening the new dataset reads it again (species, dates, datapackage
+  // validation), which takes a while on large archives: show it.
+  async function chooseResult(r: McResult) {
+    setOpening(true)
+    try {
+      await onConverted(r.camtrap_dir, {
+        study_start: r.study_start,
+        study_end: r.study_end,
+        occasion_days: r.occasion_days,
+        gap_seconds: r.gap_seconds,
+        species: [...selected],
+      })
+    } finally {
+      setOpening(false)
+    }
   }
 
   return (
@@ -410,9 +418,10 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
         )}
         <div className="flex flex-col items-end gap-2">
           {result ? (
-            <button type="button" onClick={() => chooseResult(result)}
-              className="px-5 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700">
-              {t('mc.use_dataset')}
+            <button type="button" onClick={() => chooseResult(result)} disabled={opening}
+              className="px-5 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2 disabled:opacity-60">
+              {opening && <SmallSpinner />}
+              {t(opening ? 'mc.opening' : 'mc.use_dataset')}
             </button>
           ) : (
             <button type="button" disabled={!canRun} onClick={run}

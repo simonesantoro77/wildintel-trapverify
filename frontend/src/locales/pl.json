@@ -438,6 +438,7 @@
     "strategy_levels": "Poziomy zgodności",
     "strategy_levels_calibrated": "Poziomy zgodności, skalibrowane",
     "strategy_learned": "Nauczone z referencji",
-    "strategy_learned_context": "Nauczone, z sąsiednimi zdjęciami"
+    "strategy_learned_context": "Nauczone, z sąsiednimi zdjęciami",
+    "opening": "Otwieranie zbioru danych… (jest wczytywany ponownie: może to potrwać minutę)"
   }
 }

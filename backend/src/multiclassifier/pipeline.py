@@ -178,8 +178,13 @@ def _observations(keep: pd.DataFrame, ing: Ingested, pr: Prediction, P: Prepared
         "classificationProbability": keep["score"].map(lambda v: f"{v:.4f}"),
         "observationComments": comment,
     })
-    for c in ("lifeStage", "sex", "behavior", "bboxX", "bboxY", "bboxWidth", "bboxHeight"):
+    for c in ("lifeStage", "sex", "behavior"):
         obs[c] = keep[c].to_numpy() if c in keep else np.nan
+    # Detectors sometimes give boxes a hair outside the image (e.g. bboxY = -0.001);
+    # CamtrapDP requires 0..1, so they are clipped.
+    for c, lo in (("bboxX", 0.0), ("bboxY", 0.0), ("bboxWidth", 1e-6), ("bboxHeight", 1e-6)):
+        v = pd.to_numeric(keep[c], errors="coerce").to_numpy(float) if c in keep else np.full(len(keep), np.nan)
+        obs[c] = np.where(np.isnan(v), np.nan, np.clip(v, lo, 1.0))
     for c in OBS_COLUMNS:
         if c not in obs:
             obs[c] = np.nan

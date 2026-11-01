@@ -438,6 +438,7 @@
     "strategy_levels": "Übereinstimmungsstufen",
     "strategy_levels_calibrated": "Übereinstimmungsstufen, kalibriert",
     "strategy_learned": "Aus der Referenz gelernt",
-    "strategy_learned_context": "Gelernt, mit Nachbarfotos"
+    "strategy_learned_context": "Gelernt, mit Nachbarfotos",
+    "opening": "Datensatz wird geöffnet… (er wird erneut gelesen: das kann eine Minute dauern)"
   }
 }

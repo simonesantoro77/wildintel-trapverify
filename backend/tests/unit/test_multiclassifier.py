@@ -147,7 +147,8 @@ def archive(tmp_path_factory) -> Path:
             else:
                 row.update(observationType="animal", scientificName=lab, count=1, classificationProbability=round(p, 3))
                 if boxes:
-                    row.update(bboxX=0.3 + rng.normal(0, 0.01), bboxY=0.3, bboxWidth=0.2, bboxHeight=0.2)
+                    row.update(bboxX=0.3 + rng.normal(0, 0.01), bboxY=0.3 if rng.random() > 0.1 else -0.002,
+                               bboxWidth=0.2, bboxHeight=0.2)
             rows.append(row)
         return pd.DataFrame(rows)
 
@@ -189,6 +190,9 @@ def test_run_writes_a_camtrapdp_the_app_can_load(archive, tmp_path):
     assert set(obs["scientificName"]) <= {"Cervus elaphus", "Dama dama", "Sus scrofa"}
     p = pd.to_numeric(obs["classificationProbability"])
     assert p.between(0, 1).all()
+    for c in ("bboxX", "bboxY", "bboxWidth", "bboxHeight"):
+        v = pd.to_numeric(obs[c], errors="coerce").dropna()
+        assert v.between(0, 1).all(), c
     assert obs["observationID"].is_unique
 
     dep, med, ob = load_camtrapdp(out)

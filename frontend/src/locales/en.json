@@ -438,6 +438,7 @@
     "strategy_levels": "Agreement levels",
     "strategy_levels_calibrated": "Agreement levels, calibrated",
     "strategy_learned": "Learned from the reference",
-    "strategy_learned_context": "Learned, with neighbouring photos"
+    "strategy_learned_context": "Learned, with neighbouring photos",
+    "opening": "Opening the dataset… (it is read again: this can take a minute)"
   }
 }
