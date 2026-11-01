@@ -428,12 +428,14 @@ The lightbox shows:
 - The image scaled to fill the screen, with zoom and pan support.
 - Navigation arrows to browse frames within the detection event.
 - The location and sampling occasion in the title bar.
-- Decision buttons and image adjustment controls in the toolbar.
-- On the left, the other target species of the session (see below).
+- Image adjustment controls in the toolbar.
+- A panel on the left with, from top to bottom:
+  - **Progress**: the round, how many cards of the round are decided (with a bar), how many at the current location, and how many cells of the species were resolved before this round.
+  - The other target species of the session (see below) and, right next to them, the decision buttons (**Confirmed**, **Unsure**, **Rejected**) stacked vertically, with **↶ Previous card** underneath.
 
 ### Another Species in the Photo
 
-If the photo you are looking at shows another target species (for example a fallow deer in a red deer sequence), click that species in the list on the left of the lightbox, or press its number (`1` to `9`). This confirms that species at the same location and sampling occasion, using this photo, without leaving the species you are reviewing:
+If the photo you are looking at shows another target species (for example a fallow deer in a red deer sequence), click that species in the lightbox's left panel, or press its number (`1` to `9`). This confirms that species at the same location and sampling occasion, using this photo, without leaving the species you are reviewing:
 
 - The occasion counts as a detection of that species (`1` in its `dethist_verified_<sp>.csv`), also when the classifier never assigned it there; `verification_summary.csv` reports those cells as `false_negative_cells`.
 - If the occasion was still waiting in that species' own rounds, it will not be shown again there.

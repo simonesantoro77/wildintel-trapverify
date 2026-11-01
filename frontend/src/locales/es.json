@@ -281,11 +281,15 @@
     "reopen_confirm": "¿Volver a la ronda {{n}} para corregir sus decisiones?\n\nVerás las decisiones tal como las dejaste. Lo que llevas en la ronda actual se guarda y lo recuperarás al terminar de nuevo la ronda {{n}}.",
     "reopen_done": "Ronda {{n}} reabierta: corrige lo que necesites y pulsa «Terminar ronda».",
     "cross_unsure_note": "Has confirmado {{species}} en este evento. Si es el único animal, la decisión aquí debería ser No confirmada, no Dudosa.",
-    "prev_card": "Anterior",
+    "prev_card": "Tarjeta anterior",
     "prev_card_tooltip": "Volver a la tarjeta que acabas de decidir (tecla Retroceso)",
     "cross_confirmed_note": "Has confirmado {{species}} en este evento y también esta especie: solo es correcto si hay animales de las dos.",
     "cross_pending_note": "Has confirmado {{species}} en este evento. Si es el único animal, marca esta tarjeta como No confirmada.",
-    "cross_conflict_toast": "Has confirmado {{species}} en este mismo evento: solo es correcto si hay animales de las dos especies. Pulsa otra vez el mismo botón para seguir, o cambia la decisión."
+    "cross_conflict_toast": "Has confirmado {{species}} en este mismo evento: solo es correcto si hay animales de las dos especies. Pulsa otra vez el mismo botón para seguir, o cambia la decisión.",
+    "lb_progress_label": "Progreso",
+    "lb_site_progress": "Localización {{site}} ({{i}} de {{n}}): {{done}}/{{total}} decididas",
+    "lb_species_progress": "Especie completa: {{resolved}} de {{total}} celdas resueltas (antes de esta ronda)",
+    "lb_decision_title": "Esta tarjeta"
   },
   "help": {
     "title": "Ayuda — CamTrap Verify",

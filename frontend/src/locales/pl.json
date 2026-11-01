@@ -281,11 +281,15 @@
     "reopen_confirm": "Wrócić do rundy {{n}}, aby poprawić jej decyzje?\n\nZobaczysz decyzje tak, jak je zostawiłeś. Postęp bieżącej rundy zostanie zapisany i wróci po ponownym zakończeniu rundy {{n}}.",
     "reopen_done": "Runda {{n}} ponownie otwarta: popraw, co trzeba, i kliknij „Zakończ rundę”.",
     "cross_unsure_note": "Potwierdzono {{species}} w tym zdarzeniu. Jeśli to jedyne zwierzę, decyzja tutaj powinna brzmieć Odrzucone, a nie Niepewne.",
-    "prev_card": "Wstecz",
+    "prev_card": "Poprzednia karta",
     "prev_card_tooltip": "Wróć do właśnie ocenionej karty (Backspace)",
     "cross_confirmed_note": "Potwierdzono {{species}} w tym zdarzeniu oraz ten gatunek: poprawne tylko, jeśli są zwierzęta obu gatunków.",
     "cross_pending_note": "Potwierdzono {{species}} w tym zdarzeniu. Jeśli to jedyne zwierzę, oznacz tę kartę jako Odrzucone.",
-    "cross_conflict_toast": "Potwierdzono {{species}} w tym samym zdarzeniu: poprawne tylko, jeśli są zwierzęta obu gatunków. Naciśnij ten sam przycisk ponownie, aby przejść dalej, albo zmień decyzję."
+    "cross_conflict_toast": "Potwierdzono {{species}} w tym samym zdarzeniu: poprawne tylko, jeśli są zwierzęta obu gatunków. Naciśnij ten sam przycisk ponownie, aby przejść dalej, albo zmień decyzję.",
+    "lb_progress_label": "Postęp",
+    "lb_site_progress": "Lokalizacja {{site}} ({{i}} z {{n}}): {{done}}/{{total}} zdecydowano",
+    "lb_species_progress": "Cały gatunek: {{resolved}} z {{total}} komórek rozstrzygniętych (przed tą rundą)",
+    "lb_decision_title": "Ta karta"
   },
   "help": {
     "title": "Pomoc — CamTrap Verify",

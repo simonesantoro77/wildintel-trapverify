@@ -943,67 +943,128 @@ export default function GalleryPage() {
         captions={{ showToggle: false }}
         // Use the whole screen: photos are scaled up to fill it (see the
         // .yarl__slide_image rule), leaving room for the title, the decision
-        // buttons and, on the left, the other species.
-        styles={{ slide: { padding: `44px 56px 118px ${otherSpecies.length ? 312 : 116}px` } }}
+        // panel on the left: progress, the other species and, next to them,
+        // the decision buttons (short mouse path between the two).
+        styles={{
+          slide: { padding: `44px 56px 40px ${otherSpecies.length ? 412 : 208}px` },
+          navigationPrev: { left: otherSpecies.length ? 400 : 196 },
+        }}
         render={{
           controls: () => lbCurrentEv && (
             <>
-            <button
-              type="button"
-              onClick={lbGoBack}
-              disabled={!lbCanGoBack}
-              title={t('gallery.prev_card_tooltip')}
-              aria-label={t('gallery.prev_card')}
-              className="absolute top-1/2 -translate-y-1/2 flex flex-col items-center gap-1 px-2 py-3 rounded-lg border border-white/40 bg-black/50 text-white/90 hover:bg-white/15 disabled:opacity-30 disabled:hover:bg-black/50"
-              style={{ zIndex: 10000, left: otherSpecies.length ? 252 : 56 }}
+            <div
+              className="absolute left-6 top-14 bottom-6 flex flex-col gap-3 overflow-y-auto"
+              style={{ zIndex: 10000, width: otherSpecies.length ? 372 : 168 }}
             >
-              <span aria-hidden="true" className="text-2xl leading-none">↶</span>
-              <span className="text-[10px] leading-tight w-12 text-center">{t('gallery.prev_card')}</span>
-            </button>
-            {otherSpecies.length > 0 && (
-              <div
-                className="absolute left-12 top-1/2 -translate-y-1/2 flex flex-col gap-1.5 w-48"
-                style={{ zIndex: 10000 }}
-              >
-                <span className="text-[11px] leading-tight text-white/70 mb-0.5">{t('gallery.cross_title')}</span>
-                {otherSpecies.map((sp, i) => {
-                  const st = crossByCell[crossCell]?.find((c) => c.scientificName === sp)
-                  const status = st?.status ?? 'none'
-                  return (
-                    <button
-                      key={sp}
-                      className={`px-2 py-1.5 text-left text-sm rounded transition-colors flex items-center gap-1.5 disabled:opacity-50 ${
-                        status === 'cross'
-                          ? 'bg-sky-600 text-white hover:bg-sky-700'
-                          : status === 'confirmed'
-                          ? 'border border-emerald-700 bg-black/40 text-emerald-400 cursor-default'
-                          : 'border border-white/40 bg-black/40 text-white/90 hover:bg-sky-600 hover:border-sky-600 hover:text-white'
-                      }`}
-                      onClick={() => toggleCross(i)}
-                      disabled={crossReadOnly}
-                      title={status === 'confirmed'
-                        ? t('gallery.cross_already', { species: sp })
-                        : status === 'cross'
-                        ? t('gallery.cross_undo_tooltip', { species: sp })
-                        : t('gallery.cross_tooltip', { species: sp, site: lbCurrentEv.siteId, occasion: lbCurrentEv.occasion })}
-                    >
-                      {i < 9 && <span className="text-[10px] opacity-60 font-mono w-3">{i + 1}</span>}
-                      <span className="italic flex-1 leading-tight break-words">{sp}</span>
-                      {status !== 'none' && <span aria-hidden="true">✓</span>}
-                    </button>
-                  )
-                })}
-                {lbDecision !== 'rejected' && lbCrossHere.length > 0 && (
-                  <p role="note" className="mt-1 text-[11px] leading-snug text-amber-300">
-                    {t(lbDecision === 'unsure' ? 'gallery.cross_unsure_note'
-                       : lbDecision === 'confirmed' ? 'gallery.cross_confirmed_note'
-                       : 'gallery.cross_pending_note',
-                       { species: lbCrossHere.join(', ') })}
-                  </p>
+              {/* Where the reviewer is in the work on this species. */}
+              <div className="rounded-lg bg-black/55 border border-white/15 px-3 py-2 text-[11px] leading-snug text-white/80" aria-label={t('gallery.lb_progress_label')}>
+                {mode === 'rounds' && <div className="font-semibold text-white">{t('gallery.round', { n: iteration })}</div>}
+                <div>{t('gallery.decided_progress', { done: decidedCount, total: events.length })}</div>
+                <div className="h-1.5 rounded bg-white/15 my-1 overflow-hidden">
+                  <div className="h-full bg-sky-500" style={{ width: `${events.length ? Math.round(decidedCount / events.length * 100) : 0}%` }} />
+                </div>
+                {sites.length > 1 && lbCurrentEv && (() => {
+                  const evs = bySite[lbCurrentEv.siteId] ?? []
+                  const done = evs.reduce((n, e) => n + (decisions[e.key] ? 1 : 0), 0)
+                  return <div>{t('gallery.lb_site_progress', { site: lbCurrentEv.siteId, i: sites.indexOf(lbCurrentEv.siteId) + 1, n: sites.length, done, total: evs.length })}</div>
+                })()}
+                {spStats && spStats.n_total_combos > 0 && (
+                  <div className="text-white/60">{t('gallery.lb_species_progress', { resolved: spStats.n_resolved, total: spStats.n_total_combos })}</div>
                 )}
               </div>
-            )}
-            <div className="absolute bottom-0 left-0 right-0 flex flex-col items-center gap-3 px-4 pb-6" style={{ zIndex: 10000 }}>
+              <div className="flex gap-3 items-start">
+                {otherSpecies.length > 0 && (
+                  <div className="flex flex-col gap-1.5 w-48 shrink-0">
+                    <span className="text-[11px] leading-tight text-white/70 mb-0.5">{t('gallery.cross_title')}</span>
+                    {otherSpecies.map((sp, i) => {
+                      const st = crossByCell[crossCell]?.find((c) => c.scientificName === sp)
+                      const status = st?.status ?? 'none'
+                      return (
+                        <button
+                          key={sp}
+                          className={`px-2 py-1.5 text-left text-sm rounded transition-colors flex items-center gap-1.5 disabled:opacity-50 ${
+                            status === 'cross'
+                              ? 'bg-sky-600 text-white hover:bg-sky-700'
+                              : status === 'confirmed'
+                              ? 'border border-emerald-700 bg-black/40 text-emerald-400 cursor-default'
+                              : 'border border-white/40 bg-black/40 text-white/90 hover:bg-sky-600 hover:border-sky-600 hover:text-white'
+                          }`}
+                          onClick={() => toggleCross(i)}
+                          disabled={crossReadOnly}
+                          title={status === 'confirmed'
+                            ? t('gallery.cross_already', { species: sp })
+                            : status === 'cross'
+                            ? t('gallery.cross_undo_tooltip', { species: sp })
+                            : t('gallery.cross_tooltip', { species: sp, site: lbCurrentEv.siteId, occasion: lbCurrentEv.occasion })}
+                        >
+                          {i < 9 && <span className="text-[10px] opacity-60 font-mono w-3">{i + 1}</span>}
+                          <span className="italic flex-1 leading-tight break-words">{sp}</span>
+                          {status !== 'none' && <span aria-hidden="true">✓</span>}
+                        </button>
+                      )
+                    })}
+                    {lbDecision !== 'rejected' && lbCrossHere.length > 0 && (
+                      <p role="note" className="mt-1 text-[11px] leading-snug text-amber-300">
+                        {t(lbDecision === 'unsure' ? 'gallery.cross_unsure_note'
+                           : lbDecision === 'confirmed' ? 'gallery.cross_confirmed_note'
+                           : 'gallery.cross_pending_note',
+                           { species: lbCrossHere.join(', ') })}
+                      </p>
+                    )}
+                  </div>
+                )}
+                <div className="flex flex-col gap-2 w-40 shrink-0">
+                  <span className="text-[11px] leading-tight text-white/70 mb-0.5">{t('gallery.lb_decision_title')}</span>
+                  <div className="flex flex-col gap-2">
+                    <button
+                      className={`w-full py-3 text-base rounded font-medium transition-colors disabled:opacity-50 ${
+                        lbDecision === 'confirmed'
+                          ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                          : 'border border-emerald-600 bg-black/40 text-emerald-400 hover:bg-emerald-600 hover:text-white'
+                      }`}
+                      onClick={() => decideInLb('confirmed')}
+                      disabled={lbReadOnly}
+                    >
+                      {t('gallery.confirmed_btn')} <span className="opacity-60">(Y)</span>
+                    </button>
+                    {allowUnsure && (
+                      <button
+                        className={`w-full py-3 text-base rounded font-medium transition-colors disabled:opacity-50 ${
+                          lbDecision === 'unsure'
+                            ? 'bg-amber-500 text-white hover:bg-amber-600'
+                            : 'border border-amber-500 bg-black/40 text-amber-400 hover:bg-amber-500 hover:text-white'
+                        }`}
+                        onClick={() => decideInLb('unsure')}
+                      >
+                        {t('gallery.unsure_btn')} <span className="opacity-60">(U)</span>
+                      </button>
+                    )}
+                    <button
+                      className={`w-full py-3 text-base rounded font-medium transition-colors disabled:opacity-50 ${
+                        lbDecision === 'rejected'
+                          ? 'bg-red-600 text-white hover:bg-red-700'
+                          : 'border border-red-600 bg-black/40 text-red-400 hover:bg-red-600 hover:text-white'
+                      }`}
+                      onClick={() => decideInLb('rejected')}
+                      disabled={lbReadOnly}
+                    >
+                      {t('gallery.rejected_btn')} <span className="opacity-60">(N)</span>
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={lbGoBack}
+                    disabled={!lbCanGoBack}
+                    title={t('gallery.prev_card_tooltip')}
+                    className="mt-2 w-full py-1.5 text-xs rounded border border-white/40 bg-black/50 text-white/90 hover:bg-white/15 disabled:opacity-30 disabled:hover:bg-black/50"
+                  >
+                    ↶ {t('gallery.prev_card')} <span className="opacity-60">(⌫)</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="absolute bottom-0 right-0 flex flex-col items-center gap-3 px-4 pb-3" style={{ zIndex: 10000, left: otherSpecies.length ? 412 : 208 }}>
               {lbCurrentEv.frames.length > 1 && lbCurrentEv.frames.length <= 40 && (
                 <div className="flex gap-1">
                   {lbCurrentEv.frames.map((_, i) => (
@@ -1032,42 +1093,6 @@ export default function GalleryPage() {
               {lbCurrentEv.frames.length > 40 && (
                 <span className="text-xs text-white/70">{lbIndex + 1}/{lbCurrentEv.frames.length}</span>
               )}
-              <div className="flex gap-3 w-full" style={{ maxWidth: allowUnsure ? 560 : 420 }}>
-                <button
-                  className={`flex-1 py-2.5 text-base rounded font-medium transition-colors disabled:opacity-50 ${
-                    lbDecision === 'confirmed'
-                      ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                      : 'border border-emerald-600 bg-black/40 text-emerald-400 hover:bg-emerald-600 hover:text-white'
-                  }`}
-                  onClick={() => decideInLb('confirmed')}
-                  disabled={lbReadOnly}
-                >
-                  {t('gallery.confirmed_btn')} <span className="opacity-60">(Y)</span>
-                </button>
-                {allowUnsure && (
-                  <button
-                    className={`flex-1 py-2.5 text-base rounded font-medium transition-colors disabled:opacity-50 ${
-                      lbDecision === 'unsure'
-                        ? 'bg-amber-500 text-white hover:bg-amber-600'
-                        : 'border border-amber-500 bg-black/40 text-amber-400 hover:bg-amber-500 hover:text-white'
-                    }`}
-                    onClick={() => decideInLb('unsure')}
-                  >
-                    {t('gallery.unsure_btn')} <span className="opacity-60">(U)</span>
-                  </button>
-                )}
-                <button
-                  className={`flex-1 py-2.5 text-base rounded font-medium transition-colors disabled:opacity-50 ${
-                    lbDecision === 'rejected'
-                      ? 'bg-red-600 text-white hover:bg-red-700'
-                      : 'border border-red-600 bg-black/40 text-red-400 hover:bg-red-600 hover:text-white'
-                  }`}
-                  onClick={() => decideInLb('rejected')}
-                  disabled={lbReadOnly}
-                >
-                  {t('gallery.rejected_btn')} <span className="opacity-60">(N)</span>
-                </button>
-              </div>
             </div>
             </>
           ),
