@@ -24,7 +24,7 @@ import pandas as pd
 
 from .config import PipelineConfig, Strategy
 from .evaluate import apply_filter, choose_strategy, evaluate_strategy, events, make_folds, summarize_events
-from .ingest import Ingested, ingest
+from .ingest import Ingested, ingest, relative_file_paths
 from .model import Prediction, all_rows, combine, fit, predict
 from .prepare import Prepared, prepare
 
@@ -299,7 +299,12 @@ def run(cfg: PipelineConfig, out_dir: Path, log: Log = lambda _m: None,
     if cfg.export_rows == "all" and len(ing.others):
         obs = pd.concat([obs, ing.others.reindex(columns=OBS_COLUMNS)], ignore_index=True)
     obs.to_csv(out_dir / "observations.csv", index=False)
-    ing.media.to_csv(out_dir / "media.csv", index=False)
+    media_out = ing.media.copy()
+    if "filePath" in media_out:
+        media_out["filePath"], prefix = relative_file_paths(media_out["filePath"])
+        if prefix:
+            log(f"Photo paths made relative to {prefix}")
+    media_out.to_csv(out_dir / "media.csv", index=False)
     ing.deps.to_csv(out_dir / "deployments.csv", index=False)
     if ing.datapackage is not None:
         desc = (f"CamTrap Verify dataset: {', '.join(P.A)}"

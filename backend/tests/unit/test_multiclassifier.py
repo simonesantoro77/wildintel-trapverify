@@ -211,12 +211,46 @@ def test_media_source_gives_local_photo_paths(archive, tmp_path):
     src.mkdir()
     med = pd.read_csv(archive / "A" / "media.csv", dtype=str)
     med["filePath"] = "D:/photos/" + med["deploymentID"] + "/" + med["mediaID"] + ".jpg"
-    med["fileName"] = med["mediaID"] + ".jpg"
+    med["fileName"] = med["mediaID"] + ".JPG"
     med.iloc[:-10].to_csv(src / "media.csv", index=False)   # 10 photos missing
     res = run(_cfg(archive, filter_mode="none", media_source=str(src)), tmp_path / "out4")
     out = pd.read_csv(Path(res["camtrap_dir"]) / "media.csv", dtype=str)
-    assert out["filePath"].str.startswith("D:/photos/").sum() == len(out) - 10
+    assert out["fileName"].str.endswith(".JPG").sum() == len(out) - 10
+    assert not out["filePath"].str.startswith("D:").any()      # made relative
     assert any("10 of" in w for w in res["warnings"])
+
+
+def test_relative_file_paths():
+    from multiclassifier.ingest import relative_file_paths
+    s = pd.Series(["/Volumes/T7 Shield/x/2023/R0025/dep1/a.jpg", "/Volumes/T7 Shield/x/2023/R0026/dep2/b.jpg",
+                   "https://trap/1/file/", None])
+    out, prefix = relative_file_paths(s)
+    assert prefix == "/Volumes/T7 Shield/x/2023/"
+    assert out.tolist()[:3] == ["R0025/dep1/a.jpg", "R0026/dep2/b.jpg", "https://trap/1/file/"]
+    w, p2 = relative_file_paths(pd.Series(["D:\\fotos\\dep1\\a.jpg", "D:\\fotos\\dep1\\b.jpg"]))
+    assert w.tolist() == ["dep1/a.jpg", "dep1/b.jpg"]          # folder/file kept
+    same, none = relative_file_paths(pd.Series(["dep1/a.jpg"]))
+    assert none is None and same.tolist() == ["dep1/a.jpg"]
+
+
+def test_combined_dataset_photos_are_found_under_the_images_folder(archive, tmp_path):
+    """Absolute paths from another computer become relative, and the review finds them."""
+    from camtrap_workflow import resolve_media_path
+    src = tmp_path / "local"
+    src.mkdir()
+    imgs = tmp_path / "images"
+    med = pd.read_csv(archive / "A" / "media.csv", dtype=str)
+    med["filePath"] = "/Volumes/Other Mac/survey/" + med["deploymentID"] + "/" + med["mediaID"] + ".jpg"
+    med.to_csv(src / "media.csv", index=False)
+    row = med.iloc[0]
+    (imgs / row["deploymentID"]).mkdir(parents=True)
+    (imgs / row["deploymentID"] / f"{row['mediaID']}.jpg").write_bytes(b"\xff\xd8\xff")
+    res = run(_cfg(archive, filter_mode="none", media_source=str(src)), tmp_path / "out5")
+    out = pd.read_csv(Path(res["camtrap_dir"]) / "media.csv", dtype=str)
+    assert not out["filePath"].str.startswith("/").any()
+    r = out[out["mediaID"] == row["mediaID"]].iloc[0]
+    found = resolve_media_path(r["filePath"], r["deploymentID"], r["fileName"], str(imgs), Path(res["camtrap_dir"]))
+    assert found.exists()
 
 
 def test_learned_strategy_beats_raw_on_fallow_deer_mistakes(archive, tmp_path):

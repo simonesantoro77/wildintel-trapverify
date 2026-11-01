@@ -154,6 +154,45 @@ def apply_media_source(media: pd.DataFrame, src: Path, log: Log) -> tuple[pd.Dat
     return media, warnings
 
 
+_ABS_RE = re.compile(r"^(/|~|[A-Za-z]:[\\/]|\\\\)")
+
+
+def relative_file_paths(paths: pd.Series) -> tuple[pd.Series, Optional[str]]:
+    """Absolute local filePaths -> paths relative to their common folder.
+
+    CamtrapDP requires a relative path or a URL. Photos taken from another
+    computer's media.csv (``/Volumes/Disk/2023/R0025/dep/x.jpg``) become
+    ``R0025/dep/x.jpg``, which the review finds under its Images directory on
+    any computer. At least ``folder/file`` is kept. URLs and paths that are
+    already relative are left as they are. Returns the paths and the prefix
+    removed (None when nothing changed).
+    """
+    s = paths.astype("string")
+    absolute = s.str.match(_ABS_RE.pattern, na=False)
+    if not absolute.any():
+        return paths, None
+    norm = s[absolute].str.replace("\\", "/", regex=False)
+    parts = norm.str.split("/")
+    first = parts.iloc[0]
+    common = len(first) - 1                       # never the file name itself
+    for p in parts:
+        k = 0
+        while k < min(common, len(p) - 1) and p[k] == first[k]:
+            k += 1
+        common = k
+        if common == 0:
+            break
+    depth = parts.map(len).min()
+    common = min(common, depth - 2) if depth >= 2 else 0   # keep folder/file
+    if common <= 0:
+        return paths, None
+    prefix = "/".join(first[:common]) + "/"
+    rel = parts.map(lambda p: "/".join(p[common:]))
+    out = paths.copy()
+    out.loc[absolute] = rel.to_numpy()
+    return out, prefix
+
+
 @dataclass
 class Ingested:
     media: pd.DataFrame
