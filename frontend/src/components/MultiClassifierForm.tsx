@@ -483,7 +483,7 @@ function ResultView({ r }: { r: McResult }) {
                 <td className="px-2 py-1 text-right tabular-nums">
                   {s.diff_ci_low == null || s.best ? '' : `${Math.round(s.diff_ci_low)} … ${Math.round(s.diff_ci_high ?? 0)}`}
                 </td>
-                <td className="px-2 py-1 text-right tabular-nums">{s.ambiguous_photos?.toLocaleString() ?? ''}</td>
+                <td className="px-2 py-1 text-right tabular-nums">{s.mean_second_species == null ? '' : s.mean_second_species.toFixed(3)}</td>
                 <td className="px-2 py-1">
                   {s.chosen ? t('mc.chosen') : !s.eligible ? t('mc.not_eligible') : s.tie ? t('mc.tie') : ''}
                 </td>

@@ -164,7 +164,7 @@ def evaluate_strategy(st: Strategy, P: Prepared, cfg: PipelineConfig, folds: dic
     Cc = oof.C[oof.C["ai_any"]]
     a_pres = auc(Cc["p_pres"].to_numpy(float), Cc["y"].to_numpy(float))
 
-    acc, n_sp, amb, two = float("nan"), 0, None, None
+    acc, n_sp, amb, two, second = float("nan"), 0, None, None, float("nan")
     if oof.S is not None:
         s = oof.S[oof.S["ai_any"]].sort_values("p_esp", ascending=False, kind="stable")
         k = ["mediaID", "grupo"]
@@ -173,6 +173,9 @@ def evaluate_strategy(st: Strategy, P: Prepared, cfg: PipelineConfig, folds: dic
             .rename(columns={"p_esp": "p1", "especie": "top", "ref_especie": "ref"})
         r = r.merge(s.loc[s["_rk"] == 1, k + ["p_esp"]].rename(columns={"p_esp": "p2"}), on=k, how="left")
         r["p2"] = r["p2"].fillna(0.0)
+        # how clear the species are: mean probability of the second species
+        # (0 = every photo clearly one species); no cut-off to choose
+        second = float(r["p2"].mean()) if len(r) else float("nan")
         amb = int((r["p2"] >= 0.35).sum())
         two = int(((r["p1"] >= 0.5) & (r["p2"] >= 0.5)).sum())
         rr = r[r["ref"].notna()]
@@ -203,7 +206,8 @@ def evaluate_strategy(st: Strategy, P: Prepared, cfg: PipelineConfig, folds: dic
     cel["first_ok"] = cel["ret"] & (cel["fk"] == cel["o1"])
 
     summary = {"strategy": st.name, "auc_presence": a_pres, "species_accuracy": acc, "n_photos_species": n_sp,
-               "ambiguous_photos": amb, "photos_high_in_two": two, **_aggregate(cel)}
+               "mean_second_species": second, "ambiguous_photos": amb, "photos_high_in_two": two,
+               **_aggregate(cel)}
     by_sp = pd.DataFrame([{"especie": sp, **_aggregate(d)} for sp, d in cel.groupby("especie", sort=False)])
     by_sp = by_sp.merge(th, on="especie", how="left").assign(strategy=st.name)
     by_site = cel.groupby("siteID", sort=False).agg(pos=("pos", "sum"), ret=("ret", "sum"), rounds=("rounds", "sum")).reset_index()
@@ -219,8 +223,9 @@ def choose_strategy(evs: dict[str, dict], cfg: PipelineConfig) -> pd.DataFrame:
     2. Of the rest, the one with fewest events to look at.
     3. Bootstrap by site: another strategy whose 95 % interval of the
        difference in events includes 0 ties with it; ``tie_break`` decides:
-       ``ambiguous`` fewest photos split between two species, ``simple`` the
-       first in the list, ``none`` the one with fewest events.
+       ``ambiguous`` clearest species (lowest mean probability of the second
+       species in photos of multi-species groups), ``simple`` the first in
+       the list, ``none`` the one with fewest events.
     """
     names = list(evs)
     sites: list = []
@@ -252,6 +257,7 @@ def choose_strategy(evs: dict[str, dict], cfg: PipelineConfig) -> pd.DataFrame:
     })
     tab["eligible"] = (tab["cell_retention"] >= cfg.cell_retention - 1e-9) & ~tab["strategy"].isin(cfg.not_eligible)
     tab["ambiguous_photos"] = [evs[n]["summary"]["ambiguous_photos"] for n in names]
+    tab["mean_second_species"] = [evs[n]["summary"]["mean_second_species"] for n in names]
     if not tab["eligible"].any():
         tab["diff_ci_low"] = np.nan; tab["diff_ci_high"] = np.nan
         tab["tie"] = False; tab["best"] = False; tab["chosen"] = False
@@ -266,7 +272,7 @@ def choose_strategy(evs: dict[str, dict], cfg: PipelineConfig) -> pd.DataFrame:
     if cfg.tie_break == "simple":
         chosen = tied.iloc[0]["strategy"]
     elif cfg.tie_break == "ambiguous":
-        chosen = tied.sort_values("ambiguous_photos", kind="stable", na_position="last").iloc[0]["strategy"]
+        chosen = tied.sort_values("mean_second_species", kind="stable", na_position="last").iloc[0]["strategy"]
     else:
         chosen = best
     tab["best"] = tab["strategy"] == best

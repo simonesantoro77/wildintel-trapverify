@@ -148,6 +148,7 @@ export interface McStrategyRow {
   diff_ci_high: number | null
   tie: boolean
   ambiguous_photos: number | null
+  mean_second_species: number | null
   best: boolean
   chosen: boolean
 }

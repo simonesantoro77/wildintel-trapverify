@@ -125,6 +125,7 @@ class PipelineConfig:
 
     # Strategy choice
     n_bootstrap: int = 300
+    # "ambiguous": clearest species (lowest mean probability of the second species)
     tie_break: Literal["ambiguous", "simple", "none"] = "ambiguous"
     not_eligible: tuple[str, ...] = ("raw",)
 
