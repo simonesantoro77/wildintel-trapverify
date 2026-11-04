@@ -291,6 +291,8 @@ Click **Combine**. On large archives it takes a minute or two. The result shows 
 
 > **Note:** filtering by cells keeps the presence in each cell, not every true event. If the verified events will be used for counts or detection rates, choose **By events** in the advanced options.
 
+The five methods, the choice and the filter are explained step by step, with the results on a real archive, in [Combining several classifiers: methods and workflow](multiclassifier.md).
+
 The dataset is written to `~/Documents/camtrap_verify/conversions/multiclassifier_<date>/`, with a `multiclassifier/` subfolder holding the diagnostics: labels of each classifier, precision of each AI classifier against the reference, comparison and choice of methods, thresholds, and every detection event with its new and previous score and whether it was kept. Each observation's `observationComments` records the breakdown (presence, species, what each classifier said and the reference's verdict).
 
 ### Step 2 — Species
