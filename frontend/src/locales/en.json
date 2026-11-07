@@ -386,7 +386,7 @@
     "classifiers_title": "Classifiers",
     "classifiers_desc": "AI classifiers propose detections. The reference (optional) is taken as truth: it is used to measure the AI classifiers, learn how much to trust each one and choose the method.",
     "name": "Name",
-    "name_placeholder": "Name (e.g. DF)",
+    "name_placeholder": "Name, e.g. DeepFaune",
     "folder": "CamtrapDP folder",
     "folder_placeholder": "CamtrapDP folder",
     "role": "Role",
@@ -454,6 +454,8 @@
     "opening": "Opening the dataset… (it is read again: this can take a minute)",
     "media_source": "CamtrapDP with the photo paths",
     "media_source_hint": "Use it when the classifiers' media.csv don't point to the photos on this computer (e.g. Trapper URLs or a different file extension): filePath and fileName are taken from this CamtrapDP's media.csv, matched by mediaID.",
-    "remote_paths_warning": "{{pct}} % of the photos in the AI classifiers' media.csv are web addresses (e.g. Trapper): the review won't find them on this computer unless you fill in this field."
+    "remote_paths_warning": "{{pct}} % of the photos in the AI classifiers' media.csv are web addresses (e.g. Trapper): the review won't find them on this computer unless you fill in this field.",
+    "name_hint": "Type a short name for each classifier (e.g. DeepFaune, YOLO, Zooniverse). It identifies the classifier in the tables and in the diagnostics, so each one needs a different name.",
+    "name_duplicate": "Two classifiers are called \"{{name}}\". Give each one a different name."
   }
 }

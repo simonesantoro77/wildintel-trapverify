@@ -77,7 +77,7 @@ def _sources(items: list[ClassifierIn]) -> list[ClassifierSource]:
         out.append(ClassifierSource(name=c.name.strip(), path=str(p), role=c.role))
     if not any(c.role == "ai" for c in out):
         raise HTTPException(400, "At least one classifier must be an AI classifier.")
-    names = [c.name for c in out]
+    names = [c.name.casefold() for c in out]
     if any(not n for n in names) or len(set(names)) != len(names):
         raise HTTPException(400, "Each classifier needs a different, non-empty name.")
     return out

@@ -386,7 +386,7 @@
     "classifiers_title": "Klasyfikatory",
     "classifiers_desc": "Klasyfikatory AI proponują detekcje. Referencja (opcjonalna) jest traktowana jako prawda: służy do oceny klasyfikatorów AI, nauczenia się, na ile każdemu ufać, i wyboru metody.",
     "name": "Nazwa",
-    "name_placeholder": "Nazwa (np. DF)",
+    "name_placeholder": "Nazwa, np. DeepFaune",
     "folder": "Folder CamtrapDP",
     "folder_placeholder": "Folder CamtrapDP",
     "role": "Rola",
@@ -454,6 +454,8 @@
     "opening": "Otwieranie zbioru danych… (jest wczytywany ponownie: może to potrwać minutę)",
     "media_source": "CamtrapDP ze ścieżkami zdjęć",
     "media_source_hint": "Użyj, jeśli media.csv klasyfikatorów nie wskazuje zdjęć na tym komputerze (np. adresy URL Trappera lub inne rozszerzenie pliku): filePath i fileName są pobierane z media.csv tego CamtrapDP, dopasowując po mediaID.",
-    "remote_paths_warning": "{{pct}} % zdjęć w media.csv klasyfikatorów AI to adresy internetowe (np. Trapper): przegląd nie znajdzie ich na tym komputerze, jeśli nie wypełnisz tego pola."
+    "remote_paths_warning": "{{pct}} % zdjęć w media.csv klasyfikatorów AI to adresy internetowe (np. Trapper): przegląd nie znajdzie ich na tym komputerze, jeśli nie wypełnisz tego pola.",
+    "name_hint": "Wpisz krótką nazwę każdego klasyfikatora (np. DeepFaune, YOLO, Zooniverse). Identyfikuje on klasyfikator w tabelach i diagnostyce, więc każdy musi mieć inną nazwę.",
+    "name_duplicate": "Dwa klasyfikatory nazywają się „{{name}}”. Nadaj każdemu inną nazwę."
   }
 }

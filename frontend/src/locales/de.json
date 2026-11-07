@@ -386,7 +386,7 @@
     "classifiers_title": "Klassifizierer",
     "classifiers_desc": "KI-Klassifizierer schlagen Detektionen vor. Die Referenz (optional) gilt als Wahrheit: Mit ihr werden die KI-Klassifizierer gemessen, ihr Gewicht gelernt und die Methode gewählt.",
     "name": "Name",
-    "name_placeholder": "Name (z. B. DF)",
+    "name_placeholder": "Name, z. B. DeepFaune",
     "folder": "CamtrapDP-Ordner",
     "folder_placeholder": "CamtrapDP-Ordner",
     "role": "Rolle",
@@ -454,6 +454,8 @@
     "opening": "Datensatz wird geöffnet… (er wird erneut gelesen: das kann eine Minute dauern)",
     "media_source": "CamtrapDP mit den Fotopfaden",
     "media_source_hint": "Verwenden, wenn die media.csv der Klassifizierer nicht auf die Fotos auf diesem Computer zeigt (z. B. Trapper-URLs oder eine andere Dateiendung): filePath und fileName werden über die mediaID aus der media.csv dieses CamtrapDP übernommen.",
-    "remote_paths_warning": "{{pct}} % der Fotos in der media.csv der KI-Klassifizierer sind Webadressen (z. B. Trapper): Die Prüfung findet sie auf diesem Computer nur, wenn dieses Feld ausgefüllt ist."
+    "remote_paths_warning": "{{pct}} % der Fotos in der media.csv der KI-Klassifizierer sind Webadressen (z. B. Trapper): Die Prüfung findet sie auf diesem Computer nur, wenn dieses Feld ausgefüllt ist.",
+    "name_hint": "Gib jedem Klassifikator einen kurzen Namen (z. B. DeepFaune, YOLO, Zooniverse). Er kennzeichnet den Klassifikator in den Tabellen und Diagnosen, daher braucht jeder einen anderen Namen.",
+    "name_duplicate": "Zwei Klassifikatoren heißen „{{name}}“. Gib jedem einen anderen Namen."
   }
 }

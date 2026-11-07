@@ -75,7 +75,20 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
   const pollRef = useRef<number | null>(null)
 
   const hasReference = classifiers.some(c => c.role === 'reference' && c.path)
+  // Names are typed by hand (folder names such as "2023" are often the same
+  // for several classifiers) and must differ: they key the tables and results.
+  const duplicateName = useMemo(() => {
+    const seen = new Set<string>()
+    for (const c of classifiers) {
+      const k = c.name.trim().toLowerCase()
+      if (!k) continue
+      if (seen.has(k)) return c.name.trim()
+      seen.add(k)
+    }
+    return null
+  }, [classifiers])
   const ready = classifiers.every(c => c.name.trim() && c.path.trim()) && classifiers.some(c => c.role === 'ai')
+    && !duplicateName
 
   function update(i: number, patch: Partial<McClassifier>) {
     setClassifiers(cs => cs.map((c, j) => (j === i ? { ...c, ...patch } : c)))
@@ -237,6 +250,12 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
               onClick={() => { setClassifiers(cs => cs.filter((_, j) => j !== i)); setInv(null) }}>✕</button>
           </div>
         ))}
+        {duplicateName && (
+          <p role="alert" className="text-xs text-red-600 dark:text-red-400 mb-1">
+            {t('mc.name_duplicate', { name: duplicateName })}
+          </p>
+        )}
+        <p className={hintClass}>{t('mc.name_hint')}</p>
         <div className="flex gap-2 mt-2">
           <button type="button" className={smallBtn}
             onClick={() => setClassifiers(cs => [...cs, { name: '', path: '', role: 'ai' }])}>
@@ -462,8 +481,7 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
           onSelect={path => {
             const i = picker
             if (i < 0) { setMediaSource(path); setPicker(null); return }
-            const auto = classifiers[i].name.trim() ? {} : { name: path.split(/[\\/]/).filter(Boolean).pop() ?? '' }
-            update(i, { path, ...auto })
+            update(i, { path })
             setPicker(null)
           }}
           onClose={() => setPicker(null)}

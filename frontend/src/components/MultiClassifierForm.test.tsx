@@ -60,4 +60,18 @@ describe('MultiClassifierForm', () => {
     expect(body.filter_mode).toBe('cells')
     expect(body.classifiers.map(c => c.role)).toEqual(['ai', 'reference'])
   })
+
+  it('asks for a different name when two classifiers share one', async () => {
+    const user = userEvent.setup()
+    render(<MultiClassifierForm onConverted={vi.fn()} />)
+    const names = screen.getAllByLabelText('Name')
+    const folders = screen.getAllByLabelText('CamtrapDP folder')
+    await user.type(names[0], '2023'); await user.type(folders[0], '/data/DeepFaune1.4/2023')
+    await user.type(names[1], '2023'); await user.type(folders[1], '/data/YOLODonana/2023')
+    expect(screen.getByRole('alert')).toHaveTextContent('Two classifiers are called "2023"')
+    expect(screen.getByRole('button', { name: 'Read labels' })).toBeDisabled()
+    await user.clear(names[1]); await user.type(names[1], 'YOLO')
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Read labels' })).toBeEnabled()
+  })
 })

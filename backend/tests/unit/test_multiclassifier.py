@@ -306,3 +306,11 @@ def test_api_run_rejects_missing_folder(client, tmp_path):
         "classifiers": [{"name": "A", "path": str(tmp_path / "nope"), "role": "ai"}],
         "groups": GROUPS, "date_start": "2024-03-01", "date_end": "2024-04-30"})
     assert r.status_code == 400
+
+
+def test_api_rejects_classifiers_with_the_same_name(client, archive):
+    r = client.post("/api/multiclassifier/labels", json={"classifiers": [
+        {"name": "DF", "path": str(archive / "A"), "role": "ai"},
+        {"name": "df ", "path": str(archive / "B"), "role": "ai"}]})
+    assert r.status_code == 400
+    assert "different" in r.json()["detail"]
