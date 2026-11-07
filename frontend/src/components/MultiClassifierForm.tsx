@@ -5,8 +5,8 @@ import type { McClassifier, McJob, McLabels, McResult } from '../types'
 import DirectoryPicker from './DirectoryPicker'
 
 /**
- * Combine several classifiers (e.g. DeepFaune, a YOLO model and a human
- * reference such as Zooniverse) into one CamtrapDP whose
+ * Combine one or more AI classifiers (e.g. DeepFaune, a YOLO model) and,
+ * optionally, a human reference such as Zooniverse into one CamtrapDP whose
  * classificationProbability is recalculated. The backend compares scoring
  * strategies out of sample, picks one, removes the detection events that are
  * not worth reviewing and writes the dataset; the setup then continues with
@@ -38,6 +38,8 @@ const hintClass = 'mt-1 text-xs text-zinc-500 dark:text-zinc-400'
 const boxClass = 'mb-5 p-4 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50'
 const smallBtn =
   'text-xs px-2 py-1 rounded border border-blue-400 text-blue-600 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors disabled:opacity-40'
+const stepBtn =
+  'px-4 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:hover:bg-blue-600 flex items-center gap-2'
 
 function SmallSpinner() {
   return <span className="inline-block w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
@@ -50,9 +52,11 @@ const pct = (x: number | null | undefined, d = 1) =>
 export default function MultiClassifierForm({ onConverted, onBack }: Props) {
   const { t } = useTranslation()
 
+  // One AI classifier and the (optional) reference to start with; rows left
+  // completely empty are ignored, so the reference row can stay blank.
   const [classifiers, setClassifiers] = useState<McClassifier[]>([
     { name: '', path: '', role: 'ai' },
-    { name: '', path: '', role: 'ai' },
+    { name: '', path: '', role: 'reference' },
   ])
   const [picker, setPicker] = useState<number | null>(null)   // classifier row, or -1 for the photo paths
   const [mediaSource, setMediaSource] = useState('')
@@ -74,21 +78,22 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
   const [opening, setOpening] = useState(false)
   const pollRef = useRef<number | null>(null)
 
-  const hasReference = classifiers.some(c => c.role === 'reference' && c.path)
+  const filled = useMemo(() => classifiers.filter(c => c.name.trim() || c.path.trim()), [classifiers])
+  const hasReference = filled.some(c => c.role === 'reference' && c.path.trim())
+  const nAi = filled.filter(c => c.role === 'ai').length
   // Names are typed by hand (folder names such as "2023" are often the same
   // for several classifiers) and must differ: they key the tables and results.
   const duplicateName = useMemo(() => {
     const seen = new Set<string>()
-    for (const c of classifiers) {
+    for (const c of filled) {
       const k = c.name.trim().toLowerCase()
       if (!k) continue
       if (seen.has(k)) return c.name.trim()
       seen.add(k)
     }
     return null
-  }, [classifiers])
-  const ready = classifiers.every(c => c.name.trim() && c.path.trim()) && classifiers.some(c => c.role === 'ai')
-    && !duplicateName
+  }, [filled])
+  const ready = filled.every(c => c.name.trim() && c.path.trim()) && nAi > 0 && !duplicateName
 
   function update(i: number, patch: Partial<McClassifier>) {
     setClassifiers(cs => cs.map((c, j) => (j === i ? { ...c, ...patch } : c)))
@@ -99,7 +104,7 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
     setLoadingLabels(true)
     setError(null)
     try {
-      const r = await api.mcLabels({ classifiers })
+      const r = await api.mcLabels({ classifiers: filled })
       setInv(r)
       setDates(d => ({ start: d.start || r.date_min || '', end: d.end || r.date_max || '' }))
     } catch (e) {
@@ -165,7 +170,7 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
     setJob(null)
     try {
       const { job_id } = await api.mcRun({
-        classifiers,
+        classifiers: filled,
         groups,
         date_start: dates.start,
         date_end: dates.end,
@@ -204,6 +209,14 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
   const running = jobId !== null
   const result: McResult | undefined = job?.status === 'done' ? job.result : undefined
   const canRun = ready && !!inv && selected.size > 0 && !!dates.start && !!dates.end && dates.start <= dates.end && !running
+  // The first thing still missing, said next to the disabled Combine button.
+  const missing = running || result ? null
+    : duplicateName ? null
+    : !ready ? (classifiers.some(c => c.role === 'ai') ? 'mc.missing_rows' : 'mc.missing_ai')
+    : !inv ? 'mc.missing_labels'
+    : selected.size === 0 ? 'mc.missing_species'
+    : !(dates.start && dates.end && dates.start <= dates.end) ? 'mc.missing_period'
+    : null
 
   // Opening the new dataset reads it again (species, dates, datapackage
   // validation), which takes a while on large archives: show it.
@@ -261,11 +274,20 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
             onClick={() => setClassifiers(cs => [...cs, { name: '', path: '', role: 'ai' }])}>
             + {t('mc.add')}
           </button>
-          <button type="button" className={smallBtn} disabled={!ready || loadingLabels} onClick={readLabels}>
-            {loadingLabels ? t('mc.reading') : t('mc.read_labels')}
-          </button>
         </div>
         <p className={hintClass}>{t('mc.reference_hint')}</p>
+        {ready && nAi === 1 && !hasReference && (
+          <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">{t('mc.single_ai_no_reference')}</p>
+        )}
+        <div className="mt-4 pt-3 border-t border-zinc-200 dark:border-zinc-700 flex flex-wrap items-center gap-3">
+          <button type="button" className={stepBtn} disabled={!ready || loadingLabels} onClick={readLabels}>
+            {loadingLabels && <SmallSpinner />}
+            {loadingLabels ? t('mc.reading') : inv ? t('mc.read_labels_again') : t('mc.read_labels')}
+          </button>
+          <span className="text-xs text-zinc-500 dark:text-zinc-400 flex-1 min-w-[14rem]">
+            {inv ? t('mc.labels_read', { n: inv.n_photos.toLocaleString() }) : t('mc.read_labels_required')}
+          </span>
+        </div>
         <div className="mt-4">
           <label htmlFor="mc-media" className={labelClass}>
             {t('mc.media_source')} <span className="text-zinc-400 font-normal">{t('setup.label_output_optional')}</span>
@@ -331,7 +353,7 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
                   <tr className="bg-zinc-100 dark:bg-zinc-700 text-left">
                     <th className="px-2 py-2 w-8"></th>
                     <th className="px-2 py-2 font-medium text-zinc-600 dark:text-zinc-300">{t('mc.label')}</th>
-                    {classifiers.map(c => (
+                    {filled.map(c => (
                       <th key={c.name} className="px-2 py-2 font-medium text-zinc-600 dark:text-zinc-300 text-right">{c.name}</th>
                     ))}
                     <th className="px-2 py-2 font-medium text-zinc-600 dark:text-zinc-300">{t('mc.group')}</th>
@@ -347,7 +369,7 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
                           <input type="checkbox" checked={on} onChange={() => toggle(r.label)} aria-label={r.label} />
                         </td>
                         <td className="px-2 py-1.5 italic text-zinc-800 dark:text-zinc-200">{r.label}</td>
-                        {classifiers.map(c => (
+                        {filled.map(c => (
                           <td key={c.name} className="px-2 py-1.5 text-right tabular-nums text-zinc-600 dark:text-zinc-400">
                             {(r.n[c.name] ?? 0).toLocaleString()}
                           </td>
@@ -470,6 +492,7 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
               {t(running ? 'mc.running_btn' : 'mc.run')}
             </button>
           )}
+          {missing && !error && <p className="text-xs text-zinc-500 dark:text-zinc-400 text-right">{t(missing)}</p>}
           {error && <p className="text-sm text-red-600 dark:text-red-400 text-right">{error}</p>}
         </div>
       </div>

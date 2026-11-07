@@ -133,8 +133,8 @@
     "local_format_deepfaune_desc": "Classification results exported from DeepFaune",
     "local_format_csv": "Custom CSV",
     "local_format_csv_desc": "Any classifier CSV with configurable column mapping",
-    "local_format_mc": "Several classifiers",
-    "local_format_mc_desc": "Combine several classifiers (and a human reference) into one recalculated probability",
+    "local_format_mc": "Classifiers and reference",
+    "local_format_mc_desc": "Recalculate the probability from one or more AI classifiers, checked against a human reference (e.g. Zooniverse)",
     "deepfaune_title": "Import DeepFaune CSV",
     "deepfaune_desc": "Select your DeepFaune results file. It will be automatically converted to CamtrapDP format.",
     "deepfaune_csv_label": "DeepFaune results file (.csv)",
@@ -381,10 +381,10 @@
     "open": "Set folders"
   },
   "mc": {
-    "title": "Combine several classifiers",
-    "desc": "Each classifier is a CamtrapDP folder of the same photos (e.g. DeepFaune, a YOLO model and the volunteers' labels of Zooniverse). They are combined into one probability per photo and species, the scoring method is chosen with the reference, and the detection events that are not worth reviewing are removed. The result is a new CamtrapDP that the session then uses.",
+    "title": "Classifiers and reference",
+    "desc": "Each classifier is a CamtrapDP folder of the same photos: one or more AI classifiers (e.g. DeepFaune, a YOLO model) and, optionally, a human reference (e.g. the Zooniverse volunteers' labels). The app recalculates one probability per photo and species, uses the reference to choose how to calculate it, and removes the detection events not worth reviewing. The result is a new CamtrapDP that the session then uses.",
     "classifiers_title": "Classifiers",
-    "classifiers_desc": "AI classifiers propose detections. The reference (optional) is taken as truth: it is used to measure the AI classifiers, learn how much to trust each one and choose the method.",
+    "classifiers_desc": "One row per classifier. AI classifiers propose the detections: you can use one or several. The reference (optional) is the labels given by people, taken as truth: it measures the AI classifiers, teaches the app how much to trust each one, chooses the method and decides which events can be removed. Leave its row empty if you have no reference.",
     "name": "Name",
     "name_placeholder": "Name, e.g. DeepFaune",
     "folder": "CamtrapDP folder",
@@ -456,6 +456,15 @@
     "media_source_hint": "Use it when the classifiers' media.csv don't point to the photos on this computer (e.g. Trapper URLs or a different file extension): filePath and fileName are taken from this CamtrapDP's media.csv, matched by mediaID.",
     "remote_paths_warning": "{{pct}} % of the photos in the AI classifiers' media.csv are web addresses (e.g. Trapper): the review won't find them on this computer unless you fill in this field.",
     "name_hint": "Type a short name for each classifier (e.g. DeepFaune, YOLO, Zooniverse). It identifies the classifier in the tables and in the diagnostics, so each one needs a different name.",
-    "name_duplicate": "Two classifiers are called \"{{name}}\". Give each one a different name."
+    "name_duplicate": "Two classifiers are called \"{{name}}\". Give each one a different name.",
+    "read_labels_again": "Read labels again",
+    "read_labels_required": "Required: the app reads which labels and dates each classifier has. The period, the species and the options appear after this step.",
+    "labels_read": "Labels read: {{n}} photos. If you change a classifier, read them again.",
+    "missing_ai": "Add at least one AI classifier.",
+    "missing_rows": "Fill in a name and a folder for each classifier.",
+    "missing_labels": "Read the labels first.",
+    "missing_species": "Tick at least one target species.",
+    "missing_period": "Check the study period: the start must be before the end.",
+    "single_ai_no_reference": "With one AI classifier and no reference nothing changes: the probabilities stay those of the classifier and no event is removed. Add a reference, or open the classifier's CamtrapDP directly (CamtrapDP directory)."
   }
 }

@@ -74,4 +74,21 @@ describe('MultiClassifierForm', () => {
     expect(screen.queryByRole('alert')).toBeNull()
     expect(screen.getByRole('button', { name: 'Read labels' })).toBeEnabled()
   })
+
+  it('works with a single AI classifier and an empty reference row', async () => {
+    const user = userEvent.setup()
+    vi.mocked(api.mcLabels).mockClear()
+    render(<MultiClassifierForm onConverted={vi.fn()} />)
+    expect(screen.getByText('Fill in a name and a folder for each classifier.')).toBeInTheDocument()
+    await user.type(screen.getAllByLabelText('Name')[0], 'DF')
+    await user.type(screen.getAllByLabelText('CamtrapDP folder')[0], '/data/df')
+    // the reference row is left empty: it is ignored, with a note that nothing would change
+    expect(screen.getByText(/With one AI classifier and no reference nothing changes/)).toBeInTheDocument()
+    expect(screen.getByText('Read the labels first.')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Read labels' }))
+    await screen.findByLabelText('Cervus elaphus')
+    expect(vi.mocked(api.mcLabels).mock.calls[0][0].classifiers).toEqual([{ name: 'DF', path: '/data/df', role: 'ai' }])
+    expect(screen.getByRole('button', { name: 'Read labels again' })).toBeEnabled()
+    expect(screen.getByText('Tick at least one target species.')).toBeInTheDocument()
+  })
 })

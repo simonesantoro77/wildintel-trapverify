@@ -133,8 +133,8 @@
     "local_format_deepfaune_desc": "Wyniki klasyfikacji wyeksportowane z DeepFaune",
     "local_format_csv": "Niestandardowy CSV",
     "local_format_csv_desc": "Dowolny CSV klasyfikatora z konfigurowalnym mapowaniem kolumn",
-    "local_format_mc": "Kilka klasyfikatorów",
-    "local_format_mc_desc": "Połącz kilka klasyfikatorów (i referencję ludzką) w jedno przeliczone prawdopodobieństwo",
+    "local_format_mc": "Klasyfikatory i referencja",
+    "local_format_mc_desc": "Przelicz prawdopodobieństwo z jednego lub kilku klasyfikatorów AI, sprawdzonych na referencji ludzkiej (np. Zooniverse)",
     "deepfaune_title": "Importuj CSV DeepFaune",
     "deepfaune_desc": "Wybierz plik wyników DeepFaune. Zostanie automatycznie przekonwertowany do formatu CamtrapDP.",
     "deepfaune_csv_label": "Plik wyników DeepFaune (.csv)",
@@ -381,10 +381,10 @@
     "open": "Wskaż foldery"
   },
   "mc": {
-    "title": "Połącz kilka klasyfikatorów",
-    "desc": "Każdy klasyfikator to folder CamtrapDP z tymi samymi zdjęciami (np. DeepFaune, model YOLO i etykiety wolontariuszy z Zooniverse). Są łączone w jedno prawdopodobieństwo na zdjęcie i gatunek, metoda jest wybierana na podstawie referencji, a zdarzenia, których nie warto przeglądać, są usuwane. Wynikiem jest nowy CamtrapDP, którego następnie używa sesja.",
+    "title": "Klasyfikatory i referencja",
+    "desc": "Każdy klasyfikator to folder CamtrapDP z tymi samymi zdjęciami: jeden lub więcej klasyfikatorów AI (np. DeepFaune, model YOLO) i opcjonalnie referencja ludzka (np. etykiety wolontariuszy Zooniverse). Aplikacja przelicza jedno prawdopodobieństwo na zdjęcie i gatunek, za pomocą referencji wybiera sposób obliczenia i usuwa zdarzenia detekcji, których nie warto przeglądać. Wynikiem jest nowy CamtrapDP, którego potem używa sesja.",
     "classifiers_title": "Klasyfikatory",
-    "classifiers_desc": "Klasyfikatory AI proponują detekcje. Referencja (opcjonalna) jest traktowana jako prawda: służy do oceny klasyfikatorów AI, nauczenia się, na ile każdemu ufać, i wyboru metody.",
+    "classifiers_desc": "Jeden wiersz na klasyfikator. Klasyfikatory AI proponują detekcje: możesz użyć jednego lub kilku. Referencja (opcjonalna) to etykiety nadane przez ludzi, traktowane jako prawda: mierzy klasyfikatory AI, uczy aplikację, na ile ufać każdemu z nich, wybiera metodę i ustala, które zdarzenia można usunąć. Zostaw jej wiersz pusty, jeśli nie masz referencji.",
     "name": "Nazwa",
     "name_placeholder": "Nazwa, np. DeepFaune",
     "folder": "Folder CamtrapDP",
@@ -456,6 +456,15 @@
     "media_source_hint": "Użyj, jeśli media.csv klasyfikatorów nie wskazuje zdjęć na tym komputerze (np. adresy URL Trappera lub inne rozszerzenie pliku): filePath i fileName są pobierane z media.csv tego CamtrapDP, dopasowując po mediaID.",
     "remote_paths_warning": "{{pct}} % zdjęć w media.csv klasyfikatorów AI to adresy internetowe (np. Trapper): przegląd nie znajdzie ich na tym komputerze, jeśli nie wypełnisz tego pola.",
     "name_hint": "Wpisz krótką nazwę każdego klasyfikatora (np. DeepFaune, YOLO, Zooniverse). Identyfikuje on klasyfikator w tabelach i diagnostyce, więc każdy musi mieć inną nazwę.",
-    "name_duplicate": "Dwa klasyfikatory nazywają się „{{name}}”. Nadaj każdemu inną nazwę."
+    "name_duplicate": "Dwa klasyfikatory nazywają się „{{name}}”. Nadaj każdemu inną nazwę.",
+    "read_labels_again": "Wczytaj etykiety ponownie",
+    "read_labels_required": "Wymagane: aplikacja odczytuje, jakie etykiety i daty ma każdy klasyfikator. Okres, gatunki i opcje pojawią się po tym kroku.",
+    "labels_read": "Etykiety wczytane: {{n}} zdjęć. Jeśli zmienisz klasyfikator, wczytaj je ponownie.",
+    "missing_ai": "Dodaj co najmniej jeden klasyfikator AI.",
+    "missing_rows": "Podaj nazwę i folder każdego klasyfikatora.",
+    "missing_labels": "Najpierw wczytaj etykiety.",
+    "missing_species": "Zaznacz co najmniej jeden gatunek docelowy.",
+    "missing_period": "Sprawdź okres: początek musi być przed końcem.",
+    "single_ai_no_reference": "Przy jednym klasyfikatorze AI i bez referencji nic się nie zmienia: prawdopodobieństwa pozostają takie jak u klasyfikatora i żadne zdarzenie nie jest usuwane. Dodaj referencję albo otwórz bezpośrednio CamtrapDP klasyfikatora (Katalog CamtrapDP)."
   }
 }

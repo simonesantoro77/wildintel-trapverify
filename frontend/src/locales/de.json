@@ -117,7 +117,7 @@
     "label_min_score": "Mindest-Erkennungsscore",
     "hint_min_score": "Erkennungen mit einer Konfidenz unterhalb dieses Schwellenwerts werden ignoriert.",
     "label_min_score_by_species": "Schwellenwert pro Art (optional)",
-    "hint_min_score_by_species": "Leer lassen, um den allgemeinen Schwellenwert ({{value}}) zu verwenden. Nützlich für Arten, die der Klassifikator schlecht erkennt (niedriger) oder zu oft meldet (höher).",
+    "hint_min_score_by_species": "Leer lassen, um den allgemeinen Schwellenwert ({{value}}) zu verwenden. Nützlich für Arten, die der Klassifizierer schlecht erkennt (niedriger) oder zu oft meldet (höher).",
     "reset_min_score_by_species": "Allgemeinen Schwellenwert für alle verwenden",
     "label_classified_by": "Klassifiziert von",
     "hint_classified_by": "Wert, der in das Feld classifiedBy des verifizierten CamtrapDP für bestätigte Beobachtungen geschrieben wird.",
@@ -133,8 +133,8 @@
     "local_format_deepfaune_desc": "Von DeepFaune exportierte Klassifizierungsergebnisse",
     "local_format_csv": "Benutzerdefiniertes CSV",
     "local_format_csv_desc": "Beliebige Klassifizierer-CSV mit konfigurierbarer Spaltenzuordnung",
-    "local_format_mc": "Mehrere Klassifizierer",
-    "local_format_mc_desc": "Mehrere Klassifizierer (und eine menschliche Referenz) zu einer neu berechneten Wahrscheinlichkeit kombinieren",
+    "local_format_mc": "Klassifizierer und Referenz",
+    "local_format_mc_desc": "Wahrscheinlichkeit aus einem oder mehreren KI-Klassifizierern neu berechnen, geprüft an einer menschlichen Referenz (z. B. Zooniverse)",
     "deepfaune_title": "DeepFaune CSV importieren",
     "deepfaune_desc": "Wählen Sie Ihre DeepFaune-Ergebnisdatei. Sie wird automatisch in das CamtrapDP-Format konvertiert.",
     "deepfaune_csv_label": "DeepFaune-Ergebnisdatei (.csv)",
@@ -381,10 +381,10 @@
     "open": "Ordner angeben"
   },
   "mc": {
-    "title": "Mehrere Klassifizierer kombinieren",
-    "desc": "Jeder Klassifizierer ist ein CamtrapDP-Ordner derselben Fotos (z. B. DeepFaune, ein YOLO-Modell und die Annotationen der Freiwilligen auf Zooniverse). Sie werden zu einer Wahrscheinlichkeit pro Foto und Art kombiniert, die Methode wird anhand der Referenz gewählt, und Ereignisse, deren Prüfung sich nicht lohnt, werden entfernt. Das Ergebnis ist ein neues CamtrapDP, das die Sitzung anschließend verwendet.",
+    "title": "Klassifizierer und Referenz",
+    "desc": "Jeder Klassifizierer ist ein CamtrapDP-Ordner mit denselben Fotos: ein oder mehrere KI-Klassifizierer (z. B. DeepFaune, ein YOLO-Modell) und optional eine menschliche Referenz (z. B. die Labels der Zooniverse-Freiwilligen). Die App berechnet eine neue Wahrscheinlichkeit pro Foto und Art, wählt mit der Referenz die Berechnungsweise und entfernt die Detektionsereignisse, deren Prüfung sich nicht lohnt. Das Ergebnis ist ein neues CamtrapDP, das die Sitzung dann verwendet.",
     "classifiers_title": "Klassifizierer",
-    "classifiers_desc": "KI-Klassifizierer schlagen Detektionen vor. Die Referenz (optional) gilt als Wahrheit: Mit ihr werden die KI-Klassifizierer gemessen, ihr Gewicht gelernt und die Methode gewählt.",
+    "classifiers_desc": "Eine Zeile pro Klassifizierer. KI-Klassifizierer schlagen die Detektionen vor: Du kannst einen oder mehrere verwenden. Die Referenz (optional) sind die von Menschen vergebenen Labels, die als Wahrheit gelten: Sie misst die KI-Klassifizierer, lehrt die App, wie sehr sie jedem vertrauen kann, wählt die Methode und legt fest, welche Ereignisse entfernt werden können. Lass ihre Zeile leer, wenn du keine Referenz hast.",
     "name": "Name",
     "name_placeholder": "Name, z. B. DeepFaune",
     "folder": "CamtrapDP-Ordner",
@@ -455,7 +455,16 @@
     "media_source": "CamtrapDP mit den Fotopfaden",
     "media_source_hint": "Verwenden, wenn die media.csv der Klassifizierer nicht auf die Fotos auf diesem Computer zeigt (z. B. Trapper-URLs oder eine andere Dateiendung): filePath und fileName werden über die mediaID aus der media.csv dieses CamtrapDP übernommen.",
     "remote_paths_warning": "{{pct}} % der Fotos in der media.csv der KI-Klassifizierer sind Webadressen (z. B. Trapper): Die Prüfung findet sie auf diesem Computer nur, wenn dieses Feld ausgefüllt ist.",
-    "name_hint": "Gib jedem Klassifikator einen kurzen Namen (z. B. DeepFaune, YOLO, Zooniverse). Er kennzeichnet den Klassifikator in den Tabellen und Diagnosen, daher braucht jeder einen anderen Namen.",
-    "name_duplicate": "Zwei Klassifikatoren heißen „{{name}}“. Gib jedem einen anderen Namen."
+    "name_hint": "Gib jedem Klassifizierer einen kurzen Namen (z. B. DeepFaune, YOLO, Zooniverse). Er kennzeichnet den Klassifizierer in den Tabellen und Diagnosen, daher braucht jeder einen anderen Namen.",
+    "name_duplicate": "Zwei Klassifizierer heißen „{{name}}“. Gib jedem einen anderen Namen.",
+    "read_labels_again": "Labels erneut lesen",
+    "read_labels_required": "Erforderlich: Die App liest, welche Labels und Daten jeder Klassifizierer hat. Zeitraum, Arten und Optionen erscheinen nach diesem Schritt.",
+    "labels_read": "Labels gelesen: {{n}} Fotos. Wenn du einen Klassifizierer änderst, lies sie erneut.",
+    "missing_ai": "Füge mindestens einen KI-Klassifizierer hinzu.",
+    "missing_rows": "Gib für jeden Klassifizierer einen Namen und einen Ordner an.",
+    "missing_labels": "Lies zuerst die Labels.",
+    "missing_species": "Wähle mindestens eine Zielart.",
+    "missing_period": "Prüfe den Zeitraum: Der Beginn muss vor dem Ende liegen.",
+    "single_ai_no_reference": "Mit nur einem KI-Klassifizierer und ohne Referenz ändert sich nichts: Die Wahrscheinlichkeiten bleiben die des Klassifizierers und kein Ereignis wird entfernt. Füge eine Referenz hinzu oder öffne das CamtrapDP des Klassifizierers direkt (CamtrapDP-Verzeichnis)."
   }
 }
