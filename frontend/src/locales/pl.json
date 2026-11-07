@@ -452,9 +452,6 @@
     "strategy_learned": "Nauczone z referencji",
     "strategy_learned_context": "Nauczone, z sąsiednimi zdjęciami",
     "opening": "Otwieranie zbioru danych… (jest wczytywany ponownie: może to potrwać minutę)",
-    "media_source": "CamtrapDP ze ścieżkami zdjęć",
-    "media_source_hint": "Użyj, jeśli media.csv klasyfikatorów nie wskazuje zdjęć na tym komputerze (np. adresy URL Trappera lub inne rozszerzenie pliku): filePath i fileName są pobierane z media.csv tego CamtrapDP, dopasowując po mediaID.",
-    "remote_paths_warning": "{{pct}} % zdjęć w media.csv klasyfikatorów AI to adresy internetowe (np. Trapper): przegląd nie znajdzie ich na tym komputerze, jeśli nie wypełnisz tego pola.",
     "name_hint": "Wpisz krótką nazwę każdego klasyfikatora (np. DeepFaune, YOLO, Zooniverse). Identyfikuje on klasyfikator w tabelach i diagnostyce, więc każdy musi mieć inną nazwę.",
     "name_duplicate": "Dwa klasyfikatory nazywają się „{{name}}”. Nadaj każdemu inną nazwę.",
     "read_labels_again": "Wczytaj etykiety ponownie",
@@ -465,6 +462,7 @@
     "missing_labels": "Najpierw wczytaj etykiety.",
     "missing_species": "Zaznacz co najmniej jeden gatunek docelowy.",
     "missing_period": "Sprawdź okres: początek musi być przed końcem.",
-    "single_ai_no_reference": "Przy jednym klasyfikatorze AI i bez referencji nic się nie zmienia: prawdopodobieństwa pozostają takie jak u klasyfikatora i żadne zdarzenie nie jest usuwane. Dodaj referencję albo otwórz bezpośrednio CamtrapDP klasyfikatora (Katalog CamtrapDP)."
+    "single_ai_no_reference": "Przy jednym klasyfikatorze AI i bez referencji nic się nie zmienia: prawdopodobieństwa pozostają takie jak u klasyfikatora i żadne zdarzenie nie jest usuwane. Dodaj referencję albo otwórz bezpośrednio CamtrapDP klasyfikatora (Katalog CamtrapDP).",
+    "remote_paths_info": "{{pct}} % zdjęć w media.csv klasyfikatorów AI to adresy internetowe (np. Trapper), a nie ścieżki na tym komputerze. To nie problem: w kroku Katalog obrazów wybierz folder ze zdjęciami, a aplikacja znajdzie każde z nich po folderze jego kamery (deploymentID) i nazwie pliku, także w podfolderach (np. R0025\\r0025-dona_0011) i z innym rozszerzeniem (.JPEG lub .jpg)."
   }
 }

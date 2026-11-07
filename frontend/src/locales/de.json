@@ -452,9 +452,6 @@
     "strategy_learned": "Aus der Referenz gelernt",
     "strategy_learned_context": "Gelernt, mit Nachbarfotos",
     "opening": "Datensatz wird geöffnet… (er wird erneut gelesen: das kann eine Minute dauern)",
-    "media_source": "CamtrapDP mit den Fotopfaden",
-    "media_source_hint": "Verwenden, wenn die media.csv der Klassifizierer nicht auf die Fotos auf diesem Computer zeigt (z. B. Trapper-URLs oder eine andere Dateiendung): filePath und fileName werden über die mediaID aus der media.csv dieses CamtrapDP übernommen.",
-    "remote_paths_warning": "{{pct}} % der Fotos in der media.csv der KI-Klassifizierer sind Webadressen (z. B. Trapper): Die Prüfung findet sie auf diesem Computer nur, wenn dieses Feld ausgefüllt ist.",
     "name_hint": "Gib jedem Klassifizierer einen kurzen Namen (z. B. DeepFaune, YOLO, Zooniverse). Er kennzeichnet den Klassifizierer in den Tabellen und Diagnosen, daher braucht jeder einen anderen Namen.",
     "name_duplicate": "Zwei Klassifizierer heißen „{{name}}“. Gib jedem einen anderen Namen.",
     "read_labels_again": "Labels erneut lesen",
@@ -465,6 +462,7 @@
     "missing_labels": "Lies zuerst die Labels.",
     "missing_species": "Wähle mindestens eine Zielart.",
     "missing_period": "Prüfe den Zeitraum: Der Beginn muss vor dem Ende liegen.",
-    "single_ai_no_reference": "Mit nur einem KI-Klassifizierer und ohne Referenz ändert sich nichts: Die Wahrscheinlichkeiten bleiben die des Klassifizierers und kein Ereignis wird entfernt. Füge eine Referenz hinzu oder öffne das CamtrapDP des Klassifizierers direkt (CamtrapDP-Verzeichnis)."
+    "single_ai_no_reference": "Mit nur einem KI-Klassifizierer und ohne Referenz ändert sich nichts: Die Wahrscheinlichkeiten bleiben die des Klassifizierers und kein Ereignis wird entfernt. Füge eine Referenz hinzu oder öffne das CamtrapDP des Klassifizierers direkt (CamtrapDP-Verzeichnis).",
+    "remote_paths_info": "{{pct}} % der Fotos in der media.csv der KI-Klassifizierer sind Webadressen (z. B. Trapper) statt Pfade auf diesem Computer. Das ist kein Problem: Wähle im Schritt Bildverzeichnis den Ordner mit den Fotos; die App findet jedes Foto über den Ordner seiner Kamera (deploymentID) und seinen Dateinamen, auch in Unterordnern (z. B. R0025\\r0025-dona_0011) und mit anderer Endung (.JPEG oder .jpg)."
   }
 }

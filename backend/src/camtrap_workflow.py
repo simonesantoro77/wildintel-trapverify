@@ -420,6 +420,15 @@ def _flat_image_index(image_base_dir: str) -> dict[str, tuple[str, ...]]:
     return {k: tuple(v) for k, v in index.items()}
 
 
+@lru_cache(maxsize=8)
+def _flat_image_index_norm(image_base_dir: str) -> dict[str, tuple[str, ...]]:
+    """The flat index keyed by :func:`_norm_name` (``x.JPEG`` finds ``x.jpg``)."""
+    index: dict[str, list[str]] = {}
+    for name, paths in _flat_image_index(image_base_dir).items():
+        index.setdefault(_norm_name(name), []).extend(paths)
+    return {k: tuple(v) for k, v in index.items()}
+
+
 def clear_media_caches() -> None:
     """Drop the cached flat-search file index.
 
@@ -430,6 +439,7 @@ def clear_media_caches() -> None:
     per new setup so each session starts from a fresh scan.
     """
     _flat_image_index.cache_clear()
+    _flat_image_index_norm.cache_clear()
 
 
 def is_remote_path(file_path: str) -> bool:
@@ -446,6 +456,20 @@ def _is_file(path: Path) -> bool:
 
 
 _MAX_SUFFIX_PARTS = 6
+
+# How deep below the images folder a folder named like a deployment is looked
+# for (``images/R0025/dep_0011`` is 2 levels down).
+_DEPLOYMENT_DIR_DEPTH = 3
+
+# Extensions that name the same kind of file: a classifier export may call a
+# photo ``x.JPEG`` while the file on disk is ``x.jpg``.
+_EXT_ALIASES = {".jpeg": ".jpg", ".jpe": ".jpg", ".tiff": ".tif"}
+
+
+def _norm_name(name: str) -> str:
+    """File name in lower case with equivalent image extensions folded."""
+    stem, ext = os.path.splitext(name.lower())
+    return stem + _EXT_ALIASES.get(ext, ext)
 
 
 def _path_parts(file_path: str) -> list[str]:
@@ -557,6 +581,8 @@ def resolve_media_path(
 
         if flat_search and file_name:
             hits = _flat_image_index(str(image_base_dir)).get(file_name.lower(), ())
+            if not hits:
+                hits = _flat_image_index_norm(str(image_base_dir)).get(_norm_name(file_name), ())
             if len(hits) == 1:
                 return Path(hits[0])
             if len(hits) > 1:
@@ -618,6 +644,11 @@ class MediaResolver:
             if b and (not self.image_base_dir or Path(b) != Path(self.image_base_dir))
         )
         self._dirs: dict[str, Optional[tuple[frozenset, frozenset]]] = {}
+        self._norm_names: dict[str, dict[str, str]] = {}
+        self._subdirs: dict[str, tuple[str, ...]] = {}
+        self._dep_dirs: dict[str, list[str]] = {}
+        self._dep_frontier: list[str] = [self.image_base_dir] if self.image_base_dir else []
+        self._dep_depth = 0
         self._suffix_dirs: dict[tuple, list[tuple[str, tuple[frozenset, frozenset]]]] = {}
         self._base_strs: dict[Path, str] = {}
         self._base_path = Path(self.image_base_dir) if self.image_base_dir else None
@@ -688,8 +719,82 @@ class MediaResolver:
                 return Path(d, name)
         return None
 
+    def _match_name(self, directory: str, file_name: str) -> Optional[str]:
+        """Name of the file in ``directory`` that is ``file_name``, ignoring case
+        and equivalent extensions (``x.JPEG`` is ``x.jpg``), or None."""
+        listing = self._listing(directory)
+        if not listing or not listing[0]:
+            return None
+        if file_name in listing[0]:
+            return file_name
+        key = os.path.normcase(directory)
+        names = self._norm_names.get(key)
+        if names is None:
+            names = {}
+            for n in sorted(listing[0]):
+                names.setdefault(_norm_name(n), n)
+            self._norm_names[key] = names
+        return names.get(_norm_name(file_name))
+
+    def _child_dirs(self, directory: str) -> tuple[str, ...]:
+        key = os.path.normcase(directory)
+        if key not in self._subdirs:
+            try:
+                with os.scandir(directory) as it:
+                    self._subdirs[key] = tuple(e.path for e in it if e.is_dir())
+            except OSError:
+                self._subdirs[key] = ()
+        return self._subdirs[key]
+
+    def deployment_dirs(self, deployment_id: str) -> list[str]:
+        """Folders named like ``deployment_id`` (any case) up to
+        ``_DEPLOYMENT_DIR_DEPTH`` levels below the images folder.
+
+        The tree is explored one level at a time and only as deep as needed,
+        so an archive laid out as ``images/<group>/<deploymentID>/`` costs a
+        couple of folder listings, not a walk over every photo.
+        """
+        want = (deployment_id or "").lower()
+        if not want:
+            return []
+        while want not in self._dep_dirs and self._dep_frontier and self._dep_depth < _DEPLOYMENT_DIR_DEPTH:
+            level: list[str] = []
+            for d in self._dep_frontier:
+                for sub in self._child_dirs(d):
+                    self._dep_dirs.setdefault(os.path.basename(sub).lower(), []).append(sub)
+                    level.append(sub)
+            self._dep_frontier = level
+            self._dep_depth += 1
+        return self._dep_dirs.get(want, [])
+
+    def by_deployment_folder(self, deployment_id: str, file_name: str) -> Optional[Path]:
+        """The photo in a folder named like its deployment anywhere below the
+        images folder, ignoring case and ``.JPEG``/``.jpg``.
+
+        Covers classifier exports (e.g. from TRAPPER) whose ``filePath`` is a
+        web address and whose ``fileName`` extension differs from the file on
+        disk, with the photos stored as ``images/<group>/<deploymentID>/``.
+        A name found in more than one folder is ambiguous and not used.
+        """
+        if not self.image_base_dir or not file_name or not deployment_id:
+            return None
+        folders = [os.path.join(self.image_base_dir, deployment_id), *self.deployment_dirs(deployment_id)]
+        hits: dict[str, str] = {}
+        for d in folders:
+            name = self._match_name(d, file_name)
+            if name is not None:
+                p = os.path.join(d, name)
+                hits.setdefault(os.path.normcase(os.path.normpath(p)), p)
+        if len(hits) == 1:
+            return Path(next(iter(hits.values())))
+        if len(hits) > 1:
+            logger.warning("Photo %s of %s found in %d folders; not used", file_name, deployment_id, len(hits))
+        return None
+
     def resolve(self, file_path: str, deployment_id: str, file_name: str) -> Path:
-        """Same rules as :func:`resolve_media_path`, using the cached listings."""
+        """Same rules as :func:`resolve_media_path`, using the cached listings,
+        plus the lookup by deployment folder (:meth:`by_deployment_folder`)
+        before the slower fallbacks."""
         if self.image_base_dir:
             # Fast path for the two common hits (structured layout, filePath
             # suffix) with plain strings: building Path objects dominated the
@@ -701,6 +806,9 @@ class MediaResolver:
             ):
                 return Path(d, file_name)
             hit = self.suffix_lookup(file_path, self._base_path)
+            if hit is not None:
+                return hit
+            hit = self.by_deployment_folder(deployment_id, file_name)
             if hit is not None:
                 return hit
         if self.extra_bases and not self.flat_search and file_path and not is_remote_path(file_path):
@@ -816,6 +924,7 @@ def find_flat_search_ambiguities(med: pd.DataFrame, image_base_dir: str) -> list
     strict = lambda p: lister.status(p) == "ok"  # noqa: E731
     found = [
         strict(base / d / f) or lister.suffix_lookup(fp, base) is not None
+        or lister.by_deployment_folder(d, f) is not None
         for fp, d, f in zip(_col("filePath"), _col("deploymentID"), _col("fileName"))
     ]
     med = med[[not hit for hit in found]]

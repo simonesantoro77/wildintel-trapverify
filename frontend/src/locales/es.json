@@ -452,9 +452,6 @@
     "strategy_learned": "Aprendido de la referencia",
     "strategy_learned_context": "Aprendido, con fotos vecinas",
     "opening": "Abriendo el dataset… (se vuelve a leer: puede tardar un minuto)",
-    "media_source": "CamtrapDP con las rutas de las fotos",
-    "media_source_hint": "Úsalo si el media.csv de los clasificadores no apunta a las fotos de este ordenador (por ejemplo, URLs de Trapper u otra extensión de archivo): filePath y fileName se toman del media.csv de este CamtrapDP, emparejando por mediaID.",
-    "remote_paths_warning": "El {{pct}} % de las fotos del media.csv de los clasificadores de IA son direcciones web (por ejemplo, de Trapper): la revisión no las encontrará en este ordenador si no rellenas este campo.",
     "name_hint": "Escribe un nombre corto para cada clasificador (p. ej. DeepFaune, YOLO, Zooniverse). Lo identifica en las tablas y en los diagnósticos, así que cada uno necesita un nombre distinto.",
     "name_duplicate": "Hay dos clasificadores llamados «{{name}}». Pon a cada uno un nombre distinto.",
     "read_labels_again": "Volver a leer etiquetas",
@@ -465,6 +462,7 @@
     "missing_labels": "Primero lee las etiquetas.",
     "missing_species": "Marca al menos una especie objetivo.",
     "missing_period": "Revisa el periodo: el inicio debe ser anterior al final.",
-    "single_ai_no_reference": "Con un solo clasificador de IA y sin referencia no cambia nada: las probabilidades siguen siendo las del clasificador y no se quita ningún evento. Añade una referencia o abre directamente el CamtrapDP del clasificador (Directorio CamtrapDP)."
+    "single_ai_no_reference": "Con un solo clasificador de IA y sin referencia no cambia nada: las probabilidades siguen siendo las del clasificador y no se quita ningún evento. Añade una referencia o abre directamente el CamtrapDP del clasificador (Directorio CamtrapDP).",
+    "remote_paths_info": "El {{pct}} % de las fotos del media.csv de los clasificadores de IA son direcciones web (p. ej. de Trapper) y no rutas de este ordenador. No pasa nada: en el paso Directorio de imágenes elige la carpeta que contiene las fotos y la app encontrará cada una por la carpeta de su cámara (deploymentID) y su nombre de archivo, también dentro de subcarpetas (p. ej. R0025\\r0025-dona_0011) y con otra extensión (.JPEG o .jpg)."
   }
 }

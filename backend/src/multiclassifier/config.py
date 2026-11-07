@@ -130,8 +130,10 @@ class PipelineConfig:
     not_eligible: tuple[str, ...] = ("raw",)
 
     # Optional CamtrapDP folder (or media.csv) whose filePath / fileName are
-    # used for the output, matched by mediaID: classifiers often store a
-    # remote URL or a renamed file, while the photos are on a local disk.
+    # used for the output, matched by mediaID. Not needed in the app, which
+    # finds photos stored as <images>/<group>/<deploymentID>/<fileName> even
+    # when filePath is a remote URL and the extension differs (.JPEG/.jpg);
+    # kept for scripts that want local paths written into the dataset.
     media_source: Optional[str] = None
 
     export_rows: Literal["target", "all"] = "target"

@@ -58,8 +58,7 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
     { name: '', path: '', role: 'ai' },
     { name: '', path: '', role: 'reference' },
   ])
-  const [picker, setPicker] = useState<number | null>(null)   // classifier row, or -1 for the photo paths
-  const [mediaSource, setMediaSource] = useState('')
+  const [picker, setPicker] = useState<number | null>(null)   // classifier row being browsed
   const [inv, setInv] = useState<McLabels | null>(null)
   const [loadingLabels, setLoadingLabels] = useState(false)
   const [dates, setDates] = useState({ start: '', end: '' })
@@ -180,7 +179,6 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
         retention: retention / 100,
         tie_break: tieBreak,
         use_reference_in_output: refVerdict,
-        media_source: mediaSource.trim() || null,
       })
       setJobId(job_id)
     } catch (e) {
@@ -288,22 +286,11 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
             {inv ? t('mc.labels_read', { n: inv.n_photos.toLocaleString() }) : t('mc.read_labels_required')}
           </span>
         </div>
-        <div className="mt-4">
-          <label htmlFor="mc-media" className={labelClass}>
-            {t('mc.media_source')} <span className="text-zinc-400 font-normal">{t('setup.label_output_optional')}</span>
-          </label>
-          <div className="flex">
-            <input id="mc-media" className={inputClass} placeholder={t('mc.folder_placeholder')}
-              value={mediaSource} onChange={e => setMediaSource(e.target.value)} />
-            <button type="button" className={browseBtn} onClick={() => setPicker(-1)}>{t('setup.browse')}</button>
-          </div>
-          <p className={hintClass}>{t('mc.media_source_hint')}</p>
-          {inv && inv.remote_paths > 0.5 && !mediaSource.trim() && (
-            <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
-              {t('mc.remote_paths_warning', { pct: Math.round(100 * inv.remote_paths) })}
-            </p>
-          )}
-        </div>
+        {inv && inv.remote_paths > 0.5 && (
+          <p className="mt-3 text-xs text-blue-700 dark:text-blue-300">
+            {t('mc.remote_paths_info', { pct: Math.round(100 * inv.remote_paths) })}
+          </p>
+        )}
       </div>
 
       {inv && (
@@ -500,11 +487,9 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
       {picker !== null && (
         <DirectoryPicker
           title={t('mc.folder_picker_title')}
-          initialPath={(picker < 0 ? mediaSource : classifiers[picker]?.path) || undefined}
+          initialPath={classifiers[picker]?.path || undefined}
           onSelect={path => {
-            const i = picker
-            if (i < 0) { setMediaSource(path); setPicker(null); return }
-            update(i, { path })
+            update(picker, { path })
             setPicker(null)
           }}
           onClose={() => setPicker(null)}
