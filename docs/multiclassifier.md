@@ -1,12 +1,12 @@
 # Combining several classifiers: methods and workflow
 
-How the **Several classifiers** data format works (setup wizard, local data, Option E in the [user manual](user-manual.md)). Code: `backend/src/multiclassifier/`.
+How the **Classifiers and reference** data format works (setup wizard, local data, Option E in the [user manual](user-manual.md)). Code: `backend/src/multiclassifier/`.
 
 ## Purpose
 
-The app combines several classifiers into one CamtrapDP with a new `classificationProbability` per photo and target species, so the review shows the most likely events first and skips the events not worth reviewing.
+The app combines one or more AI classifiers and, optionally, a human reference into one CamtrapDP with a new `classificationProbability` per photo and target species, so the review shows the most likely events first and skips the events not worth reviewing.
 
-CamTrap Verify uses that score for two things: the **order** of the rounds in each cell (highest score first) and the **filter** (which events are left out). The inputs are the CamtrapDP folders of the AI classifiers (here DeepFaune 1.4 and YOLODoñana) and, optionally, a human **reference** taken as truth (here Zooniverse). With a reference, the app learns how much to trust each classifier, compares five ways of scoring, picks one and sets a threshold per species. Without a reference it can only apply the rule-based methods and no filter is estimated.
+CamTrap Verify uses that score for two things: the **order** of the rounds in each cell (highest score first) and the **filter** (which events are left out). The inputs are the CamtrapDP folders of the AI classifiers (here DeepFaune 1.4 and YOLODoñana) and, optionally, a human **reference** taken as truth (here Zooniverse). With a reference, the app learns how much to trust each classifier, compares five ways of scoring, picks one and sets a threshold per species. Without a reference it can only apply the rule-based methods and no filter is estimated, so one AI classifier without a reference changes nothing. One AI classifier with a reference is useful: on Doñana 2023, DeepFaune alone with Zooniverse removed 12 % of the events of five ungulate species without losing any cell (28 % with DeepFaune and YOLO).
 
 ## Key terms
 
@@ -32,11 +32,13 @@ For each photo and group the reference is in one of six states:
 
 The species is learnt only from photos where the reference named a single species. A photo with two species of the same group counts as true for both, but does not train the species model.
 
+**How groups are formed.** Species are proposed as one group when some classifier uses their genus (e.g. *Martes*) or their family (e.g. *Cervidae*) as a label. Mammal families come from a genus → family table taken from the [Mammal Diversity Database](https://www.mammaldiversity.org) (1,363 genera, CC BY 4.0; `multiclassifier/taxonomy.py`), so this works outside Europe too. The user can leave a species on its own, take a proposed group or type any group name (e.g. for birds, or to score two confusable species together). The groups and label meanings used in a run are saved in the app folder (`multiclassifier_groups.json`) and proposed again next time. A label that is a group's name is read as "an animal of the group, species unknown"; other labels that are not a species (a genus, a common name) can be mapped to a group or a target species, otherwise they count as another animal.
+
 ## Workflow
 
 Six steps run in one go when **Combine** is pressed (about 75 s for 548,000 photos):
 
-1. **Ingest** (`ingest.py`). Reads each classifier's CamtrapDP within the study period. For every photo and classifier it records what the classifier says: a target group or species with its probability, empty, unidentified, another animal, or a person. It keeps the detector boxes, lists every label so you can map species to groups, and takes the photo paths from the "CamtrapDP with the photo paths" when given.
+1. **Ingest** (`ingest.py`). Reads each classifier's CamtrapDP within the study period. For every photo and classifier it records what the classifier says: a target group or species with its probability, empty, unidentified, another animal, or a person. It keeps the detector boxes and lists every label so you can map species to groups. Labels that are not a species can be mapped to a group or a target species (aliases: e.g. *deer* means *Cervidae*). The photo paths are kept as the classifiers give them (often web addresses): the review finds each photo by its deployment folder and file name under the Images directory.
 2. **Prepare** (`prepare.py`). Builds three tables: photo × group (what each AI says, the reference state, the neighbouring photos), photo × species for multi-species groups, and animal × species after matching the boxes of the AIs.
 3. **Compare the five methods** (`model.py`, `evaluate.py`). Each method is fitted and scored out of sample: cameras are split into 5 blocks, each block is scored by a model trained on the other 4. Each method is then judged by how many events a reviewer would look at (see *How the method is chosen*).
 4. **Score everything** (`model.py`). The chosen method is fitted on all photos. On photos the reference reviewed, its verdict is applied (see *The reference in the output*).
@@ -143,7 +145,7 @@ The fallow deer threshold is low because the AIs often take fallow deer for red 
 
 ## Outputs and limits
 
-The combined dataset is saved in `Documents\camtrap_verify\conversions\multiclassifier_<date>`; its `multiclassifier/` subfolder holds the diagnostics:
+The combined dataset is saved in the folder chosen in the form (by default `Documents\camtrap_verify\conversions\multiclassifier_<date and time>`; a folder that already holds files is never overwritten). Its `multiclassifier/` subfolder holds the diagnostics:
 
 | File | Contents |
 | --- | --- |

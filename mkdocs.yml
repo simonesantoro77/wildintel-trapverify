@@ -95,7 +95,7 @@ plugins:
 nav:
   - Home: index.md
   - User Manual: user-manual.md
-  - Several classifiers: multiclassifier.md
+  - Classifiers and reference: multiclassifier.md
   - Developer Manual: developer-manual.md
   - Features: features.md
   - About: about.md
