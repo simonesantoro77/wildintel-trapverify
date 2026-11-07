@@ -274,7 +274,9 @@ def client(tmp_path, monkeypatch):
     from fastapi.testclient import TestClient
     from api.routers import multiclassifier as router
     from main import app
+    import services.session_service as session_service
     monkeypatch.setattr(router, "CONVERSIONS_DIR", tmp_path / "conversions")
+    monkeypatch.setattr(session_service, "APP_DIR", tmp_path / "app")
     return TestClient(app, raise_server_exceptions=True)
 
 
@@ -340,4 +342,57 @@ def test_api_writes_to_the_chosen_folder(client, archive, tmp_path):
 
 def test_api_default_output_folder(client, tmp_path):
     assert client.get("/api/multiclassifier/defaults").json()["output_dir"] == str(tmp_path / "conversions")
+
+
+def test_propose_groups_from_the_mammal_table_genus_labels_and_memory():
+    # family from the Mammal Diversity Database table, not only European genera
+    assert propose_groups(["Odocoileus virginianus", "Mazama americana"], ["Cervidae"]) == {
+        "Cervidae": ["Odocoileus virginianus", "Mazama americana"]}
+    # a genus used as a label groups its species
+    assert propose_groups(["Martes foina", "Martes martes", "Meles meles"], ["Martes", "Meles meles"]) == {
+        "Martes": ["Martes foina", "Martes martes"], "Meles meles": ["Meles meles"]}
+    # nothing says the group: each species on its own
+    assert propose_groups(["Cervus elaphus", "Dama dama"], ["Cervus elaphus", "Dama dama"]) == {
+        "Cervus elaphus": ["Cervus elaphus"], "Dama dama": ["Dama dama"]}
+    # a grouping chosen before comes back when two of its species are chosen
+    mem = {"Alectoris rufa": "partridges", "Perdix perdix": "partridges"}
+    assert propose_groups(["Alectoris rufa", "Perdix perdix"], [], mem) == {"partridges": ["Alectoris rufa", "Perdix perdix"]}
+    assert propose_groups(["Alectoris rufa"], [], mem) == {"Alectoris rufa": ["Alectoris rufa"]}
+
+
+def test_api_remembers_groups_and_label_meanings(client, archive):
+    body = {"classifiers": [{"name": "A", "path": str(archive / "A"), "role": "ai"},
+                            {"name": "R", "path": str(archive / "R"), "role": "reference"}],
+            "groups": {"deer": ["Cervus elaphus", "Dama dama"], "Sus scrofa": ["Sus scrofa"]},
+            "aliases": {"Cervidae": "deer", "Aves": ""},
+            "date_start": "2024-03-01", "date_end": "2024-04-30", "filter_mode": "none"}
+    r = client.post("/api/multiclassifier/run", json=body)
+    assert r.status_code == 200, r.text
+    g = client.post("/api/multiclassifier/groups",
+                    json={"species": ["Cervus elaphus", "Dama dama"], "labels": ["Cervus elaphus", "Dama dama", "Cervidae", "Aves"]}).json()
+    assert g["groups"] == {"deer": ["Cervus elaphus", "Dama dama"]}
+    assert g["aliases"] == {"Cervidae": "deer"}
+    bad = client.post("/api/multiclassifier/run", json={**body, "aliases": {"Cervidae": "Bos taurus"}})
+    assert bad.status_code == 400
+    bad2 = client.post("/api/multiclassifier/run", json={**body, "aliases": {"Dama dama": "deer"}})
+    assert bad2.status_code == 400
+
+
+def test_label_mapped_to_a_group_counts_as_that_group(archive, tmp_path):
+    """A label that is not a species (here an alias) is read as "the group, species unknown"."""
+    src = tmp_path / "B2"
+    import shutil
+    shutil.copytree(archive / "B", src)
+    obs = pd.read_csv(src / "observations.csv", dtype=str)
+    obs.loc[obs["scientificName"].eq("Dama dama"), "scientificName"] = "deer"
+    obs.to_csv(src / "observations.csv", index=False)
+    cfg = PipelineConfig(classifiers=[ClassifierSource("A", str(archive / "A")), ClassifierSource("B", str(src)),
+                                      ClassifierSource("R", str(archive / "R"), role="reference")],
+                         groups=GROUPS, aliases={"deer": "Cervidae"}, date_start="2024-03-01", date_end="2024-04-30",
+                         min_ref_cells=20, min_ref_species=60, n_bootstrap=20, filter_mode="none", strict_taxonomy=False)
+    res = run(cfg, tmp_path / "out_alias")
+    lab = pd.read_csv(tmp_path / "out_alias" / "multiclassifier" / "labels.csv")
+    row = lab[(lab["clf"] == "B") & (lab["scientificName"] == "Cervidae")]
+    assert len(row) and row["level"].iloc[0] == "group only"
+    assert res["events_after"] > 0
 

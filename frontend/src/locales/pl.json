@@ -403,11 +403,10 @@
     "gap": "Odstęp między zdarzeniami (s)",
     "period_hint": "{{n}} zdjęć w folderach klasyfikatorów AI. Sesja użyje tego samego okresu, długości okazji i odstępu.",
     "species_title": "Gatunki docelowe i grupy",
-    "species_desc": "Zaznacz gatunki docelowe. Grupa to to, co klasyfikator może powiedzieć bez wskazania gatunku (np. Cervidae dla jelenia i daniela): gatunki z jednej grupy są oceniane razem, a potem rozdzielane zwierzę po zwierzęciu.",
-    "group_labels": "Znalezione etykiety grup: {{labels}}",
+    "species_desc": "Zaznacz gatunki docelowe: to one będą potem przeglądane. Gatunki z jednej grupy (np. jeleń szlachetny i daniel w Cervidae) są oceniane razem, a potem rozdzielane zwierzę po zwierzęciu. Zostaw grupę pustą dla gatunku osobno, wybierz zaproponowaną lub wpisz dowolną nazwę.",
     "label": "Etykieta",
     "group": "Grupa",
-    "own_group": "(własna grupa)",
+    "own_group": "własna grupa",
     "groups_summary": "Grupy:",
     "advanced": "Opcje zaawansowane",
     "no_reference": "Bez referencji prawdopodobieństwa są łączone według zgodności klasyfikatorów i żadne zdarzenia nie są usuwane.",
@@ -468,6 +467,15 @@
     "output_dir": "Folder",
     "output_name": "Nazwa nowego folderu",
     "output_hint": "W {{dir}} tworzony jest nowy folder z CamtrapDP oraz, w podfolderze multiclassifier, diagnostyką. Zostaw nazwę pustą, aby użyć multiclassifier_ z datą i godziną. Istniejący folder, który zawiera już pliki, nigdy nie jest nadpisywany.",
-    "output_picker_title": "Folder na połączony zbiór danych"
+    "output_picker_title": "Folder na połączony zbiór danych",
+    "group_of": "Grupa gatunku {{species}}",
+    "groups_how": "Jak proponowane są grupy: gatunki są łączone, gdy któryś klasyfikator używa ich rodzaju (np. Martes) lub rodziny (np. Cervidae) jako etykiety. Rodziny ssaków pochodzą z Mammal Diversity Database (wszystkie 1363 rodzaje ssaków), więc działa to także poza Europą. Dla innych taksonów, np. ptaków, wpisz grupę samodzielnie. Użyte grupy są zapamiętywane i proponowane ponownie, gdy następnym razem wybierzesz te gatunki.",
+    "other_labels_title": "Etykiety, które nie są gatunkiem",
+    "other_labels_desc": "Tych etykiet (np. Cervidae, Leporidae, Aves) nie można zaznaczyć jako gatunku docelowego, bo przegląd odbywa się według gatunków, a one nie mówią, który to gatunek. Nie są tracone: etykieta będąca nazwą grupy oznacza „zwierzę z tej grupy, gatunek nieznany”, co liczy się do obecności grupy, a gatunek ustalany jest zwierzę po zwierzęciu na podstawie pozostałych klasyfikatorów. Każdej innej etykiecie (np. rodzajowi lub nazwie zwyczajowej, jak jeleń) można przypisać grupę lub gatunek; w przeciwnym razie liczy się jako inne zwierzę.",
+    "label_means": "Oznacza",
+    "label_means_of": "Co oznacza {{label}}",
+    "label_group_auto": "Etykieta grupy: zwierzę z {{species}}, gatunek nieznany",
+    "label_not_target": "Inne zwierzę (nie docelowe)",
+    "label_is_group": "Grupa {{group}}, gatunek nieznany"
   }
 }

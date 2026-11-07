@@ -403,11 +403,10 @@
     "gap": "Separación entre eventos (s)",
     "period_hint": "{{n}} fotos en las carpetas de los clasificadores de IA. La sesión usará este mismo periodo, duración de ocasión y separación.",
     "species_title": "Especies objetivo y grupos",
-    "species_desc": "Marca las especies objetivo. Un grupo es lo que un clasificador puede decir sin precisar la especie (p. ej. Cervidae para ciervo y gamo): las especies de un grupo se puntúan juntas y después se reparten animal por animal.",
-    "group_labels": "Etiquetas de grupo encontradas: {{labels}}",
+    "species_desc": "Marca las especies objetivo: son las que se revisan después. Las especies de un mismo grupo (p. ej. ciervo y gamo en Cervidae) se puntúan juntas y luego se separan animal por animal. Deja el grupo vacío para una especie sola, elige uno propuesto o escribe cualquier nombre.",
     "label": "Etiqueta",
     "group": "Grupo",
-    "own_group": "(grupo propio)",
+    "own_group": "grupo propio",
     "groups_summary": "Grupos:",
     "advanced": "Opciones avanzadas",
     "no_reference": "Sin referencia, las probabilidades se combinan por acuerdo entre clasificadores y no se quita ningún evento.",
@@ -468,6 +467,15 @@
     "output_dir": "Carpeta",
     "output_name": "Nombre de la carpeta nueva",
     "output_hint": "Dentro de {{dir}} se crea una carpeta nueva con el CamtrapDP y, en su subcarpeta multiclassifier, los diagnósticos. Deja el nombre vacío para usar multiclassifier_ con la fecha y la hora. Una carpeta que ya existe y tiene archivos nunca se sobrescribe.",
-    "output_picker_title": "Carpeta para el dataset combinado"
+    "output_picker_title": "Carpeta para el dataset combinado",
+    "group_of": "Grupo de {{species}}",
+    "groups_how": "Cómo se proponen los grupos: las especies se juntan cuando algún clasificador usa su género (p. ej. Martes) o su familia (p. ej. Cervidae) como etiqueta. Las familias de mamíferos salen de la Mammal Diversity Database (los 1.363 géneros de mamíferos), así que funciona también fuera de Europa. Para otros grupos, como las aves, escribe tú el grupo. Los grupos que uses se recuerdan y se vuelven a proponer la próxima vez que elijas esas especies.",
+    "other_labels_title": "Etiquetas que no son una especie",
+    "other_labels_desc": "Estas etiquetas (p. ej. Cervidae, Leporidae, Aves) no se pueden marcar como especie objetivo, porque la revisión es por especie y no dicen cuál es. No se pierden: una etiqueta que es el nombre de un grupo significa «un animal de ese grupo, especie desconocida», que cuenta para la presencia del grupo mientras la especie se decide animal por animal con los demás clasificadores. A cualquier otra etiqueta (p. ej. un género o un nombre común como ciervo) se le puede decir que significa un grupo o una especie; si no, cuenta como otro animal.",
+    "label_means": "Significa",
+    "label_means_of": "Qué significa {{label}}",
+    "label_group_auto": "Etiqueta de grupo: un animal de {{species}}, especie desconocida",
+    "label_not_target": "Otro animal (no objetivo)",
+    "label_is_group": "Grupo {{group}}, especie desconocida"
   }
 }

@@ -403,11 +403,10 @@
     "gap": "Detection event gap (s)",
     "period_hint": "{{n}} photos in the AI classifiers' folders. The session will use this same period, occasion length and gap.",
     "species_title": "Target species and groups",
-    "species_desc": "Tick the target species. A group is what a classifier can say without naming the species (e.g. Cervidae for red and fallow deer): species of the same group are scored together and then split animal by animal.",
-    "group_labels": "Group labels found: {{labels}}",
+    "species_desc": "Tick the target species: these are the species reviewed afterwards. Species of the same group (e.g. red and fallow deer in Cervidae) are scored together and then split animal by animal. Leave the group empty for a species on its own, pick a proposed one or type any name.",
     "label": "Label",
     "group": "Group",
-    "own_group": "(own group)",
+    "own_group": "own group",
     "groups_summary": "Groups:",
     "advanced": "Advanced options",
     "no_reference": "Without a reference the probabilities are combined by agreement between classifiers and no events are removed.",
@@ -468,6 +467,15 @@
     "output_dir": "Folder",
     "output_name": "Name of the new folder",
     "output_hint": "A new folder is created inside {{dir}} with the CamtrapDP and, in its multiclassifier subfolder, the diagnostics. Leave the name empty to use multiclassifier_ and the date and time. An existing folder that already holds files is never overwritten.",
-    "output_picker_title": "Folder for the combined dataset"
+    "output_picker_title": "Folder for the combined dataset",
+    "group_of": "Group of {{species}}",
+    "groups_how": "How groups are proposed: species are put together when some classifier uses their genus (e.g. Martes) or their family (e.g. Cervidae) as a label. Mammal families come from the Mammal Diversity Database (all 1,363 mammal genera), so this also works outside Europe. For other taxa, such as birds, type the group yourself. The groups you use are remembered and proposed again the next time you choose those species.",
+    "other_labels_title": "Labels that are not a species",
+    "other_labels_desc": "These labels (e.g. Cervidae, Leporidae, Aves) can't be ticked as target species, because the review is per species and they don't say which one. They are not lost: a label that is a group's name means \"an animal of that group, species unknown\", which counts for the group's presence while the species is decided animal by animal from the other classifiers. Any other label (e.g. a genus or a common name such as deer) can be told to mean a group or a species; otherwise it counts as another animal.",
+    "label_means": "Means",
+    "label_means_of": "What {{label}} means",
+    "label_group_auto": "Group label: an animal of {{species}}, species unknown",
+    "label_not_target": "Another animal (not a target)",
+    "label_is_group": "Group {{group}}, species unknown"
   }
 }

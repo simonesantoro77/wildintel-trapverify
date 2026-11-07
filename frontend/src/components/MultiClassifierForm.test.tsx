@@ -14,6 +14,7 @@ vi.mock('../api', () => ({
         { classifier: 'DF', label: 'Dama dama', photos: 100 },
         { classifier: 'ZOO', label: 'Cervidae', photos: 50 },
         { classifier: 'DF', label: 'Sus scrofa', photos: 80 },
+        { classifier: 'ZOO', label: 'deer', photos: 5 },
       ],
     })),
     mcGroups: vi.fn(async (species: string[]) => ({
@@ -111,5 +112,45 @@ describe('MultiClassifierForm', () => {
     const body = vi.mocked(api.mcRun).mock.calls[0][0]
     expect(body.output_dir).toBe('D:/2023_optimized')
     expect(body.output_name).toBe('donana_2023_combined')
+  })
+
+  async function readTwo(user: ReturnType<typeof userEvent.setup>) {
+    const names = screen.getAllByLabelText('Name')
+    const folders = screen.getAllByLabelText('CamtrapDP folder')
+    await user.type(names[0], 'DF'); await user.type(folders[0], '/data/df')
+    await user.type(names[1], 'ZOO'); await user.type(folders[1], '/data/zoo')
+    await user.click(screen.getByRole('button', { name: 'Read labels' }))
+    await screen.findByLabelText('Cervus elaphus')
+  }
+
+  it('lists the labels that are not a species and sends what they mean', async () => {
+    const user = userEvent.setup()
+    vi.mocked(api.mcRun).mockClear()
+    render(<MultiClassifierForm onConverted={vi.fn()} />)
+    await readTwo(user)
+    for (const sp of ['Cervus elaphus', 'Dama dama', 'Sus scrofa']) await user.click(screen.getByLabelText(sp))
+    // Cervidae is the group's own name: read as that group automatically
+    await waitFor(() => expect(screen.getByText(/Group label: an animal of Cervus elaphus, Dama dama/)).toBeInTheDocument())
+    expect(screen.queryByLabelText('What Cervidae means')).toBeNull()
+    await user.selectOptions(screen.getByLabelText('What deer means'), 'Cervidae')
+    await user.click(screen.getByRole('button', { name: 'Combine' }))
+    await waitFor(() => expect(api.mcRun).toHaveBeenCalled())
+    expect(vi.mocked(api.mcRun).mock.calls[0][0].aliases).toEqual({ deer: 'Cervidae' })
+  })
+
+  it('keeps a group typed by hand when more species are ticked', async () => {
+    const user = userEvent.setup()
+    vi.mocked(api.mcRun).mockClear()
+    render(<MultiClassifierForm onConverted={vi.fn()} />)
+    await readTwo(user)
+    await user.click(screen.getByLabelText('Cervus elaphus'))
+    await user.click(screen.getByLabelText('Sus scrofa'))
+    await user.type(screen.getByLabelText('Group of Cervus elaphus'), 'ungulates')
+    await user.type(screen.getByLabelText('Group of Sus scrofa'), 'ungulates')
+    await user.click(screen.getByLabelText('Dama dama'))
+    await user.click(screen.getByRole('button', { name: 'Combine' }))
+    await waitFor(() => expect(api.mcRun).toHaveBeenCalled())
+    expect(vi.mocked(api.mcRun).mock.calls[0][0].groups).toEqual({
+      ungulates: ['Cervus elaphus', 'Sus scrofa'], 'Dama dama': ['Dama dama'] })
   })
 })

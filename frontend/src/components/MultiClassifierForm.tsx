@@ -68,7 +68,14 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
   const [occasionDays, setOccasionDays] = useState(5)
   const [gapSeconds, setGapSeconds] = useState(60)
   const [selected, setSelected] = useState<Set<string>>(new Set())
-  const [groupOf, setGroupOf] = useState<Record<string, string>>({})
+  // Group of each selected species: proposed by the backend (genus or family
+  // labels, groups used before) unless typed by hand; '' = its own group.
+  const [proposedGroup, setProposedGroup] = useState<Record<string, string>>({})
+  const [manualGroup, setManualGroup] = useState<Record<string, string>>({})
+  // What each label that is not a species means: a group, a target species or
+  // '' (not a target). Remembered values come from the backend.
+  const [labelMeaning, setLabelMeaning] = useState<Record<string, string>>({})
+  const [rememberedMeaning, setRememberedMeaning] = useState<Record<string, string>>({})
   const [filterMode, setFilterMode] = useState<'cells' | 'events' | 'none'>('cells')
   const [retention, setRetention] = useState(99)
   const [tieBreak, setTieBreak] = useState<'ambiguous' | 'simple' | 'none'>('ambiguous')
@@ -134,34 +141,64 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
       .sort((a, b) => b.total - a.total)
   }, [inv])
   const speciesRows = table.filter(r => isSpecies(r.label))
+  const otherRows = table.filter(r => !isSpecies(r.label))
   const families = inv?.families ?? []
 
-  // propose groups whenever the selection changes
+  // propose groups whenever the selection changes (hand-typed groups stay)
   useEffect(() => {
-    if (!inv || selected.size === 0) { setGroupOf({}); return }
+    if (!inv || selected.size === 0) { setProposedGroup({}); return }
     let alive = true
     api.mcGroups([...selected], table.map(r => r.label))
       .then(r => {
         if (!alive) return
         const g: Record<string, string> = {}
         for (const [name, sps] of Object.entries(r.groups)) for (const sp of sps) g[sp] = name
-        setGroupOf(g)
+        setProposedGroup(g)
+        setRememberedMeaning(r.aliases ?? {})
       })
       .catch(() => { /* keep each species on its own */ })
     return () => { alive = false }
   }, [inv, selected, table])
 
+  const groupOf = (sp: string) => {
+    const m = manualGroup[sp]
+    return (m !== undefined ? m.trim() : proposedGroup[sp]) || sp
+  }
+
   const groups = useMemo(() => {
     const g: Record<string, string[]> = {}
     for (const sp of selected) {
-      const name = groupOf[sp] || sp
+      const m = manualGroup[sp]
+      const name = (m !== undefined ? m.trim() : proposedGroup[sp]) || sp
       ;(g[name] ??= []).push(sp)
     }
     // a group with a single species is named after it
     const out: Record<string, string[]> = {}
     for (const [name, sps] of Object.entries(g)) out[sps.length === 1 ? sps[0] : name] = sps
     return out
-  }, [selected, groupOf])
+  }, [selected, manualGroup, proposedGroup])
+  const multiGroups = Object.keys(groups).filter(g => groups[g].length > 1)
+  const groupSuggestions = [...new Set([...families, ...otherRows.map(r => r.label).filter(l => /^[A-Z][a-z]+$/.test(l)), ...multiGroups])]
+
+  // Other labels: a group name is read as that group automatically; the rest
+  // mean what was chosen (or remembered), or nothing.
+  const meaningOf = (label: string): { value: string; automatic: boolean } => {
+    if (groups[label] && groups[label].length > 1) return { value: label, automatic: true }
+    const chosen = labelMeaning[label] ?? rememberedMeaning[label] ?? ''
+    const valid = chosen === '' || multiGroups.includes(chosen) || selected.has(chosen)
+    return { value: valid ? chosen : '', automatic: false }
+  }
+  const aliases = useMemo(() => {
+    const out: Record<string, string> = {}
+    for (const r of otherRows) {
+      const m = meaningOf(r.label)
+      if (m.automatic) continue
+      // what the user chose now, or a remembered meaning that still applies
+      if (labelMeaning[r.label] !== undefined || (rememberedMeaning[r.label] && m.value)) out[r.label] = m.value
+    }
+    return out
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [otherRows, labelMeaning, rememberedMeaning, groups])
 
   function toggle(sp: string) {
     setSelected(s => {
@@ -186,6 +223,7 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
         retention: retention / 100,
         tie_break: tieBreak,
         use_reference_in_output: refVerdict,
+        aliases,
         output_dir: outputDir.trim() || null,
         output_name: outputName.trim() || null,
       })
@@ -338,11 +376,6 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
           <div className={boxClass}>
             <h5 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-1">{t('mc.species_title')}</h5>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">{t('mc.species_desc')}</p>
-            {families.length > 0 && (
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-2">
-                {t('mc.group_labels', { labels: families.join(', ') })}
-              </p>
-            )}
             <div className="max-h-72 overflow-y-auto rounded border border-zinc-200 dark:border-zinc-700">
               <table className="w-full text-sm border-collapse">
                 <thead>
@@ -358,7 +391,7 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
                 <tbody>
                   {speciesRows.map(r => {
                     const on = selected.has(r.label)
-                    const options = [...new Set([r.label, ...families, ...Object.values(groupOf)])]
+                    const g = groupOf(r.label)
                     return (
                       <tr key={r.label} className="border-t border-zinc-200 dark:border-zinc-700">
                         <td className="px-2 py-1.5">
@@ -372,12 +405,10 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
                         ))}
                         <td className="px-2 py-1">
                           {on && (
-                            <select className={selectClass} value={groupOf[r.label] || r.label}
-                              onChange={e => setGroupOf(g => ({ ...g, [r.label]: e.target.value }))}>
-                              {options.map(o => (
-                                <option key={o} value={o}>{o === r.label ? t('mc.own_group') : o}</option>
-                              ))}
-                            </select>
+                            <input className={selectClass} list="mc-group-names" aria-label={t('mc.group_of', { species: r.label })}
+                              placeholder={t('mc.own_group')}
+                              value={manualGroup[r.label] !== undefined ? manualGroup[r.label] : (g === r.label ? '' : g)}
+                              onChange={e => setManualGroup(m => ({ ...m, [r.label]: e.target.value }))} />
                           )}
                         </td>
                       </tr>
@@ -386,11 +417,69 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
                 </tbody>
               </table>
             </div>
+            <datalist id="mc-group-names">
+              {groupSuggestions.map(o => <option key={o} value={o} />)}
+            </datalist>
             {Object.keys(groups).length > 0 && (
               <p className={hintClass}>
                 {t('mc.groups_summary')}{' '}
                 {Object.entries(groups).map(([g, sps]) => (sps.length > 1 ? `${g} (${sps.join(', ')})` : g)).join('; ')}
               </p>
+            )}
+            <p className={hintClass}>{t('mc.groups_how')}</p>
+
+            {otherRows.length > 0 && (
+              <div className="mt-4">
+                <h6 className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">{t('mc.other_labels_title')}</h6>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-2">{t('mc.other_labels_desc')}</p>
+                <div className="max-h-56 overflow-y-auto rounded border border-zinc-200 dark:border-zinc-700">
+                  <table className="w-full text-sm border-collapse">
+                    <thead>
+                      <tr className="bg-zinc-100 dark:bg-zinc-700 text-left">
+                        <th className="px-2 py-2 font-medium text-zinc-600 dark:text-zinc-300">{t('mc.label')}</th>
+                        {filled.map(c => (
+                          <th key={c.name} className="px-2 py-2 font-medium text-zinc-600 dark:text-zinc-300 text-right">{c.name}</th>
+                        ))}
+                        <th className="px-2 py-2 font-medium text-zinc-600 dark:text-zinc-300">{t('mc.label_means')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {otherRows.map(r => {
+                        const m = meaningOf(r.label)
+                        return (
+                          <tr key={r.label} className="border-t border-zinc-200 dark:border-zinc-700">
+                            <td className="px-2 py-1.5 text-zinc-800 dark:text-zinc-200">{r.label}</td>
+                            {filled.map(c => (
+                              <td key={c.name} className="px-2 py-1.5 text-right tabular-nums text-zinc-600 dark:text-zinc-400">
+                                {(r.n[c.name] ?? 0).toLocaleString()}
+                              </td>
+                            ))}
+                            <td className="px-2 py-1">
+                              {m.automatic ? (
+                                <span className="text-xs text-emerald-700 dark:text-emerald-400">
+                                  {t('mc.label_group_auto', { species: groups[r.label].join(', ') })}
+                                </span>
+                              ) : (
+                                <select className={selectClass} aria-label={t('mc.label_means_of', { label: r.label })}
+                                  value={m.value} disabled={selected.size === 0}
+                                  onChange={e => setLabelMeaning(lm => ({ ...lm, [r.label]: e.target.value }))}>
+                                  <option value="">{t('mc.label_not_target')}</option>
+                                  {multiGroups.map(g => (
+                                    <option key={`g:${g}`} value={g}>{t('mc.label_is_group', { group: g })}</option>
+                                  ))}
+                                  {[...selected].map(sp => (
+                                    <option key={`s:${sp}`} value={sp}>{sp}</option>
+                                  ))}
+                                </select>
+                              )}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             )}
           </div>
 

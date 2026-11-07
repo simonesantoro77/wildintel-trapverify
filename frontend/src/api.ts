@@ -215,7 +215,8 @@ export const api = {
     post<McLabels>('/api/multiclassifier/labels', body),
 
   mcGroups: (species: string[], labels: string[]) =>
-    post<{ groups: Record<string, string[]> }>('/api/multiclassifier/groups', { species, labels }),
+    post<{ groups: Record<string, string[]>; aliases?: Record<string, string> }>(
+      '/api/multiclassifier/groups', { species, labels }),
 
   mcRun: (body: McRunRequest) =>
     post<{ job_id: string; out_dir: string }>('/api/multiclassifier/run', body),

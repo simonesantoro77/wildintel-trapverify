@@ -7,6 +7,7 @@ normal CamtrapDP.
 """
 from __future__ import annotations
 
+import json
 import logging
 import re
 import threading
@@ -63,6 +64,9 @@ class RunRequest(BaseModel):
     retention: float = Field(0.99, gt=0, le=1)
     tie_break: Literal["ambiguous", "simple", "none"] = "ambiguous"
     use_reference_in_output: bool = True
+    # Labels that are not a target species -> the group or species they mean
+    # (e.g. "deer" -> "Cervidae"); "" = not a target (remembered as such).
+    aliases: dict[str, str] = Field(default_factory=dict)
     strict_taxonomy: bool = False
     media_source: Optional[str] = None
     # Folder where the dataset's own folder is created (default
@@ -144,10 +148,70 @@ def labels(req: LabelsRequest) -> dict:
         raise HTTPException(400, str(exc)) from exc
 
 
+# ── Groups chosen before, proposed again ────────────────────────────────────
+
+def _memory_file() -> Path:
+    from services import session_service
+    return session_service.APP_DIR / "multiclassifier_groups.json"
+
+
+def _load_memory() -> dict:
+    """{"groups": species -> group, "aliases": label -> group or species}."""
+    try:
+        d = json.loads(_memory_file().read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        d = {}
+    return {"groups": dict(d.get("groups") or {}), "aliases": dict(d.get("aliases") or {})}
+
+
+def _remember(groups: dict[str, list[str]], aliases: dict[str, str]) -> None:
+    m = _load_memory()
+    for g, sps in groups.items():
+        for sp in sps:
+            if len(sps) > 1:
+                m["groups"][sp] = g
+            else:
+                m["groups"].pop(sp, None)
+    for label, target in aliases.items():
+        if target:
+            m["aliases"][label] = target
+        else:
+            m["aliases"].pop(label, None)
+    try:
+        f = _memory_file()
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(json.dumps(m, indent=1, ensure_ascii=False), encoding="utf-8")
+    except OSError:
+        logger.warning("Could not save the groups for next time", exc_info=True)
+
+
 @router.post("/groups")
 def groups(req: GroupsRequest) -> dict:
-    """Proposed groups for the chosen target species."""
-    return {"groups": propose_groups(req.species, req.labels)}
+    """Proposed groups for the chosen target species, and what the other
+    labels meant the last time they were mapped."""
+    m = _load_memory()
+    labels = set(req.labels)
+    return {
+        "groups": propose_groups(req.species, req.labels, m["groups"]),
+        "aliases": {k: v for k, v in m["aliases"].items() if k in labels},
+    }
+
+
+def _aliases(raw: dict[str, str], groups: dict[str, list[str]]) -> dict[str, str]:
+    """Label -> group or target species it means; refused if it points
+    elsewhere or renames a target species."""
+    targets = set(groups) | {sp for sps in groups.values() for sp in sps}
+    out = {}
+    for label, target in raw.items():
+        label, target = label.strip(), (target or "").strip()
+        if not label or not target or label == target:
+            continue
+        if label in targets:
+            raise HTTPException(400, f"\"{label}\" is a target species or group and can't mean another one.")
+        if target not in targets:
+            raise HTTPException(400, f"\"{label}\" is mapped to \"{target}\", which is not a group or target species.")
+        out[label] = target
+    return out
 
 
 def _run_job(job_id: str, cfg: PipelineConfig, out_dir: Path) -> None:
@@ -175,8 +239,9 @@ def _run_job(job_id: str, cfg: PipelineConfig, out_dir: Path) -> None:
 def start(req: RunRequest) -> dict:
     sources = _sources(req.classifiers)
     groups = {g.strip(): [s.strip() for s in sps if s.strip()] for g, sps in req.groups.items() if g.strip()}
+    aliases = _aliases(req.aliases, groups)
     cfg = PipelineConfig(
-        classifiers=sources, groups=groups,
+        classifiers=sources, groups=groups, aliases=aliases,
         date_start=req.date_start, date_end=req.date_end,
         occasion_days=req.occasion_days, gap_seconds=req.gap_seconds,
         filter_mode=req.filter_mode, cell_retention=req.retention, event_retention=req.retention,
@@ -193,6 +258,7 @@ def start(req: RunRequest) -> dict:
         busy = any(j["status"] == "running" and j["out_dir"] == str(out_dir) for j in _jobs.values())
     if busy:
         raise HTTPException(400, f"{out_dir} is already being written by another combination.")
+    _remember(groups, {k.strip(): (v or "").strip() for k, v in req.aliases.items() if k.strip()})
     job_id = uuid.uuid4().hex[:12]
     with _lock:
         _jobs[job_id] = {"status": "running", "log": [], "out_dir": str(out_dir)}

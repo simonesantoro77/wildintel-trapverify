@@ -403,11 +403,10 @@
     "gap": "Abstand zwischen Ereignissen (s)",
     "period_hint": "{{n}} Fotos in den Ordnern der KI-Klassifizierer. Die Sitzung verwendet denselben Zeitraum, dieselbe Fensterlänge und denselben Abstand.",
     "species_title": "Zielarten und Gruppen",
-    "species_desc": "Zielarten ankreuzen. Eine Gruppe ist das, was ein Klassifizierer sagen kann, ohne die Art zu nennen (z. B. Cervidae für Rot- und Damhirsch): Arten einer Gruppe werden gemeinsam bewertet und dann Tier für Tier aufgeteilt.",
-    "group_labels": "Gefundene Gruppenlabels: {{labels}}",
+    "species_desc": "Wähle die Zielarten: Diese Arten werden danach geprüft. Arten derselben Gruppe (z. B. Rot- und Damhirsch in Cervidae) werden gemeinsam bewertet und dann Tier für Tier getrennt. Lass die Gruppe leer für eine Art allein, wähle eine vorgeschlagene oder gib einen beliebigen Namen ein.",
     "label": "Label",
     "group": "Gruppe",
-    "own_group": "(eigene Gruppe)",
+    "own_group": "eigene Gruppe",
     "groups_summary": "Gruppen:",
     "advanced": "Erweiterte Optionen",
     "no_reference": "Ohne Referenz werden die Wahrscheinlichkeiten nach Übereinstimmung der Klassifizierer kombiniert, und es werden keine Ereignisse entfernt.",
@@ -468,6 +467,15 @@
     "output_dir": "Ordner",
     "output_name": "Name des neuen Ordners",
     "output_hint": "In {{dir}} wird ein neuer Ordner mit dem CamtrapDP und, im Unterordner multiclassifier, den Diagnosen angelegt. Lass den Namen leer, um multiclassifier_ mit Datum und Uhrzeit zu verwenden. Ein vorhandener Ordner, der schon Dateien enthält, wird nie überschrieben.",
-    "output_picker_title": "Ordner für den kombinierten Datensatz"
+    "output_picker_title": "Ordner für den kombinierten Datensatz",
+    "group_of": "Gruppe von {{species}}",
+    "groups_how": "Wie Gruppen vorgeschlagen werden: Arten werden zusammengefasst, wenn ein Klassifizierer ihre Gattung (z. B. Martes) oder ihre Familie (z. B. Cervidae) als Label verwendet. Säugetierfamilien stammen aus der Mammal Diversity Database (alle 1.363 Säugetiergattungen), daher funktioniert das auch außerhalb Europas. Für andere Taxa wie Vögel gib die Gruppe selbst ein. Verwendete Gruppen werden gespeichert und beim nächsten Mal für diese Arten wieder vorgeschlagen.",
+    "other_labels_title": "Labels, die keine Art sind",
+    "other_labels_desc": "Diese Labels (z. B. Cervidae, Leporidae, Aves) können nicht als Zielart gewählt werden, weil die Prüfung pro Art erfolgt und sie nicht sagen, welche Art es ist. Sie gehen nicht verloren: Ein Label, das der Name einer Gruppe ist, bedeutet „ein Tier dieser Gruppe, Art unbekannt“; es zählt für die Anwesenheit der Gruppe, während die Art Tier für Tier aus den anderen Klassifizierern bestimmt wird. Jedem anderen Label (z. B. einer Gattung oder einem Trivialnamen wie Hirsch) kann eine Gruppe oder Art zugewiesen werden; sonst zählt es als anderes Tier.",
+    "label_means": "Bedeutet",
+    "label_means_of": "Was {{label}} bedeutet",
+    "label_group_auto": "Gruppenlabel: ein Tier aus {{species}}, Art unbekannt",
+    "label_not_target": "Anderes Tier (kein Ziel)",
+    "label_is_group": "Gruppe {{group}}, Art unbekannt"
   }
 }

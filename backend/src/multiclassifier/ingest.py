@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 
 from .config import ClassifierSource, PipelineConfig
+from .taxonomy import genus_family
 
 Log = Callable[[str], None]
 
@@ -346,37 +347,39 @@ def ingest(cfg: PipelineConfig, log: Log = lambda _m: None) -> Ingested:
 
 _FAMILY_RE = re.compile(r"^[A-Z][a-z]+(idae|inae)$")
 
-# Genus -> family of mammals commonly photographed by camera traps in Europe,
-# used only to propose groups (the user can change them).
-GENUS_FAMILY = {
-    "Cervus": "Cervidae", "Dama": "Cervidae", "Capreolus": "Cervidae", "Alces": "Cervidae",
-    "Rangifer": "Cervidae", "Muntiacus": "Cervidae", "Odocoileus": "Cervidae",
-    "Lepus": "Leporidae", "Oryctolagus": "Leporidae", "Sylvilagus": "Leporidae",
-    "Sus": "Suidae", "Bos": "Bovidae", "Bison": "Bovidae", "Capra": "Bovidae", "Ovis": "Bovidae",
-    "Rupicapra": "Bovidae", "Equus": "Equidae",
-    "Vulpes": "Canidae", "Canis": "Canidae", "Nyctereutes": "Canidae",
-    "Meles": "Mustelidae", "Martes": "Mustelidae", "Mustela": "Mustelidae", "Lutra": "Mustelidae",
-    "Gulo": "Mustelidae", "Neovison": "Mustelidae",
-    "Lynx": "Felidae", "Felis": "Felidae", "Genetta": "Viverridae", "Herpestes": "Herpestidae",
-    "Ursus": "Ursidae", "Erinaceus": "Erinaceidae", "Sciurus": "Sciuridae", "Castor": "Castoridae",
-    "Procyon": "Procyonidae",
-}
 
-
-def propose_groups(species: list[str], labels: list[str]) -> dict[str, list[str]]:
+def propose_groups(species: list[str], labels: list[str],
+                   remembered: Optional[dict[str, str]] = None) -> dict[str, list[str]]:
     """Propose groups for the chosen target species.
 
-    Species are put together under a family when some classifier uses that
-    family as a label (it can say "Cervidae" without naming the species);
-    otherwise each species is its own group.
+    Species go together under a label that some classifier uses without
+    naming the species: their genus (e.g. "Martes") or their family (e.g.
+    "Cervidae"; mammal families come from the Mammal Diversity Database,
+    :mod:`multiclassifier.taxonomy`). A grouping chosen before
+    (``remembered``: species -> group) is proposed again when two or more of
+    its species are chosen. Otherwise each species is its own group.
     """
-    families_seen = {l for l in labels if _FAMILY_RE.match(l or "")}
+    seen = set(labels)
+    families = genus_family()
+    remembered = remembered or {}
+    key: dict[str, str] = {}
+    for sp in species:
+        r = remembered.get(sp)
+        if r and r != sp and sum(remembered.get(o) == r for o in species) > 1:
+            key[sp] = r
+            continue
+        genus = sp.split(" ")[0]
+        family = families.get(genus)
+        if genus != sp and genus in seen:
+            key[sp] = genus
+        elif family and family in seen:
+            key[sp] = family
+        else:
+            key[sp] = sp
     groups: dict[str, list[str]] = {}
     for sp in species:
-        fam = GENUS_FAMILY.get(sp.split(" ")[0])
-        g = fam if fam in families_seen else sp
-        groups.setdefault(g, []).append(sp)
-    # a family with a single target species is just that species
+        groups.setdefault(key[sp], []).append(sp)
+    # a group with a single target species is just that species
     out: dict[str, list[str]] = {}
     for g, sps in groups.items():
         if len(sps) == 1 and g != sps[0]:
