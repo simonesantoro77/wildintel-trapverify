@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { api } from '../api'
 import DirectoryPicker from '../components/DirectoryPicker'
 import CsvImportForm from '../components/CsvImportForm'
+import SessionNameEditor from '../components/SessionNameEditor'
 import MultiClassifierForm, { type McParams } from '../components/MultiClassifierForm'
 import RelinkDialog from '../components/RelinkDialog'
 import type { RecentSession, RelinkStatus, WorkflowConfig } from '../types'
@@ -11,6 +12,7 @@ import type { RecentSession, RelinkStatus, WorkflowConfig } from '../types'
 interface Props { onSetup: () => void; ready: boolean }
 
 const DEFAULT: WorkflowConfig = {
+  session_name: '',
   camtrap_dir: '',
   image_base_dir: '',
   flat_search: false,
@@ -89,11 +91,14 @@ export default function SetupPage({ onSetup, ready }: Props) {
     speciesCount: number; resolved: number; total: number; pct: number
   } | null>(null)
   const [recentSessions, setRecentSessions] = useState<RecentSession[]>([])
+  const [renaming, setRenaming] = useState<string | null>(null)   // session_dir being renamed
+  const [activeDir, setActiveDir] = useState<string | null>(null)
   const [imageCheck, setImageCheck] = useState<{ total: number; missing: number; permission_denied: number; ambiguous: { fileName: string }[] } | null>(null)
   const [checkingImages, setCheckingImages] = useState(false)
 
   useEffect(() => {
     api.getState().then((s) => {
+      setActiveDir(s.session_dir ?? null)
       if (s.config) {
         setForm(s.config)
         setSelectedSpecies(new Set(s.config.target_species))
@@ -489,7 +494,7 @@ export default function SetupPage({ onSetup, ready }: Props) {
           </button>
           <button
             className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-base flex items-center gap-2"
-            onClick={() => setStep(0)}
+            onClick={() => { set('session_name', ''); setStep(0) }}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
               <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -501,6 +506,7 @@ export default function SetupPage({ onSetup, ready }: Props) {
           )}
           {ready && sessionSummary && (
             <p className="text-zinc-500 dark:text-zinc-400 text-sm mt-1 w-full text-center">
+              {form.session_name && <><strong className="text-zinc-700 dark:text-zinc-200">{form.session_name}</strong>{' · '}</>}
               {t('welcome.session_summary', {
                 speciesCount: sessionSummary.speciesCount,
                 resolved: sessionSummary.resolved,
@@ -517,25 +523,57 @@ export default function SetupPage({ onSetup, ready }: Props) {
               {t('welcome.recent_sessions')}
             </p>
             <ul className="list-none p-0 m-0 space-y-1.5">
-              {recentSessions.map((s) => (
-                <li key={s.session_dir}>
+              {recentSessions.map((s) => renaming === s.session_dir ? (
+                <li key={s.session_dir} className="rounded border border-blue-400 px-3 py-2">
+                  <SessionNameEditor
+                    className="w-full"
+                    sessionDir={s.session_dir}
+                    name={s.session_name ?? ''}
+                    fallback=""
+                    startEditing
+                    onDone={() => setRenaming(null)}
+                    onRenamed={(name) => {
+                      setRecentSessions(rs => rs.map(r => r.session_dir === s.session_dir ? { ...r, session_name: name } : r))
+                      if (activeDir === s.session_dir) set('session_name', name)
+                    }}
+                  />
+                  <div className="text-xs text-zinc-500 dark:text-zinc-400 truncate font-mono mt-1">{s.session_dir}</div>
+                </li>
+              ) : (
+                <li key={s.session_dir}
+                  className="relative rounded border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
                   <button
-                    className="w-full text-left px-3 py-2 rounded border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50"
+                    className="w-full text-left px-3 py-2 pr-24 disabled:opacity-50"
                     onClick={() => handleLoadSession(s.session_dir)}
                     disabled={loadingSession}
+                    aria-label={t('session_name.open', { name: s.session_name || s.target_species.join(', ') || t('welcome.recent_untitled') })}
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
-                        {s.target_species.join(', ') || t('welcome.recent_untitled')}
-                      </span>
-                      <span className="text-xs text-zinc-400 dark:text-zinc-500 flex-shrink-0">
-                        {new Date(s.last_opened).toLocaleDateString(i18n.language, { day: 'numeric', month: 'short' })}
-                      </span>
+                    <div className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
+                      {s.session_name || s.target_species.join(', ') || t('welcome.recent_untitled')}
                     </div>
+                    {s.session_name && s.target_species.length > 0 && (
+                      <div className="text-xs text-zinc-600 dark:text-zinc-300 truncate mt-0.5 italic">
+                        {s.target_species.join(', ')}
+                      </div>
+                    )}
                     <div className="text-xs text-zinc-500 dark:text-zinc-400 truncate font-mono mt-0.5">
                       {s.session_dir}
                     </div>
                   </button>
+                  <div className="absolute top-2 right-2 flex items-center gap-1">
+                    <span className="text-xs text-zinc-400 dark:text-zinc-500">
+                      {new Date(s.last_opened).toLocaleDateString(i18n.language, { day: 'numeric', month: 'short' })}
+                    </span>
+                    <button
+                      type="button"
+                      className="text-xs px-1.5 py-0.5 rounded text-zinc-500 hover:text-blue-600 dark:hover:text-blue-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                      title={t('session_name.rename')}
+                      aria-label={t('session_name.rename_one', { name: s.session_name || s.session_dir })}
+                      onClick={() => setRenaming(s.session_dir)}
+                    >
+                      ✎
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -1121,6 +1159,23 @@ export default function SetupPage({ onSetup, ready }: Props) {
       {step === 3 && (
         <div>
           <h4 className="text-lg font-semibold mb-6">{t('setup.step3_title')}</h4>
+
+          {/* ── Session name ── */}
+          <div className="mb-6">
+            <label htmlFor="session-name" className={labelClass}>
+              {t('session_name.label')}{' '}
+              <span className="text-zinc-400 font-normal">{t('setup.label_output_optional')}</span>
+            </label>
+            <input
+              id="session-name"
+              className={inputClass.replace(' font-mono', '')}
+              placeholder={t('session_name.placeholder')}
+              maxLength={120}
+              value={form.session_name ?? ''}
+              onChange={(e) => set('session_name', e.target.value)}
+            />
+            <p className={hintClass}>{t('session_name.hint')}</p>
+          </div>
 
           {/* ── Output location ── */}
           <div className="mb-6">

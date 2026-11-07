@@ -525,5 +525,17 @@
     "best": "el mejor",
     "details_hint": "Eventos de detección a mirar: el trabajo de quien revisa, estimado fuera de muestra (en cada celda, los eventos que se muestran hasta el primero confirmado, o todos si la especie no está). Celdas mantenidas: parte de las celdas con la especie que conservan un evento confirmado. Eventos de más frente al mejor: cuántos eventos más que el método con menos, como rango del 95 % al remuestrear las localizaciones 300 veces; si el rango incluye el 0 (p. ej. −46 a +62) la diferencia no está clara y los métodos empatan. Segunda especie: probabilidad media de la segunda especie más probable en fotos de grupos con varias especies; más baja quiere decir especies más claras.",
     "sum_tags": "No se borra nada: los eventos de detección quitados siguen en observations.csv con la etiqueta camtrapverify:filtered (columna observationTags), y la revisión se los salta. Las filas que confirmó la referencia llevan camtrapverify:reference; después de la revisión, el CamtrapDP verificado añade camtrapverify:confirmed, :rejected o :unsure a los eventos de detección que decidiste."
+  },
+  "session_name": {
+    "label": "Nombre de la sesión",
+    "placeholder": "p. ej. Doñana primavera 2023, combinado",
+    "hint": "Se muestra en Sesiones recientes y en la página de especies, para distinguir unas sesiones de otras (p. ej. dos sesiones con las mismas especies). Puedes cambiarlo después con ✎.",
+    "rename": "Cambiar el nombre de la sesión",
+    "rename_one": "Cambiar el nombre de {{name}}",
+    "open": "Abrir {{name}}",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "session": "Sesión:",
+    "none": "sin nombre"
   }
 }

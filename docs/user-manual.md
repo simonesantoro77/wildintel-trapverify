@@ -167,7 +167,9 @@ When you open the application, you will see the **Welcome Screen**. Which button
 | **Import session…** | Always | Opens a session `.zip` exported on another computer (see [Continuing a Session on Another Computer](#9-continuing-a-session-on-another-computer)). |
 | **Start verifying →** / **New session** | Always — the label depends on state | Starts the Setup Wizard to configure a session. Reads **Start verifying →** if no session is currently active, or **New session** if one is (to start a fresh one alongside it). |
 
-Below the buttons, a **Recent sessions** list appears if you have previously opened sessions on record, letting you jump back into any of them directly — independently of whether a session is active right now.
+Below the buttons, a **Recent sessions** list appears if you have previously opened sessions on record, letting you jump back into any of them directly — independently of whether a session is active right now. Each entry shows the session's name (or, if it has none, its target species), the species, the folder and the date it was last opened. The **✎** button next to the date names or renames that session (**Enter** saves, **Esc** cancels; an empty name clears it).
+
+A *session* is one review: its configuration (data folder, images folder, study period, species, parameters) and every decision made in it, saved together in a folder of its own (by default `Documents/camtrap_verify/<date and time>`). Naming sessions helps to tell them apart, for example two sessions with the same species built from different datasets.
 
 ---
 
@@ -327,6 +329,8 @@ Set the date range for the review. Only images whose timestamp falls within this
 
 Fine-tune how images are grouped and how confirmations are recorded. Parameters are divided into two sections.
 
+At the top, **Session name** (optional) gives the session a name of your choice, e.g. *Doñana spring 2023, combined*. It is shown in **Recent sessions** and on the species index, and can be changed later.
+
 #### Sampling parameters
 
 These control how the data is segmented into reviewable units.
@@ -366,7 +370,7 @@ After setup (or when resuming a session), you arrive at the **Species Index** �
 ![Species index](./img/user_manual/species-index.png)
 *Species index showing species cards with progress bars.*
 
-An information panel at the top shows the session parameters:
+Under the title, **Session:** shows the session's name with a **✎** button to name or rename it. An information panel at the top shows the session parameters:
 
 ![Session info panel](./img/user_manual/species-index-info.png)
 *Info panel showing overall progress, the study period and the sampling occasion length.*

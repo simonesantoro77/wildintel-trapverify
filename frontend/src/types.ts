@@ -38,6 +38,7 @@ export interface SpeciesStats {
 }
 
 export interface WorkflowConfig {
+  session_name?: string
   camtrap_dir: string
   image_base_dir: string
   flat_search: boolean
@@ -85,6 +86,7 @@ export interface OccupancyRow {
 export interface RecentSession {
   session_dir: string
   last_opened: string
+  session_name?: string
   target_species: string[]
   study_start: string | null
   study_end: string | null

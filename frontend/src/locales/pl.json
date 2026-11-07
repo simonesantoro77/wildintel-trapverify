@@ -527,5 +527,17 @@
     "best": "najlepsza",
     "details_hint": "Zdarzenia detekcji do obejrzenia: praca osoby przeglądającej, oszacowana poza próbą (w każdej komórce zdarzenia pokazane do pierwszego potwierdzonego albo wszystkie, gdy gatunku nie ma). Zachowane komórki: odsetek komórek z gatunkiem, które zachowują potwierdzone zdarzenie. Zdarzenia ponad najlepszą: o ile więcej zdarzeń niż metoda z najmniejszą liczbą, jako zakres 95 % z 300-krotnego losowania lokalizacji; jeśli zakres obejmuje 0 (np. −46 do +62), różnica nie jest jasna i metody remisują. Drugi gatunek: średnie prawdopodobieństwo drugiego najbardziej prawdopodobnego gatunku na zdjęciach grup z kilkoma gatunkami; niższe oznacza wyraźniejsze gatunki.",
     "sum_tags": "Nic nie jest kasowane: usunięte zdarzenia detekcji pozostają w observations.csv z tagiem camtrapverify:filtered (kolumna observationTags), a przegląd je pomija. Wiersze potwierdzone przez referencję mają camtrapverify:reference; po przeglądzie zweryfikowany CamtrapDP dodaje camtrapverify:confirmed, :rejected lub :unsure do zdarzeń detekcji, o których zdecydowano."
+  },
+  "session_name": {
+    "label": "Nazwa sesji",
+    "placeholder": "np. Doñana wiosna 2023, połączone",
+    "hint": "Wyświetlana w Ostatnich sesjach i na stronie gatunków, aby odróżnić sesje (np. dwie sesje z tymi samymi gatunkami). Możesz ją później zmienić przyciskiem ✎.",
+    "rename": "Zmień nazwę sesji",
+    "rename_one": "Zmień nazwę: {{name}}",
+    "open": "Otwórz {{name}}",
+    "save": "Zapisz",
+    "cancel": "Anuluj",
+    "session": "Sesja:",
+    "none": "bez nazwy"
   }
 }

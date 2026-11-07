@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { api } from '../api'
 import RelinkDialog from '../components/RelinkDialog'
+import SessionNameEditor from '../components/SessionNameEditor'
 import type { RelinkStatus, SpeciesStats } from '../types'
 import { isPermissionDenied } from '../utils/imageError'
 import { downloadFile } from '../utils/download'
@@ -20,6 +21,7 @@ export default function IndexPage() {
     start: string; end: string
     occasion_days: number; gap_seconds: number; min_score: number
   } | null>(null)
+  const [sessionName, setSessionName] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [relink, setRelink] = useState<RelinkStatus | null>(null)
@@ -30,6 +32,7 @@ export default function IndexPage() {
     return Promise.all([api.getSpecies(), api.getState()])
       .then(([sp, state]) => {
         setSpecies(sp)
+        setSessionName(state.config?.session_name ?? '')
         setRelink(state.relink ?? null)
         if (state.config) setSessionInfo({
           start: state.config.study_start,
@@ -143,6 +146,12 @@ export default function IndexPage() {
             {t('index.see_results')}
           </button>
         </div>
+      </div>
+
+      <div className="text-sm text-zinc-700 dark:text-zinc-300 mb-1 flex items-center gap-1.5 min-w-0">
+        <span className="text-zinc-500 dark:text-zinc-400 flex-shrink-0">{t('session_name.session')}</span>
+        <SessionNameEditor sessionDir="" name={sessionName} fallback={t('session_name.none')}
+          onRenamed={setSessionName} className="font-medium" />
       </div>
 
       {sessionInfo && (

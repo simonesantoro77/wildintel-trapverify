@@ -525,5 +525,17 @@
     "best": "beste",
     "details_hint": "Zu prüfende Detektionsereignisse: die Arbeit der prüfenden Person, außerhalb der Stichprobe geschätzt (in jeder Zelle die Ereignisse bis zum ersten bestätigten, oder alle, wenn die Art nicht da ist). Behaltene Zellen: Anteil der Zellen mit der Art, die ein bestätigtes Ereignis behalten. Mehr Ereignisse als die beste: wie viele Ereignisse mehr als die Methode mit den wenigsten, als 95-%-Bereich aus 300-maligem Neuziehen der Standorte; enthält der Bereich die 0 (z. B. −46 bis +62), ist der Unterschied nicht klar und die Methoden sind gleichauf. Zweite Art: mittlere Wahrscheinlichkeit der zweitwahrscheinlichsten Art in Fotos von Gruppen mit mehreren Arten; niedriger heißt klarere Arten.",
     "sum_tags": "Nichts wird gelöscht: Entfernte Detektionsereignisse bleiben in observations.csv mit dem Tag camtrapverify:filtered (Spalte observationTags), und die Überprüfung überspringt sie. Von der Referenz bestätigte Zeilen tragen camtrapverify:reference; nach der Überprüfung ergänzt das verifizierte CamtrapDP camtrapverify:confirmed, :rejected oder :unsure bei den Detektionsereignissen, über die Sie entschieden haben."
+  },
+  "session_name": {
+    "label": "Name der Sitzung",
+    "placeholder": "z. B. Doñana Frühjahr 2023, kombiniert",
+    "hint": "Wird unter Letzte Sitzungen und auf der Artenseite angezeigt, damit du Sitzungen unterscheiden kannst (z. B. zwei Sitzungen mit denselben Arten). Du kannst ihn später mit ✎ ändern.",
+    "rename": "Sitzung umbenennen",
+    "rename_one": "{{name}} umbenennen",
+    "open": "{{name}} öffnen",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "session": "Sitzung:",
+    "none": "ohne Namen"
   }
 }

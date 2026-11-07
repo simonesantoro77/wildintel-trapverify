@@ -1,8 +1,10 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class SetupRequest(BaseModel):
     camtrap_dir: str
+    # Shown in Recent sessions and on the species page to tell sessions apart.
+    session_name: str = Field("", max_length=120)
     image_base_dir: str = ""
     flat_search: bool = False
     output_dir: str = ""
@@ -68,6 +70,11 @@ class UnrejectRequest(BaseModel):
 
 class ReviewDecisionsRequest(BaseModel):
     confirmed_keys: list[str]
+
+
+class RenameSessionRequest(BaseModel):
+    session_dir: str = ""          # empty: the active session
+    name: str = Field("", max_length=120)
 
 
 class LoadSessionRequest(BaseModel):

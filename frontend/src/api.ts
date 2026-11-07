@@ -164,6 +164,10 @@ export const api = {
   getRecentSessions: () =>
     req<RecentSession[]>('/api/session/recent'),
 
+  /** Name a session ('' = the active one); an empty name clears it. */
+  renameSession: (session_dir: string, name: string) =>
+    put<{ session_dir: string; session_name: string }>('/api/session/name', { session_dir, name }),
+
   trapperLogin: (url: string, username: string, password: string) =>
     post<{ ok: boolean; base_url: string; research_projects_count: number }>(
       '/api/trapper/login', { url, username, password },

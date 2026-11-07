@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 from starlette.background import BackgroundTask
 
-from schemas.requests import ImportSessionRequest, LoadSessionRequest, RelinkRequest, SetupRequest
+from schemas.requests import ImportSessionRequest, LoadSessionRequest, RelinkRequest, RenameSessionRequest, SetupRequest
 from services import session_service, workflow_service
 
 router = APIRouter(prefix="/api", tags=["session"])
@@ -43,6 +43,12 @@ def get_state() -> dict:
 def recent_sessions() -> list[dict]:
     """List recently opened sessions still present on disk, most recent first."""
     return session_service.list_recent_sessions()
+
+
+@router.put("/session/name")
+def rename_session(req: RenameSessionRequest) -> dict:
+    """Name (or rename) a session; an empty name clears it."""
+    return session_service.rename_session(req.session_dir, req.name)
 
 
 @router.post("/session/load")
