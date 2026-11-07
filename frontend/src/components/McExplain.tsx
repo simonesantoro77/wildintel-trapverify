@@ -64,7 +64,14 @@ interface SummaryProps {
 }
 
 export function McResultSummary({ r, retention, tieBreak }: SummaryProps) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const list = (xs: string[]) => {
+    try {
+      return new Intl.ListFormat(i18n.language, { type: 'conjunction' }).format(xs)
+    } catch {
+      return xs.join(', ')
+    }
+  }
   const name = (s: string) => t(`mc.strategy_${s}`, { defaultValue: s })
   const chosen = r.strategies.find(s => s.chosen)
   const tied = r.strategies.filter(s => s.tie && !s.chosen && s.eligible)
@@ -81,7 +88,7 @@ export function McResultSummary({ r, retention, tieBreak }: SummaryProps) {
           {t('mc.sum_method', { name: name(chosen.strategy), share: `${retention} %`, rounds: chosen.rounds.toLocaleString() })}
           {tied.length > 0 && <>
             {' '}
-            {t('mc.sum_method_tie', { others: tied.map(s => name(s.strategy)).join(', ') })}
+            {t('mc.sum_method_tie', { others: list(tied.map(s => name(s.strategy))), count: tied.length })}
             {' '}
             {tieBreak === 'ambiguous'
               ? t('mc.sum_rule_ambiguous', { value: chosen.mean_second_species?.toFixed(3) ?? '' })

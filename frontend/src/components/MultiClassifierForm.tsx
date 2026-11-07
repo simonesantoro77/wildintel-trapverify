@@ -291,8 +291,9 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
         <h5 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-1">{t('mc.classifiers_title')}</h5>
         <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">{t('mc.classifiers_desc')}</p>
         {classifiers.map((c, i) => (
-          <div key={i} className="grid grid-cols-1 sm:grid-cols-[8rem_1fr_9rem_auto] gap-2 mb-2 items-center">
-            <input className={plainInput} placeholder={t('mc.name_placeholder')} aria-label={t('mc.name')}
+          <div key={i} className="grid grid-cols-1 sm:grid-cols-[10rem_1fr_11rem_auto] gap-2 mb-2 items-center">
+            <input className={plainInput} aria-label={t('mc.name')}
+              placeholder={t(c.role === 'reference' ? 'mc.name_placeholder_ref' : 'mc.name_placeholder')}
               value={c.name} onChange={e => update(i, { name: e.target.value })} />
             <div className="flex">
               <input className={inputClass} placeholder={t('mc.folder_placeholder')} aria-label={t('mc.folder')}

@@ -386,7 +386,7 @@
     "classifiers_title": "Classifiers",
     "classifiers_desc": "One row per classifier. AI classifiers propose the detections: you can use one or several. The reference (optional) is the labels given by people, taken as truth: it measures the AI classifiers, teaches the app how much to trust each one, chooses the method and decides which events can be removed. Leave its row empty if you have no reference.",
     "name": "Name",
-    "name_placeholder": "Name, e.g. DeepFaune",
+    "name_placeholder": "e.g. DeepFaune",
     "folder": "CamtrapDP folder",
     "folder_placeholder": "CamtrapDP folder",
     "role": "Role",
@@ -505,7 +505,6 @@
     "always_kept": "Always kept, whatever the options: the best event of each cell, the events the reference confirmed and those with an animal it couldn't identify.",
     "sum_title": "What the combination did",
     "sum_method": "Method chosen: {{name}}. Among the methods that keep a true event in {{share}} of the cells with the species, it leaves the fewest events to look at ({{rounds}}).",
-    "sum_method_tie": "{{others}} left a number that is not clearly different (the 95 % interval of the difference includes 0), so",
     "sum_rule_ambiguous": "the tie was broken by the clearest species (mean probability of the second species: {{value}}).",
     "sum_rule_simple": "the simplest of them was taken.",
     "sum_rule_none": "the one with fewest events was taken.",
@@ -518,6 +517,9 @@
     "sum_species_nofilter": "not filtered: only {{n}} cells confirmed by the reference, at least {{min}} are needed.",
     "sum_two": "Photos with two species of the same group at 0.5 or more: {{before}} → {{after}}.",
     "sum_check": "To see what was removed before reviewing, open multiclassifier/events_with_score.csv in the new folder: each event with its new score, its previous score and whether it was kept.",
-    "details_title": "Details"
+    "details_title": "Details",
+    "sum_method_tie_one": "{{others}} left a number that is not clearly different (the 95 % interval of the difference includes 0), so",
+    "sum_method_tie_other": "{{others}} left numbers that are not clearly different (the 95 % interval of the difference includes 0), so",
+    "name_placeholder_ref": "e.g. Zooniverse"
   }
 }

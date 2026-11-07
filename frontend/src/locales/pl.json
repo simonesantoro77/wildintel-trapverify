@@ -386,7 +386,7 @@
     "classifiers_title": "Klasyfikatory",
     "classifiers_desc": "Jeden wiersz na klasyfikator. Klasyfikatory AI proponują detekcje: możesz użyć jednego lub kilku. Referencja (opcjonalna) to etykiety nadane przez ludzi, traktowane jako prawda: mierzy klasyfikatory AI, uczy aplikację, na ile ufać każdemu z nich, wybiera metodę i ustala, które zdarzenia można usunąć. Zostaw jej wiersz pusty, jeśli nie masz referencji.",
     "name": "Nazwa",
-    "name_placeholder": "Nazwa, np. DeepFaune",
+    "name_placeholder": "np. DeepFaune",
     "folder": "Folder CamtrapDP",
     "folder_placeholder": "Folder CamtrapDP",
     "role": "Rola",
@@ -505,7 +505,6 @@
     "always_kept": "Zawsze zachowywane, niezależnie od opcji: najlepsze zdarzenie każdej komórki, zdarzenia potwierdzone przez referencję i te ze zwierzęciem, którego nie mogła zidentyfikować.",
     "sum_title": "Co zrobiło połączenie",
     "sum_method": "Wybrana metoda: {{name}}. Spośród metod, które zachowują prawdziwe zdarzenie w {{share}} komórek z gatunkiem, pozostawia najmniej zdarzeń do przejrzenia ({{rounds}}).",
-    "sum_method_tie": "{{others}} pozostawiały liczbę, która nie jest wyraźnie inna (95-procentowy przedział różnicy obejmuje 0), więc",
     "sum_rule_ambiguous": "remis rozstrzygnięto według najwyraźniejszego gatunku (średnie prawdopodobieństwo drugiego gatunku: {{value}}).",
     "sum_rule_simple": "wybrano najprostszą z nich.",
     "sum_rule_none": "wybrano tę z najmniejszą liczbą zdarzeń.",
@@ -518,6 +517,11 @@
     "sum_species_nofilter": "bez filtrowania: tylko {{n}} komórek potwierdzonych przez referencję, potrzeba co najmniej {{min}}.",
     "sum_two": "Zdjęcia z dwoma gatunkami tej samej grupy na poziomie 0,5 lub wyższym: {{before}} → {{after}}.",
     "sum_check": "Aby przed przeglądem zobaczyć, co usunięto, otwórz multiclassifier/events_with_score.csv w nowym folderze: każde zdarzenie z nowym wynikiem, poprzednim wynikiem i informacją, czy zostało zachowane.",
-    "details_title": "Szczegóły"
+    "details_title": "Szczegóły",
+    "sum_method_tie_one": "{{others}} pozostawiała liczbę, która nie jest wyraźnie inna (95-procentowy przedział różnicy obejmuje 0), więc",
+    "sum_method_tie_other": "{{others}} pozostawiały liczby, które nie są wyraźnie inne (95-procentowy przedział różnicy obejmuje 0), więc",
+    "name_placeholder_ref": "np. Zooniverse",
+    "sum_method_tie_few": "{{others}} pozostawiały liczby, które nie są wyraźnie inne (95-procentowy przedział różnicy obejmuje 0), więc",
+    "sum_method_tie_many": "{{others}} pozostawiały liczby, które nie są wyraźnie inne (95-procentowy przedział różnicy obejmuje 0), więc"
   }
 }

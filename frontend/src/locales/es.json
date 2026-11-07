@@ -386,11 +386,11 @@
     "classifiers_title": "Clasificadores",
     "classifiers_desc": "Una fila por clasificador. Los clasificadores de IA proponen las detecciones: puedes usar uno o varios. La referencia (opcional) son las etiquetas puestas por personas, tomadas como verdad: mide a los clasificadores de IA, enseña a la app cuánto fiarse de cada uno, elige el método y decide qué eventos se pueden quitar. Deja su fila vacía si no tienes referencia.",
     "name": "Nombre",
-    "name_placeholder": "Nombre, p. ej. DeepFaune",
+    "name_placeholder": "p. ej. DeepFaune",
     "folder": "Carpeta CamtrapDP",
     "folder_placeholder": "Carpeta CamtrapDP",
     "role": "Rol",
-    "role_ai": "Classifier de IA",
+    "role_ai": "Clasificador de IA",
     "role_reference": "Referencia (humanos)",
     "remove": "Quitar",
     "add": "Añadir clasificador",
@@ -505,7 +505,6 @@
     "always_kept": "Siempre se conservan, sean cuales sean las opciones: el mejor evento de cada celda, los eventos que confirmó la referencia y los que tienen un animal que no pudo identificar.",
     "sum_title": "Qué ha hecho la combinación",
     "sum_method": "Método elegido: {{name}}. Entre los métodos que conservan un evento verdadero en el {{share}} de las celdas con la especie, es el que deja menos eventos que mirar ({{rounds}}).",
-    "sum_method_tie": "{{others}} dejaban una cifra que no es claramente distinta (el intervalo del 95 % de la diferencia incluye el 0), así que",
     "sum_rule_ambiguous": "el empate se resolvió por la especie más clara (probabilidad media de la segunda especie: {{value}}).",
     "sum_rule_simple": "se tomó el más sencillo de ellos.",
     "sum_rule_none": "se tomó el de menos eventos.",
@@ -518,6 +517,9 @@
     "sum_species_nofilter": "sin filtrar: solo {{n}} celdas confirmadas por la referencia, hacen falta al menos {{min}}.",
     "sum_two": "Fotos con dos especies del mismo grupo a 0,5 o más: {{before}} → {{after}}.",
     "sum_check": "Para ver qué se ha quitado antes de revisar, abre multiclassifier/events_with_score.csv en la carpeta nueva: cada evento con su puntuación nueva, la anterior y si se conservó.",
-    "details_title": "Detalles"
+    "details_title": "Detalles",
+    "sum_method_tie_one": "{{others}} dejaba una cifra que no es claramente distinta (el intervalo del 95 % de la diferencia incluye el 0), así que",
+    "sum_method_tie_other": "{{others}} dejaban cifras que no son claramente distintas (el intervalo del 95 % de la diferencia incluye el 0), así que",
+    "name_placeholder_ref": "p. ej. Zooniverse"
   }
 }

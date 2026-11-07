@@ -386,7 +386,7 @@
     "classifiers_title": "Klassifizierer",
     "classifiers_desc": "Eine Zeile pro Klassifizierer. KI-Klassifizierer schlagen die Detektionen vor: Du kannst einen oder mehrere verwenden. Die Referenz (optional) sind die von Menschen vergebenen Labels, die als Wahrheit gelten: Sie misst die KI-Klassifizierer, lehrt die App, wie sehr sie jedem vertrauen kann, wählt die Methode und legt fest, welche Ereignisse entfernt werden können. Lass ihre Zeile leer, wenn du keine Referenz hast.",
     "name": "Name",
-    "name_placeholder": "Name, z. B. DeepFaune",
+    "name_placeholder": "z. B. DeepFaune",
     "folder": "CamtrapDP-Ordner",
     "folder_placeholder": "CamtrapDP-Ordner",
     "role": "Rolle",
@@ -505,7 +505,6 @@
     "always_kept": "Immer behalten, unabhängig von den Optionen: das beste Ereignis jeder Zelle, die von der Referenz bestätigten Ereignisse und die mit einem Tier, das sie nicht bestimmen konnte.",
     "sum_title": "Was die Kombination getan hat",
     "sum_method": "Gewählte Methode: {{name}}. Unter den Methoden, die in {{share}} der Zellen mit der Art ein echtes Ereignis behalten, lässt sie die wenigsten Ereignisse zur Prüfung übrig ({{rounds}}).",
-    "sum_method_tie": "{{others}} ließen eine nicht eindeutig andere Zahl übrig (das 95-%-Intervall der Differenz enthält 0), daher",
     "sum_rule_ambiguous": "wurde der Gleichstand über die deutlichste Art aufgelöst (mittlere Wahrscheinlichkeit der zweiten Art: {{value}}).",
     "sum_rule_simple": "wurde die einfachste von ihnen genommen.",
     "sum_rule_none": "wurde die mit den wenigsten Ereignissen genommen.",
@@ -518,6 +517,9 @@
     "sum_species_nofilter": "nicht gefiltert: nur {{n}} von der Referenz bestätigte Zellen, mindestens {{min}} sind nötig.",
     "sum_two": "Fotos mit zwei Arten derselben Gruppe bei 0,5 oder mehr: {{before}} → {{after}}.",
     "sum_check": "Um vor der Prüfung zu sehen, was entfernt wurde, öffne multiclassifier/events_with_score.csv im neuen Ordner: jedes Ereignis mit seiner neuen und vorherigen Bewertung und ob es behalten wurde.",
-    "details_title": "Details"
+    "details_title": "Details",
+    "sum_method_tie_one": "{{others}} ließ eine nicht eindeutig andere Zahl übrig (das 95-%-Intervall der Differenz enthält 0), daher",
+    "sum_method_tie_other": "{{others}} ließen nicht eindeutig andere Zahlen übrig (das 95-%-Intervall der Differenz enthält 0), daher",
+    "name_placeholder_ref": "z. B. Zooniverse"
   }
 }
