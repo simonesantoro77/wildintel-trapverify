@@ -223,6 +223,9 @@ export const api = {
   mcJob: (jobId: string) =>
     req<McJob>(`/api/multiclassifier/jobs/${jobId}`),
 
+  mcDefaults: () =>
+    req<{ output_dir: string }>('/api/multiclassifier/defaults'),
+
   openFolder: () =>
     req<{ ok: boolean; path: string }>('/api/open-folder', { method: 'POST' }),
 

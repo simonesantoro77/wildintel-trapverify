@@ -463,6 +463,11 @@
     "missing_species": "Wähle mindestens eine Zielart.",
     "missing_period": "Prüfe den Zeitraum: Der Beginn muss vor dem Ende liegen.",
     "single_ai_no_reference": "Mit nur einem KI-Klassifizierer und ohne Referenz ändert sich nichts: Die Wahrscheinlichkeiten bleiben die des Klassifizierers und kein Ereignis wird entfernt. Füge eine Referenz hinzu oder öffne das CamtrapDP des Klassifizierers direkt (CamtrapDP-Verzeichnis).",
-    "remote_paths_info": "{{pct}} % der Fotos in der media.csv der KI-Klassifizierer sind Webadressen (z. B. Trapper) statt Pfade auf diesem Computer. Das ist kein Problem: Wähle im Schritt Bildverzeichnis den Ordner mit den Fotos; die App findet jedes Foto über den Ordner seiner Kamera (deploymentID) und seinen Dateinamen, auch in Unterordnern (z. B. R0025\\r0025-dona_0011) und mit anderer Endung (.JPEG oder .jpg)."
+    "remote_paths_info": "{{pct}} % der Fotos in der media.csv der KI-Klassifizierer sind Webadressen (z. B. Trapper) statt Pfade auf diesem Computer. Das ist kein Problem: Wähle im Schritt Bildverzeichnis den Ordner mit den Fotos; die App findet jedes Foto über den Ordner seiner Kamera (deploymentID) und seinen Dateinamen, auch in Unterordnern (z. B. R0025\\r0025-dona_0011) und mit anderer Endung (.JPEG oder .jpg).",
+    "output_title": "Wo der kombinierte Datensatz gespeichert wird",
+    "output_dir": "Ordner",
+    "output_name": "Name des neuen Ordners",
+    "output_hint": "In {{dir}} wird ein neuer Ordner mit dem CamtrapDP und, im Unterordner multiclassifier, den Diagnosen angelegt. Lass den Namen leer, um multiclassifier_ mit Datum und Uhrzeit zu verwenden. Ein vorhandener Ordner, der schon Dateien enthält, wird nie überschrieben.",
+    "output_picker_title": "Ordner für den kombinierten Datensatz"
   }
 }

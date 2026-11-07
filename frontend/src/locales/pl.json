@@ -463,6 +463,11 @@
     "missing_species": "Zaznacz co najmniej jeden gatunek docelowy.",
     "missing_period": "Sprawdź okres: początek musi być przed końcem.",
     "single_ai_no_reference": "Przy jednym klasyfikatorze AI i bez referencji nic się nie zmienia: prawdopodobieństwa pozostają takie jak u klasyfikatora i żadne zdarzenie nie jest usuwane. Dodaj referencję albo otwórz bezpośrednio CamtrapDP klasyfikatora (Katalog CamtrapDP).",
-    "remote_paths_info": "{{pct}} % zdjęć w media.csv klasyfikatorów AI to adresy internetowe (np. Trapper), a nie ścieżki na tym komputerze. To nie problem: w kroku Katalog obrazów wybierz folder ze zdjęciami, a aplikacja znajdzie każde z nich po folderze jego kamery (deploymentID) i nazwie pliku, także w podfolderach (np. R0025\\r0025-dona_0011) i z innym rozszerzeniem (.JPEG lub .jpg)."
+    "remote_paths_info": "{{pct}} % zdjęć w media.csv klasyfikatorów AI to adresy internetowe (np. Trapper), a nie ścieżki na tym komputerze. To nie problem: w kroku Katalog obrazów wybierz folder ze zdjęciami, a aplikacja znajdzie każde z nich po folderze jego kamery (deploymentID) i nazwie pliku, także w podfolderach (np. R0025\\r0025-dona_0011) i z innym rozszerzeniem (.JPEG lub .jpg).",
+    "output_title": "Gdzie zapisać połączony zbiór danych",
+    "output_dir": "Folder",
+    "output_name": "Nazwa nowego folderu",
+    "output_hint": "W {{dir}} tworzony jest nowy folder z CamtrapDP oraz, w podfolderze multiclassifier, diagnostyką. Zostaw nazwę pustą, aby użyć multiclassifier_ z datą i godziną. Istniejący folder, który zawiera już pliki, nigdy nie jest nadpisywany.",
+    "output_picker_title": "Folder na połączony zbiór danych"
   }
 }

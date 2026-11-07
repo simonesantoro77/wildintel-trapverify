@@ -314,3 +314,30 @@ def test_api_rejects_classifiers_with_the_same_name(client, archive):
         {"name": "df ", "path": str(archive / "B"), "role": "ai"}]})
     assert r.status_code == 400
     assert "different" in r.json()["detail"]
+
+
+def test_api_writes_to_the_chosen_folder(client, archive, tmp_path):
+    body = {"classifiers": [{"name": "A", "path": str(archive / "A"), "role": "ai"},
+                            {"name": "R", "path": str(archive / "R"), "role": "reference"}],
+            "groups": GROUPS, "date_start": "2024-03-01", "date_end": "2024-04-30", "filter_mode": "none",
+            "output_dir": str(tmp_path / "mine"), "output_name": "deer_2024"}
+    r = client.post("/api/multiclassifier/run", json=body)
+    assert r.status_code == 200
+    assert r.json()["out_dir"] == str(tmp_path / "mine" / "deer_2024")
+    for _ in range(600):
+        j = client.get(f"/api/multiclassifier/jobs/{r.json()['job_id']}").json()
+        if j["status"] != "running":
+            break
+        time.sleep(0.1)
+    assert j["status"] == "done", j.get("error")
+    assert (tmp_path / "mine" / "deer_2024" / "datapackage.json").exists()
+    # the same folder again: refused, nothing overwritten
+    again = client.post("/api/multiclassifier/run", json=body)
+    assert again.status_code == 400 and "not empty" in again.json()["detail"]
+    bad = client.post("/api/multiclassifier/run", json={**body, "output_name": "a/b"})
+    assert bad.status_code == 400
+
+
+def test_api_default_output_folder(client, tmp_path):
+    assert client.get("/api/multiclassifier/defaults").json()["output_dir"] == str(tmp_path / "conversions")
+

@@ -8,6 +8,7 @@ normal CamtrapDP.
 from __future__ import annotations
 
 import logging
+import re
 import threading
 import traceback
 import uuid
@@ -24,8 +25,11 @@ from multiclassifier.ingest import TaxonomyError, find_table, label_inventory, p
 router = APIRouter(prefix="/api/multiclassifier", tags=["multiclassifier"])
 logger = logging.getLogger(__name__)
 
-# Where the combined datasets are written (like the other conversions).
+# Where the combined datasets are written unless another folder is chosen.
 CONVERSIONS_DIR = Path.home() / "Documents" / "camtrap_verify" / "conversions"
+
+# A folder name, not a path: no separators, no reserved characters.
+_SAFE_NAME = re.compile(r'^[^\\/:*?"<>|]+$')
 
 _jobs: dict[str, dict] = {}
 _lock = threading.Lock()
@@ -61,6 +65,10 @@ class RunRequest(BaseModel):
     use_reference_in_output: bool = True
     strict_taxonomy: bool = False
     media_source: Optional[str] = None
+    # Folder where the dataset's own folder is created (default
+    # CONVERSIONS_DIR) and that folder's name (default multiclassifier_<time>).
+    output_dir: Optional[str] = None
+    output_name: Optional[str] = None
 
 
 def _sources(items: list[ClassifierIn]) -> list[ClassifierSource]:
@@ -94,6 +102,34 @@ def _media_source(path: Optional[str]) -> Optional[str]:
     except FileNotFoundError:
         raise HTTPException(400, f"media.csv not found in {path}")
     return str(p)
+
+
+def _output_folder(parent: Optional[str], name: Optional[str]) -> Path:
+    """Folder the combined dataset is written to; refused if it can't be
+    created or already holds files, so nothing is overwritten."""
+    base = Path(parent.strip()) if parent and parent.strip() else CONVERSIONS_DIR
+    name = (name or "").strip().rstrip(".")
+    if not name:
+        name = f"multiclassifier_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:4]}"
+    elif not _SAFE_NAME.match(name) or name in (".", ".."):
+        raise HTTPException(400, f"\"{name}\" can't be a folder name: leave out / \\ : * ? \" < > |")
+    out = base / name
+    if out.exists() and (not out.is_dir() or any(out.iterdir())):
+        raise HTTPException(400, f"{out} already exists and is not empty: choose another name or folder.")
+    try:
+        base.mkdir(parents=True, exist_ok=True)
+        probe = base / f".camtrapverify_write_test_{uuid.uuid4().hex[:6]}"
+        probe.write_text("")
+        probe.unlink()
+    except OSError as exc:
+        raise HTTPException(400, f"Can't write in {base}: {exc}") from exc
+    return out
+
+
+@router.get("/defaults")
+def defaults() -> dict:
+    """Default output folder, shown in the form."""
+    return {"output_dir": str(CONVERSIONS_DIR)}
 
 
 @router.post("/labels")
@@ -152,8 +188,11 @@ def start(req: RunRequest) -> dict:
         cfg.validate()
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    out_dir = CONVERSIONS_DIR / f"multiclassifier_{ts}_{uuid.uuid4().hex[:4]}"
+    out_dir = _output_folder(req.output_dir, req.output_name)
+    with _lock:
+        busy = any(j["status"] == "running" and j["out_dir"] == str(out_dir) for j in _jobs.values())
+    if busy:
+        raise HTTPException(400, f"{out_dir} is already being written by another combination.")
     job_id = uuid.uuid4().hex[:12]
     with _lock:
         _jobs[job_id] = {"status": "running", "log": [], "out_dir": str(out_dir)}

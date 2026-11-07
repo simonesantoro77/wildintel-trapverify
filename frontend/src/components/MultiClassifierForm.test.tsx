@@ -25,6 +25,7 @@ vi.mock('../api', () => ({
     })),
     mcRun: vi.fn(async () => ({ job_id: 'j1', out_dir: '/tmp/x' })),
     mcJob: vi.fn(async () => ({ status: 'running', log: [], out_dir: '/tmp/x' })),
+    mcDefaults: vi.fn(async () => ({ output_dir: '/home/me/Documents/camtrap_verify/conversions' })),
   },
 }))
 
@@ -59,6 +60,8 @@ describe('MultiClassifierForm', () => {
     expect(body.date_start).toBe('2023-02-01')
     expect(body.filter_mode).toBe('cells')
     expect(body.classifiers.map(c => c.role)).toEqual(['ai', 'reference'])
+    expect(body.output_dir).toBeNull()
+    expect(body.output_name).toBeNull()
   })
 
   it('asks for a different name when two classifiers share one', async () => {
@@ -90,5 +93,23 @@ describe('MultiClassifierForm', () => {
     expect(vi.mocked(api.mcLabels).mock.calls[0][0].classifiers).toEqual([{ name: 'DF', path: '/data/df', role: 'ai' }])
     expect(screen.getByRole('button', { name: 'Read labels again' })).toBeEnabled()
     expect(screen.getByText('Tick at least one target species.')).toBeInTheDocument()
+  })
+
+  it('sends the chosen output folder and name', async () => {
+    const user = userEvent.setup()
+    vi.mocked(api.mcRun).mockClear()
+    render(<MultiClassifierForm onConverted={vi.fn()} />)
+    await user.type(screen.getAllByLabelText('Name')[0], 'DF')
+    await user.type(screen.getAllByLabelText('CamtrapDP folder')[0], '/data/df')
+    await user.click(screen.getByRole('button', { name: 'Read labels' }))
+    await user.click(await screen.findByLabelText('Cervus elaphus'))
+    expect(screen.getByLabelText('Folder')).toHaveAttribute('placeholder', '/home/me/Documents/camtrap_verify/conversions')
+    await user.type(screen.getByLabelText('Folder'), 'D:/2023_optimized')
+    await user.type(screen.getByLabelText('Name of the new folder'), 'donana_2023_combined')
+    await user.click(screen.getByRole('button', { name: 'Combine' }))
+    await waitFor(() => expect(api.mcRun).toHaveBeenCalled())
+    const body = vi.mocked(api.mcRun).mock.calls[0][0]
+    expect(body.output_dir).toBe('D:/2023_optimized')
+    expect(body.output_name).toBe('donana_2023_combined')
   })
 })

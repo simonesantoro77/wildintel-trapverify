@@ -58,7 +58,10 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
     { name: '', path: '', role: 'ai' },
     { name: '', path: '', role: 'reference' },
   ])
-  const [picker, setPicker] = useState<number | null>(null)   // classifier row being browsed
+  const [picker, setPicker] = useState<number | null>(null)   // classifier row being browsed, -1: output folder
+  const [outputDir, setOutputDir] = useState('')
+  const [defaultOutputDir, setDefaultOutputDir] = useState('')
+  const [outputName, setOutputName] = useState('')
   const [inv, setInv] = useState<McLabels | null>(null)
   const [loadingLabels, setLoadingLabels] = useState(false)
   const [dates, setDates] = useState({ start: '', end: '' })
@@ -76,6 +79,10 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [opening, setOpening] = useState(false)
   const pollRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    api.mcDefaults().then(d => setDefaultOutputDir(d.output_dir)).catch(() => { /* placeholder only */ })
+  }, [])
 
   const filled = useMemo(() => classifiers.filter(c => c.name.trim() || c.path.trim()), [classifiers])
   const hasReference = filled.some(c => c.role === 'reference' && c.path.trim())
@@ -179,6 +186,8 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
         retention: retention / 100,
         tie_break: tieBreak,
         use_reference_in_output: refVerdict,
+        output_dir: outputDir.trim() || null,
+        output_name: outputName.trim() || null,
       })
       setJobId(job_id)
     } catch (e) {
@@ -432,6 +441,28 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
         </>
       )}
 
+      {inv && (
+        <div className={boxClass}>
+          <h5 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-3">{t('mc.output_title')}</h5>
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr_16rem] gap-3">
+            <div>
+              <label htmlFor="mc-out-dir" className={labelClass}>{t('mc.output_dir')}</label>
+              <div className="flex">
+                <input id="mc-out-dir" className={inputClass} placeholder={defaultOutputDir}
+                  value={outputDir} onChange={e => setOutputDir(e.target.value)} />
+                <button type="button" className={browseBtn} onClick={() => setPicker(-1)}>{t('setup.browse')}</button>
+              </div>
+            </div>
+            <div>
+              <label htmlFor="mc-out-name" className={labelClass}>{t('mc.output_name')}</label>
+              <input id="mc-out-name" className={plainInput} placeholder="multiclassifier_<date>"
+                value={outputName} onChange={e => setOutputName(e.target.value)} />
+            </div>
+          </div>
+          <p className={hintClass}>{t('mc.output_hint', { dir: outputDir.trim() || defaultOutputDir })}</p>
+        </div>
+      )}
+
       {/* ── Progress and result ── */}
       {job && (
         <div className={boxClass}>
@@ -486,10 +517,11 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
 
       {picker !== null && (
         <DirectoryPicker
-          title={t('mc.folder_picker_title')}
-          initialPath={classifiers[picker]?.path || undefined}
+          title={t(picker < 0 ? 'mc.output_picker_title' : 'mc.folder_picker_title')}
+          initialPath={(picker < 0 ? outputDir || defaultOutputDir : classifiers[picker]?.path) || undefined}
           onSelect={path => {
-            update(picker, { path })
+            if (picker < 0) setOutputDir(path)
+            else update(picker, { path })
             setPicker(null)
           }}
           onClose={() => setPicker(null)}

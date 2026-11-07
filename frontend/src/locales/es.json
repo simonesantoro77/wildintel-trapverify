@@ -463,6 +463,11 @@
     "missing_species": "Marca al menos una especie objetivo.",
     "missing_period": "Revisa el periodo: el inicio debe ser anterior al final.",
     "single_ai_no_reference": "Con un solo clasificador de IA y sin referencia no cambia nada: las probabilidades siguen siendo las del clasificador y no se quita ningún evento. Añade una referencia o abre directamente el CamtrapDP del clasificador (Directorio CamtrapDP).",
-    "remote_paths_info": "El {{pct}} % de las fotos del media.csv de los clasificadores de IA son direcciones web (p. ej. de Trapper) y no rutas de este ordenador. No pasa nada: en el paso Directorio de imágenes elige la carpeta que contiene las fotos y la app encontrará cada una por la carpeta de su cámara (deploymentID) y su nombre de archivo, también dentro de subcarpetas (p. ej. R0025\\r0025-dona_0011) y con otra extensión (.JPEG o .jpg)."
+    "remote_paths_info": "El {{pct}} % de las fotos del media.csv de los clasificadores de IA son direcciones web (p. ej. de Trapper) y no rutas de este ordenador. No pasa nada: en el paso Directorio de imágenes elige la carpeta que contiene las fotos y la app encontrará cada una por la carpeta de su cámara (deploymentID) y su nombre de archivo, también dentro de subcarpetas (p. ej. R0025\\r0025-dona_0011) y con otra extensión (.JPEG o .jpg).",
+    "output_title": "Dónde guardar el dataset combinado",
+    "output_dir": "Carpeta",
+    "output_name": "Nombre de la carpeta nueva",
+    "output_hint": "Dentro de {{dir}} se crea una carpeta nueva con el CamtrapDP y, en su subcarpeta multiclassifier, los diagnósticos. Deja el nombre vacío para usar multiclassifier_ con la fecha y la hora. Una carpeta que ya existe y tiene archivos nunca se sobrescribe.",
+    "output_picker_title": "Carpeta para el dataset combinado"
   }
 }

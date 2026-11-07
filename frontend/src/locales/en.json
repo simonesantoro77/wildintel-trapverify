@@ -463,6 +463,11 @@
     "missing_species": "Tick at least one target species.",
     "missing_period": "Check the study period: the start must be before the end.",
     "single_ai_no_reference": "With one AI classifier and no reference nothing changes: the probabilities stay those of the classifier and no event is removed. Add a reference, or open the classifier's CamtrapDP directly (CamtrapDP directory).",
-    "remote_paths_info": "{{pct}} % of the photos in the AI classifiers' media.csv are web addresses (e.g. Trapper) instead of paths on this computer. That is fine: in the Images directory step, choose the folder that holds the photos, and the app finds each one by its camera folder (deploymentID) and its file name, also inside subfolders (e.g. R0025\\r0025-dona_0011) and with another extension (.JPEG or .jpg)."
+    "remote_paths_info": "{{pct}} % of the photos in the AI classifiers' media.csv are web addresses (e.g. Trapper) instead of paths on this computer. That is fine: in the Images directory step, choose the folder that holds the photos, and the app finds each one by its camera folder (deploymentID) and its file name, also inside subfolders (e.g. R0025\\r0025-dona_0011) and with another extension (.JPEG or .jpg).",
+    "output_title": "Where to save the combined dataset",
+    "output_dir": "Folder",
+    "output_name": "Name of the new folder",
+    "output_hint": "A new folder is created inside {{dir}} with the CamtrapDP and, in its multiclassifier subfolder, the diagnostics. Leave the name empty to use multiclassifier_ and the date and time. An existing folder that already holds files is never overwritten.",
+    "output_picker_title": "Folder for the combined dataset"
   }
 }
