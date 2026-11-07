@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { api } from '../api'
 import type { McClassifier, McJob, McLabels, McResult } from '../types'
 import DirectoryPicker from './DirectoryPicker'
+import { McHowItWorks, McResultSummary } from './McExplain'
 
 /**
  * Combine one or more AI classifiers (e.g. DeepFaune, a YOLO model) and,
@@ -483,6 +484,8 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
             )}
           </div>
 
+          <McHowItWorks />
+
           {/* ── 4. Advanced options ── */}
           <div className="mb-5">
             <button type="button" className="text-sm text-blue-600 dark:text-blue-300 hover:underline"
@@ -508,6 +511,7 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
                     <input id="mc-retention" type="number" min={50} max={100} step={0.5} className={plainInput} value={retention}
                       disabled={!hasReference || filterMode === 'none'}
                       onChange={e => setRetention(Math.min(100, Math.max(50, Number(e.target.value) || 99)))} />
+                    <p className={hintClass}>{t('mc.retention_hint')}</p>
                   </div>
                   <div>
                     <label htmlFor="mc-tie" className={labelClass}>{t('mc.tie_break')}</label>
@@ -517,13 +521,18 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
                       <option value="simple">{t('mc.tie_simple')}</option>
                       <option value="none">{t('mc.tie_none')}</option>
                     </select>
+                    <p className={hintClass}>{t(`mc.tie_${tieBreak}_hint`)}</p>
                   </div>
-                  <label className="flex items-start gap-2 text-sm text-zinc-700 dark:text-zinc-300 mt-6">
-                    <input type="checkbox" checked={refVerdict} disabled={!hasReference}
-                      onChange={e => setRefVerdict(e.target.checked)} />
-                    <span>{t('mc.use_reference')}</span>
-                  </label>
+                  <div className="mt-6">
+                    <label className="flex items-start gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+                      <input type="checkbox" checked={refVerdict} disabled={!hasReference}
+                        onChange={e => setRefVerdict(e.target.checked)} />
+                      <span>{t('mc.use_reference')}</span>
+                    </label>
+                    <p className={hintClass}>{t('mc.use_reference_hint')}</p>
+                  </div>
                 </div>
+                <p className="mt-3 text-xs text-zinc-600 dark:text-zinc-400">{t('mc.always_kept')}</p>
               </div>
             )}
           </div>
@@ -569,7 +578,7 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
               {job.unmapped?.length ? ` (${job.unmapped.join(', ')})` : ''}
             </p>
           )}
-          {result && <ResultView r={result} />}
+          {result && <ResultView r={result} retention={retention} tieBreak={tieBreak} />}
         </div>
       )}
 
@@ -620,23 +629,15 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
   )
 }
 
-function ResultView({ r }: { r: McResult }) {
+function ResultView({ r, retention, tieBreak }: {
+  r: McResult; retention: number; tieBreak: 'ambiguous' | 'simple' | 'none'
+}) {
   const { t } = useTranslation()
   const name = (s: string) => t(`mc.strategy_${s}`, { defaultValue: s })
   return (
     <div className="text-sm text-zinc-700 dark:text-zinc-300">
-      <p className="mb-2">
-        <strong>{t('mc.result_strategy')}</strong> {name(r.strategy)}
-        {' · '}
-        {t('mc.result_events', {
-          before: r.events_before.toLocaleString(), after: r.events_after.toLocaleString(),
-          pct: pct(1 - r.events_after / Math.max(1, r.events_before), 0),
-        })}
-        {' · '}
-        {t('mc.result_two', {
-          before: r.photos_high_in_two_before.toLocaleString(), after: r.photos_high_in_two_after.toLocaleString(),
-        })}
-      </p>
+      <McResultSummary r={r} retention={retention} tieBreak={tieBreak} />
+      <h6 className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1 mt-3">{t('mc.details_title')}</h6>
       {r.strategies.length > 0 && (
         <table className="w-full text-xs border-collapse mb-3">
           <thead>
