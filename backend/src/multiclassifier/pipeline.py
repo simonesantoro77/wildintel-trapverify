@@ -225,6 +225,9 @@ def run(cfg: PipelineConfig, out_dir: Path, log: Log = lambda _m: None,
     P = prepare(ing, cfg, log)
     has_ref = bool(P.R) and P.C["y"].notna().any()
     warnings = list(ing.warnings)
+    for c, g in P.gaps:
+        warnings.append(f"{c} never names {g}: for {g} it counts as not having seen the photos, "
+                        "so its silence doesn't lower the probability.")
 
     cov = ing.cov.groupby("clf")["mediaID"].apply(set)
     pd.DataFrame([{"classifier": a, "photos": len(cov[a]),

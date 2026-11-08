@@ -12,9 +12,9 @@ import pytest
 
 from multiclassifier import ClassifierSource, PipelineConfig, run
 from multiclassifier.evaluate import thresholds_cells
-from multiclassifier.ingest import label_inventory, propose_groups
-from multiclassifier.model import fit_logit
-from multiclassifier.prepare import count_window, match_boxes
+from multiclassifier.ingest import ingest, label_inventory, propose_groups
+from multiclassifier.model import all_rows, fit, fit_logit, predict
+from multiclassifier.prepare import count_window, match_boxes, prepare
 
 GROUPS = {"Cervidae": ["Cervus elaphus", "Dama dama"], "Sus scrofa": ["Sus scrofa"]}
 
@@ -396,3 +396,29 @@ def test_label_mapped_to_a_group_counts_as_that_group(archive, tmp_path):
     assert len(row) and row["level"].iloc[0] == "group only"
     assert res["events_after"] > 0
 
+
+
+def test_classifier_that_never_names_a_group_has_not_seen_it(archive, tmp_path):
+    """A model without a wild boar class says "empty" on wild boar photos; that
+    must not count as contradicting the classifier that does see wild boar."""
+    import shutil
+    src = tmp_path / "B_noboar"
+    shutil.copytree(archive / "B", src)
+    obs = pd.read_csv(src / "observations.csv", dtype=str)
+    boar = obs["scientificName"].eq("Sus scrofa")
+    obs.loc[boar, "observationType"] = "blank"
+    obs.loc[boar, ["scientificName", "classificationProbability", "count"]] = np.nan
+    obs.to_csv(src / "observations.csv", index=False)
+    cfg = PipelineConfig(classifiers=[ClassifierSource("A", str(archive / "A")), ClassifierSource("B", str(src))],
+                         groups=GROUPS, date_start="2024-03-01", date_end="2024-04-30")
+    P = prepare(ingest(cfg), cfg)
+    assert ("B", "Sus scrofa") in P.gaps
+    boar_rows = P.C[P.C["grupo"] == "Sus scrofa"]
+    assert boar_rows["state_B"].eq("not_covered").all()
+    assert (boar_rows["n_cover"] == 1).all()
+    # with agreement levels, A alone decides wild boar (it is not halved by B's silence)
+    pr = predict(fit(cfg.strategy_by_name("levels"), P, all_rows(P), cfg), P)
+    b = pr.C[pr.C["grupo"] == "Sus scrofa"]
+    assert np.allclose(b["p_pres"], b["p_A"])
+    res = run(cfg, tmp_path / "out_noboar")
+    assert any("B never names Sus scrofa" in w for w in res["warnings"])

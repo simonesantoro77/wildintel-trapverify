@@ -8,7 +8,7 @@
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 
 import numpy as np
@@ -17,7 +17,7 @@ import pandas as pd
 from .config import PipelineConfig
 from .ingest import Ingested, Log
 
-AI_STATES = ("says", "other_target", "other_animal", "unidentified", "empty", "human")
+AI_STATES = ("says", "other_target", "other_animal", "unidentified", "empty", "human", "not_covered")
 _BIG = 10**10
 
 
@@ -29,6 +29,7 @@ class Prepared:
     A: list[str]
     R: list[str]
     voters: set[tuple[str, str]]   # (group, classifier) pairs: the classifier gives species in that group
+    gaps: list[tuple[str, str]] = field(default_factory=list)   # (classifier, group): never names the group
 
 
 def count_window(dep: pd.Series, ts: np.ndarray, lab_dep: pd.Series, lab_ts: np.ndarray, w: float) -> np.ndarray:
@@ -113,12 +114,23 @@ def prepare(ing: Ingested, cfg: PipelineConfig, log: Log = lambda _m: None) -> P
     C = C.sort_values(["mediaID", "grupo"], kind="stable").reset_index(drop=True)
     key = ["mediaID", "grupo"]
 
+    # A classifier that never names a group (its model has no such class, or it
+    # was not asked about it) has not "seen" that group: in its photos it says
+    # "empty" or "another animal" because it can't say anything else. For that
+    # group it counts as not having seen the photo, like a photo outside its
+    # media.csv, instead of as a classifier that contradicts the others.
+    named = {c: set(evg.loc[evg["clf"] == c, "grupo"]) for c in A + R}
+    gaps = [(c, g) for c in A + R for g in cfg.groups if g not in named[c]]
+    for c, g in gaps:
+        log(f"{c} never names {g}: for that group it counts as not having seen the photos")
+
     for c in A:
         e = evg.loc[evg["clf"] == c, ["mediaID", "grupo", "p", "p_fam"]]
         m = C[key].merge(e, on=key, how="left")
         p = m["p"].fillna(0).to_numpy(); fam = m["p_fam"].fillna(0).to_numpy()
         s = C[["mediaID"]].merge(est[est["clf"] == c], on="mediaID", how="left")
-        covered = C["mediaID"].isin(set(cov.loc[cov["clf"] == c, "mediaID"])).to_numpy()
+        covered = C["mediaID"].isin(set(cov.loc[cov["clf"] == c, "mediaID"])).to_numpy() \
+            & C["grupo"].isin(named[c]).to_numpy()
         ng = s["n_groups"].fillna(0).to_numpy()
         state = np.select(
             [p > 0, ~covered, ng > 0, s["other_animal"].eq(True).to_numpy(),
@@ -146,7 +158,8 @@ def prepare(ing: Ingested, cfg: PipelineConfig, log: Log = lambda _m: None) -> P
         e = evg.loc[evg["clf"] == r, ["mediaID", "grupo", "p"]]
         rp = C[key].merge(e, on=key, how="left")["p"].to_numpy()
         s = C[["mediaID"]].merge(est[est["clf"] == r], on="mediaID", how="left")
-        cub = C["mediaID"].isin(set(cov.loc[cov["clf"] == r, "mediaID"])).to_numpy()
+        cub = C["mediaID"].isin(set(cov.loc[cov["clf"] == r, "mediaID"])).to_numpy() \
+            & C["grupo"].isin(named[r]).to_numpy()
         ng = s["n_groups"].fillna(0).to_numpy()
         st = np.select(
             [~np.isnan(rp), (ng > 0) | s["other_animal"].eq(True).to_numpy(),
@@ -263,4 +276,4 @@ def prepare(ing: Ingested, cfg: PipelineConfig, log: Log = lambda _m: None) -> P
             f"seen by more than one classifier: {100 * (nv > 1).mean():.1f} %")
 
     voters = set(map(tuple, evs.loc[evs["clf"].isin(A), ["grupo", "clf"]].drop_duplicates().to_numpy()))
-    return Prepared(C=C, S=S, An=An, A=A, R=R, voters=voters)
+    return Prepared(C=C, S=S, An=An, A=A, R=R, voters=voters, gaps=gaps)
