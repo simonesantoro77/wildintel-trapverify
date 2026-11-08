@@ -191,7 +191,6 @@ export interface McResult {
   study_end: string
   occasion_days: number
   occasion_hours?: number
-  filter_mode?: string
   gap_seconds: number
   warnings: string[]
 }
