@@ -630,6 +630,12 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
   )
 }
 
+// Signed whole number with a true minus sign: +117, −46, 0.
+const signed = (x: number) => {
+  const n = Math.round(x)
+  return n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '0'
+}
+
 function ResultView({ r, retention, tieBreak }: {
   r: McResult; retention: number; tieBreak: 'ambiguous' | 'simple' | 'none'
 }) {
@@ -658,7 +664,7 @@ function ResultView({ r, retention, tieBreak }: {
                 <td className="px-2 py-1 text-right tabular-nums">{s.rounds.toLocaleString()}</td>
                 <td className="px-2 py-1 text-right tabular-nums">{pct(s.cell_retention)}</td>
                 <td className="px-2 py-1 text-right tabular-nums">
-                  {s.diff_ci_low == null || s.best ? '' : `${Math.round(s.diff_ci_low)} … ${Math.round(s.diff_ci_high ?? 0)}`}
+                  {s.best ? t('mc.best') : s.diff_ci_low == null ? '' : `${signed(s.diff_ci_low)} … ${signed(s.diff_ci_high ?? 0)}`}
                 </td>
                 <td className="px-2 py-1 text-right tabular-nums">{s.mean_second_species == null ? '' : s.mean_second_species.toFixed(3)}</td>
                 <td className="px-2 py-1">
@@ -669,6 +675,7 @@ function ResultView({ r, retention, tieBreak }: {
           </tbody>
         </table>
       )}
+      {r.strategies.length > 0 && <p className={`${hintClass} mb-3`}>{t('mc.details_hint')}</p>}
       <table className="w-full text-xs border-collapse mb-2">
         <thead>
           <tr className="bg-zinc-100 dark:bg-zinc-700 text-left">

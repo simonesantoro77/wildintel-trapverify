@@ -770,6 +770,7 @@ export default function GalleryPage() {
                     : mode === 'pending'
                     ? t('gallery.pending_hint')
                     : t('gallery.round_hint_unsure', { n: iteration })}
+                  {mode === 'rounds' && <><br /><strong>{t('gallery.open_tip_title')}</strong> {t('gallery.open_tip')}</>}
                 </span>
               </div>
             </>
@@ -882,6 +883,16 @@ export default function GalleryPage() {
                     max: Math.max(...siteEvents.map((e) => e.maxProb * 100)).toFixed(0),
                   })}
                 </span>
+              )}
+              {siteEvents.length > 0 && (
+                <button type="button"
+                  className="ml-auto px-3 py-1 text-sm font-normal rounded-md bg-blue-600 text-white hover:bg-blue-500"
+                  onClick={() => {
+                    const first = siteEvents.find((e) => !decisions[e.key]) ?? siteEvents[0]
+                    openLightbox(indexByKey.get(first.key) ?? 0, 0)
+                  }}>
+                  ⤢ {t('gallery.open_large')}
+                </button>
               )}
             </h5>
             <hr className="border-zinc-700 mt-0 mb-3" />

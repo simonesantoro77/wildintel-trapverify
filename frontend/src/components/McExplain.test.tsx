@@ -34,13 +34,13 @@ const result: McResult = {
 describe('McResultSummary', () => {
   it('explains the choice, the events removed and each species', () => {
     render(<McResultSummary r={result} retention={99} tieBreak="ambiguous" />)
-    expect(screen.getByText(/Method chosen: Learned, with neighbouring photos/)).toHaveTextContent(
-      'keep a true event in 99 % of the cells with the species, it leaves the fewest events to look at (9,554)')
-    expect(screen.getByText(/Learned from the reference left a number that is not clearly different/)).toHaveTextContent(
+    expect(screen.getByText(/Method chosen: Learned probability with neighbouring photos/)).toHaveTextContent(
+      'keep a confirmed detection event in 99 % of the cells with the species, it leaves the fewest detection events to look at (9,554)')
+    expect(screen.getByText(/Learned probability left a number that is not clearly different/)).toHaveTextContent(
       'clearest species (mean probability of the second species: 0.060)')
-    expect(screen.getByText(/Events to review: 26,131 → 19,377 \(26 % fewer\)/)).toHaveTextContent(
-      'Every cell with the species keeps at least one event.')
-    expect(screen.getByText(/threshold 1.000; 2,029 of 3,182 events removed \(64 %\)/)).toBeInTheDocument()
+    expect(screen.getByText(/Detection events to review: 26,131 → 19,377 \(26 % fewer\)/)).toHaveTextContent(
+      'Every cell with the species keeps at least one detection event.')
+    expect(screen.getByText(/threshold 1.000; 2,029 of 3,182 detection events removed \(64 %\)/)).toBeInTheDocument()
     expect(screen.getByText(/not filtered: only 56 cells confirmed by the reference, at least 100 are needed/)).toBeInTheDocument()
   })
 })

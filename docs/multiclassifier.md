@@ -13,10 +13,11 @@ CamTrap Verify uses that score for two things: the **order** of the rounds in ea
 | Term | Meaning |
 | --- | --- |
 | Photo | One image (`mediaID`). All classifiers must use the same IDs |
-| Animal | One detector box. Boxes of two classifiers that overlap (IoU ≥ 0.3) are the same animal |
+| Animal | One detector box. Boxes of two classifiers that overlap with an intersection over union of at least 0.3 (the area they share is at least 30 % of the area they cover together) are the same animal |
 | Group | What a classifier or a volunteer can say without naming the species: Cervidae (red and fallow deer), Leporidae (hare and rabbit). Horse, cattle and wild boar are single-species groups |
-| Detection event | Consecutive photos of the same camera with the species, less than 60 s apart. One card in the review |
-| Cell | Site × sampling occasion (5 days) × species. The unit in which the app decides whether the species is present |
+| Detection event | Consecutive photos of the same camera with the species, less than 60 s apart. One card in the review. *Confirmed* when the reference confirms the species in one of its photos |
+| Cell | Location × sampling occasion (5 days) × species: one entry of a detection history. The unit in which the app decides whether the species is present |
+| New probability | The combined probability written to `classificationProbability`; the review shows it as the detection confidence |
 | Reference | The classifier taken as truth (Zooniverse) |
 
 For each photo and group the reference is in one of six states:
@@ -29,6 +30,8 @@ For each photo and group the reference is in one of six states:
 | Human | Only people or vehicles | False |
 | Unidentified | An animal, species unknown | Neither; never filtered out |
 | Not reviewed | The reference did not see the photo | Not used |
+
+**Classifiers that can't name a group.** A classifier counts as having seen a photo × group only if the photo is in its `media.csv` and it names that group somewhere in the study (as the group or one of its species). A model without a class for wild boar, say, answers "empty" or "another animal" on wild boar photos because it can't say anything else; for wild boar it is treated like a classifier that did not process the photo, so its silence doesn't lower the probability. The same holds for the reference: a reference that never names a group neither confirms nor contradicts it. The result lists each such classifier × group as a warning. Different temporal coverage (a classifier run on part of the period or of the cameras) is handled the same way, through each classifier's `media.csv`.
 
 The species is learnt only from photos where the reference named a single species. A photo with two species of the same group counts as true for both, but does not train the species model.
 
@@ -55,7 +58,7 @@ score = P(an animal of the group is in the photo) × P(one of those animals is t
 
 **Presence of the group** combines what every AI that saw the photo says about the group. The five methods differ mainly here.
 
-**Species, animal by animal**, only for Cervidae and Leporidae. A photo can hold several animals and each AI gives one species per box. The boxes of the AIs are matched (IoU ≥ 0.3), so each animal has the vote of DeepFaune and that of YOLO. Each animal gets a probability for each species of the group (they add up to 1), and the photo takes, for each species, the probability of the animal that is most clearly that species.
+**Species, animal by animal**, only for Cervidae and Leporidae. A photo can hold several animals and each AI gives one species per box. The boxes of the AIs are matched (intersection over union ≥ 0.3), so each animal has the vote of DeepFaune and that of YOLO. Each animal gets a probability for each species of the group (they add up to 1), and the photo takes, for each species, the probability of the animal that is most clearly that species.
 
 Example, photo 3242006: YOLO sees four red deer, DeepFaune three red deer and one fallow deer. The disputed animal ends at red deer 0.72, fallow deer 0.28; the other three are red deer at 0.93–0.95. The photo gets red deer 0.95 and fallow deer 0.28, times a presence of 0.99. So a photo with real red and fallow deer, both AIs agreeing on each animal, can score high in both species, and a lone fallow deer seen by one AI stays low. Photos without boxes split the species evenly.
 
@@ -67,25 +70,25 @@ The methods are built from four switches, each adding one idea to the one before
 
 | Method | Calibration | Presence of the group | Neighbouring photos | Species of each animal | Needs reference |
 | --- | --- | --- | --- | --- | --- |
-| Raw (`raw`) | No | Highest probability | No | Highest probability of a label naming it | No |
-| Levels (`levels`) | No | How many AIs agree, then probability | No | Vote rule | No |
-| Levels, calibrated (`levels_calibrated`) | Yes | How many AIs agree, then probability | No | Learnt | Yes |
-| Learned (`learned`) | Yes | Learnt weights | No | Learnt | Yes |
-| Learned, with neighbouring photos (`learned_context`) | Yes | Learnt weights | Yes | Learnt | Yes |
+| Highest probability (`raw`) | No | Highest probability | No | Highest probability of a label naming it | No |
+| Agreement probability (`levels`) | No | How many AIs agree, then probability | No | Vote rule | No |
+| Calibrated agreement probability (`levels_calibrated`) | Yes | How many AIs agree, then probability | No | Learnt | Yes |
+| Learned probability (`learned`) | Yes | Learnt weights | No | Learnt | Yes |
+| Learned probability with neighbouring photos (`learned_context`) | Yes | Learnt weights | Yes | Learnt | Yes |
 
-**1. Raw.** The former merge: each photo × species takes the highest probability that any AI gave to a label naming that species or its group. Kept only as the baseline; it is never chosen.
+**1. Highest probability.** The former merge: each photo × species takes the highest probability that any AI gave to a label naming that species or its group. It competes like the others and is chosen if it is clearly best; it seldom is, because it can give two species a high probability for the same animal, and in a tie the clearest-species rule prefers the others.
 
-**2. Levels.** First how many of the AIs that saw the photo name the group, then the highest probability: (number agreeing − 1 + highest probability) / number that saw it. A photo where both AIs agree is always above one where only one does. Species by the vote rule: each animal gets (0.5 + votes) / total for each species. Needs no reference.
+**2. Agreement probability.** First how many of the AIs that saw the photo name the group, then the highest probability: (number agreeing − 1 + highest probability) / number that saw it. A photo where both AIs agree is always above one where only one does. Species by the vote rule: each animal gets (0.5 + votes) / total for each species. Needs no reference.
 
-**3. Levels, calibrated.** As Levels, but each AI's probability is first turned into the precision it really has in that group, measured against the reference (logistic "Platt" calibration per classifier × group; a constant precision when there are fewer than 30 true or 30 false reference photos). After it, 0.9 from DeepFaune and 0.9 from YOLO mean the same. Species learnt (see below).
+**3. Calibrated agreement probability.** As Agreement probability, but each AI's probability is first turned into the precision it really has in that group, measured against the reference (logistic "Platt" calibration per classifier × group; a constant precision when there are fewer than 30 true or 30 false reference photos). After it, 0.9 from DeepFaune and 0.9 from YOLO mean the same. Species learnt (see below).
 
-**4. Learned.** A logistic regression learns from the reference how much each situation weighs: "YOLO names the group with probability p", "DeepFaune says empty", "says another target", "another animal", "unidentified", "a person", "did not see the photo", plus a term per group. The calibrated probabilities enter on the logit scale.
+**4. Learned probability.** A logistic regression learns from the reference how much each situation weighs: "YOLO names the group with probability p", "DeepFaune says empty", "says another target", "another animal", "unidentified", "a person", "did not see the photo", plus a term per group. The calibrated probabilities enter on the logit scale. All groups are fitted together: the calibration is per classifier × group, so "YOLO 0.9 for horses" and "YOLO 0.9 for deer" already mean different things before the regression, while the weights of the situations are shared and each group has its own intercept.
 
-**5. Learned, with neighbouring photos.** As Learned, plus the context of the same camera within ±20 s: how many neighbouring photos the AIs gave the same group and how many another one. For the species it adds how many neighbours were given this species versus the other species of the group, and the same ratio over the whole camera (excluding the photo itself).
+**5. Learned probability with neighbouring photos.** As Learned probability, plus the context of the same camera within ±20 s: how many neighbouring photos the AIs gave the same group and how many another one. For the species it adds how many neighbours were given this species versus the other species of the group, and the same ratio over the whole camera (excluding the photo itself).
 
 **Learnt species** (methods 3 to 5): a logistic regression on each AI's vote for this species minus its vote for the other, plus a base rate per species, trained on the animals of photos where the reference named a single species (each photo weighs 1). A group with at least 200 such photos gets its own model; otherwise the common one is used.
 
-Example, photo 5017409: YOLO says horse 0.93, DeepFaune says empty, no neighbours with horses. Raw gives 0.93; Levels (0 + 0.93) / 2 = 0.47, below any photo where both agree; Learned 0.53; with neighbours 0.32. The same photo with 14 neighbouring horse photos would get 0.68.
+Example, photo 5017409: YOLO says horse with 0.93, DeepFaune says empty, and no neighbouring photo has horses. Highest probability: 0.93. Agreement probability: (0 + 0.93) / 2 = 0.47, below any photo where both agree. Calibrated agreement probability: (0 + 0.82) / 2 = 0.41, because at 0.93 YOLO is right about horses 82 % of the time. Learned probability: 0.53. Learned probability with neighbouring photos: 0.32; with 14 neighbouring photos of horses it would be 0.68.
 
 ## How the method is chosen
 
@@ -93,12 +96,14 @@ The chosen method is the one that leaves the reviewer fewest events to look at w
 
 1. **Out-of-sample scores.** The cameras are split into 5 blocks (fixed seed, so two runs give the same result). Each block is scored by a model trained on the other 4, so no photo is scored by a model that saw its own label.
 2. **Same filter for all.** For each method the per-species thresholds are computed on those scores and applied, exactly as in the final filter.
-3. **Restriction.** A method is kept only if, after its filter, a true event remains in at least 99 % of the cells where the reference confirms the species. Raw is evaluated as a baseline but is never eligible.
+3. **Restriction.** A method is kept only if, after its filter, a confirmed detection event remains in at least 99 % of the cells where the reference confirms the species.
 4. **Objective: rounds.** The reviewer's work is counted per cell. Where the reference confirms the species, the events from the highest score down to the first true one. Where it does not, every event left after the filter, because each must be rejected. This one number rewards both a better order and a stronger filter.
-5. **Uncertainty.** The sites are resampled 300 times (bootstrap). A method whose 95 % interval of the difference in rounds with the best one includes 0 is tied with it.
+5. **Uncertainty.** The locations are resampled 300 times (bootstrap). A method whose 95 % interval of the difference in rounds with the best one includes 0 is tied with it.
 6. **Tie-break.** Among tied methods, the lowest mean probability of the second species in photos of Cervidae and Leporidae: the method that most often says clearly which species each photo is. Alternatives in Advanced options: *Simplest* (first in the list) and *Fewest events* (the best even if not significantly so).
 
-Without a reference nothing is chosen: the app uses Levels and no filter.
+Without a reference nothing is chosen: the app uses Agreement probability and no filter.
+
+**One method for all species.** The method is chosen once for all species, while each species gets its own threshold. On Doñana 2023, picking the best method species by species would have left 9,501 detection events to look at instead of 9,554 (−0.6 %), far less than the uncertainty of the comparison (the 95 % intervals span hundreds of events), and with 15 to 1,042 reference cells per species the choice for each species would mostly follow noise.
 
 ## The filter
 
@@ -111,21 +116,21 @@ Per species, the threshold is the highest score that still leaves a true event t
 
 A species is filtered only with at least 100 reference cells; with fewer, a 1 % loss cannot be estimated and nothing is removed.
 
-**By cells keeps presence, not every event.** On the 2023 data 83 % of the true events survive with the chosen method (97 % with Raw). If the events will be used for counts or detection rates, choose *By events* in Advanced options: it keeps 99 % of the true events instead. *None* only reorders.
+**By cells keeps presence, not every event.** On the 2023 data 83 % of the true events survive with the chosen method (97 % with Highest probability). If the events will be used for counts or detection rates, choose *By detection events* in Advanced options: it keeps 99 % of the true events instead. *None* only reorders.
 
 ## Results on Doñana, spring 2023
 
-Learned, with neighbouring photos, was chosen: it ties with Learned and Levels on rounds and has the clearest species. The final dataset goes from 26,131 to 19,377 events (−26 %) and keeps every cell.
+Learned probability with neighbouring photos was chosen: it ties with Learned probability and Agreement probability on rounds and has the clearest species. The final dataset goes from 26,131 to 19,377 events (−26 %) and keeps every cell.
 
 Data: 547,916 photos from 1 February to 31 May 2023; DeepFaune 1.4 and YOLODoñana as AIs, Zooniverse as reference; 2,207 cells with the species according to the reference. Out-of-sample values, each method with its own filter:
 
 | Method | AUC presence | Species right | Mean 2nd species | Photos ≥ 0.5 in two species | Cells kept | Rounds | vs best, 95 % interval | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Raw | 0.919 | 89.8 % | 0.150 | 18,136 | 99.4 % | 9,832 | +117 to +451 | Baseline only |
-| Levels | 0.928 | 90.7 % | 0.116 | 5,099 | 99.2 % | 9,653 | −17 to +208 | Tied |
-| Levels, calibrated | 0.949 | 91.7 % | 0.065 | 1,522 | 99.2 % | 9,684 | +46 to +222 | Worse |
-| Learned | 0.963 | 91.7 % | 0.065 | 1,522 | 99.1 % | 9,565 | −46 to +62 | Tied |
-| **Learned, with neighbours** | **0.964** | **92.1 %** | **0.060** | **545** | **99.2 %** | **9,554** | best | **Chosen** |
+| Highest probability | 0.919 | 89.8 % | 0.150 | 18,136 | 99.4 % | 9,832 | +117 to +451 | Worse |
+| Agreement probability | 0.928 | 90.7 % | 0.116 | 5,099 | 99.2 % | 9,653 | −17 to +208 | Tied |
+| Calibrated agreement probability | 0.949 | 91.7 % | 0.065 | 1,522 | 99.2 % | 9,684 | +46 to +222 | Worse |
+| Learned probability | 0.963 | 91.7 % | 0.065 | 1,522 | 99.1 % | 9,565 | −46 to +62 | Tied |
+| **Learned probability with neighbouring photos** | **0.964** | **92.1 %** | **0.060** | **545** | **99.2 %** | **9,554** | best | **Chosen** |
 
 Without any filter a reviewer would look at about 12,600 events to reach the same cells. With the chosen method the first event shown is already a true one in 78.5 % of the cells with the species.
 
