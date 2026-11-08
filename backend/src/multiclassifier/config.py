@@ -127,7 +127,7 @@ class PipelineConfig:
     n_bootstrap: int = 300
     # "ambiguous": clearest species (lowest mean probability of the second species)
     tie_break: Literal["ambiguous", "simple", "none"] = "ambiguous"
-    not_eligible: tuple[str, ...] = ("raw",)
+    not_eligible: tuple[str, ...] = ()   # strategies never chosen (e.g. ("raw",) to keep it only as a baseline)
 
     # Optional CamtrapDP folder (or media.csv) whose filePath / fileName are
     # used for the output, matched by mediaID. Not needed in the app, which
