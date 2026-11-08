@@ -1696,3 +1696,24 @@ def test_build_candidates_min_score_by_species_overrides_general(camtrap_dir):
                              min_score_by_species={"Meles meles": 0.1}, **common)
     general = build_candidates(dep, med, obs, min_score=0.75, **common)
     assert set(other["mediaID"]) == set(general["mediaID"])
+
+
+def test_export_rejected_photo_with_another_species(camtrap_dir, tmp_path, candidates):
+    """A detection event rejected for its species whose photo was used to
+    confirm another species: the first species' row says rejected, the other
+    species gets a confirmed row of its own in the same photo."""
+    from camtrap_workflow import save_decisions, set_cross_confirmation
+    d = tmp_path / "decisions"
+    d.mkdir()
+    save_decisions(d, candidates, "Vulpes_vulpes", 1, [])   # round 1: everything rejected
+    row = candidates[candidates["rank"] == 1].iloc[0]
+    set_cross_confirmation(d, "Meles meles", row["siteID"], int(row["occasion"]), row["mediaID"],
+                           "", "Vulpes vulpes")
+    out = tmp_path / "verified"
+    export_verified_camtrapdp(camtrap_dir, out, d, set(), candidates=candidates)
+    obs = pd.read_csv(out / "observations.csv", dtype=str)
+    photo = obs[obs["mediaID"] == row["mediaID"]].set_index("scientificName")
+    assert photo.loc["Vulpes vulpes", "observationTags"] == "camtrapverify:rejected"
+    assert photo.loc["Vulpes vulpes", "classificationMethod"] == "machine"
+    assert photo.loc["Meles meles", "observationTags"] == "camtrapverify:confirmed"
+    assert photo.loc["Meles meles", "classificationMethod"] == "human"
