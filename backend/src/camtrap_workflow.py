@@ -1342,7 +1342,7 @@ def build_candidates(
     )
 
     candidates = joined[joined["rank"] <= total_iterations].copy()
-    candidates["timestamp_display"] = candidates["ts"].dt.strftime("%Y-%m-%d %H:%M")
+    candidates["timestamp_display"] = candidates["ts"].dt.strftime("%Y-%m-%d %H:%M:%S")
     candidates["is_context"] = False
 
     if include_burst_context and not candidates.empty:
@@ -1393,7 +1393,7 @@ def build_candidates(
                     "occasion":                  int(burst["occasion"].iloc[0]),
                     "species_safe":              burst["species_safe"].iloc[0],
                     "ts":                        ts_val,
-                    "timestamp_display":         ts_val.strftime("%Y-%m-%d %H:%M") if pd.notna(ts_val) else "",
+                    "timestamp_display":         ts_val.strftime("%Y-%m-%d %H:%M:%S") if pd.notna(ts_val) else "",
                     "is_context":                True,
                 })
 
