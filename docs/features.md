@@ -14,9 +14,10 @@
 
 ## Sampling occasion and detection event construction
 
-- **Configurable sampling occasions** — divides the study window into fixed-length windows (`occasion_days`, default 5 days) per deployment. The number of occasions adapts automatically to the study duration.
+- **Configurable sampling occasions** — divides the study window into fixed-length windows of days (`occasion_days`, default 5) or hours (`occasion_hours`, e.g. 1 for activity patterns). The number of occasions adapts automatically to the study duration.
 - **Detection event grouping** — consecutive frames at the same location separated by less than `gap_seconds` (default 60 s) are grouped into a single reviewable detection event.
 - **Confidence ranking** — within each site × occasion × species cell, detection events are ranked by the maximum `classificationProbability` across their frames, so round 1 always shows the most likely true detection.
+- **Time ranking (time to detection)** — optionally (`review_order = "time"`), events are ranked by start, earliest first, so the first confirmed event is the first true detection; `ttd_naive_<sp>.csv` and `ttd_verified_<sp>.csv` give the hours from the start of each occasion to the first detection, censored at the occasion length.
 - **Minimum detection confidence** — frames below `min_score` (default 0.5, optionally per species) are excluded from the candidate manifest, avoiding the lowest-confidence noise.
 
 ---

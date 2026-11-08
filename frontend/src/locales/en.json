@@ -110,8 +110,8 @@
     "step3_desc": "Adjust how images are grouped into <b>sampling occasions</b> and how they are split into <b>detection events</b>.",
     "section_sampling": "Sampling parameters",
     "section_confirmation": "Confirmation parameters",
-    "label_occasion_days": "Duration of each sampling occasion in days",
-    "hint_occasion_days": "A sampling occasion groups images taken at a location within a window of N days.",
+    "label_occasion_days": "Duration of each sampling occasion",
+    "hint_occasion_days": "A sampling occasion groups the images taken at a location within a window of this length: days, or hours for sub-day occasions.",
     "label_gap": "Gap between detection events (seconds)",
     "hint_gap": "Images less than N seconds apart are grouped into the same detection event.",
     "label_min_score": "Minimum detection confidence",
@@ -181,13 +181,20 @@
     "err_end_too_late": "End date ({{date}}) is after the last record in the CamtrapDP ({{max}}).",
     "err_unknown": "Unknown error",
     "mc_locked": "Set by the classifier combination. To change it, run the combination again with other values.",
-    "mc_locked_score": "None: the detection events were already filtered per species when the classifiers were combined."
+    "mc_locked_score": "None: the detection events were already filtered per species when the classifiers were combined.",
+    "hint_occasion_hours": "Occasions of a few hours (e.g. 1 hour, to verify one record per species and hour for activity patterns) give many more occasions, so there are more detection events to review.",
+    "label_review_order": "Order of the detection events in each occasion",
+    "review_order_score": "By score: the most confident first (default)",
+    "review_order_time": "By time: the earliest first (time to detection)",
+    "hint_review_order_score": "The review usually ends sooner, because the first event shown is the most likely to be right. The detection histories are the same with either order.",
+    "hint_review_order_time": "Each occasion is reviewed from its earliest detection event, so the first one confirmed is the first true detection. Besides the detection histories (the same as by score), the results include the time to the first detection (ttd_*.csv, in hours from the start of the occasion) for time-to-detection models. It usually takes a few more events than by score.",
+    "review_order_mc_warning": "This dataset was filtered by cells, which keeps presence but can remove the earliest detection event of an occasion. For time to detection, combine the classifiers again with “None” in the advanced options."
   },
   "index": {
     "title": "Detection verification",
     "periods_reviewed": "{{resolved}} / {{total}} sampling occasions reviewed",
     "confirmed": "{{n}} confirmed",
-    "subtitle": "Select the species whose presence at locations and sampling occasions you want to verify. The sampling occasions run from <strong style='color:#10b981'>{{start}}</strong> to <strong style='color:#10b981'>{{end}}</strong>, in sampling occasions of <strong style='color:#10b981'>{{days}} days</strong>.",
+    "subtitle": "Select the species whose presence at locations and sampling occasions you want to verify. The sampling occasions run from <strong style='color:#10b981'>{{start}}</strong> to <strong style='color:#10b981'>{{end}}</strong>, in sampling occasions of <strong style='color:#10b981'>{{duration}}</strong>.",
     "see_results": "See results",
     "confirmed_periods": "{{n}} sampling occasions with confirmed detection",
     "reviewed_periods": "Reviewed {{resolved}} of {{total}} sampling occasions ({{pct}}%)",
@@ -206,7 +213,7 @@
     "round": "Round {{n}}",
     "confirmed_periods": "{{n}} sampling occasions with confirmed detection",
     "reviewed": "Reviewed {{resolved}} of {{total}}",
-    "intro_hint": "The detection events shown below are separated by <strong style='color:#10b981'>{{gap}} seconds</strong>, captured at different locations and sampling occasions of <strong style='color:#10b981'>{{days}} days</strong>, corresponding to observations with a detection confidence of <strong style='color:#10b981'>{{minScore}}</strong> or higher. For each one, confirm whether the detection event contains one or more individuals of the species <strong style='color:#10b981'>{{species}}</strong>. If you confirm the species' presence in a detection event, its presence will be considered verified for that location during the corresponding sampling occasion, and no further detection events from that same occasion will need to be reviewed. If you cannot confirm its presence, a new detection event captured at the same location and during the same sampling occasion will be shown to continue the verification.",
+    "intro_hint": "The detection events shown below are separated by <strong style='color:#10b981'>{{gap}} seconds</strong>, captured at different locations and sampling occasions of <strong style='color:#10b981'>{{duration}}</strong>, corresponding to observations with a detection confidence of <strong style='color:#10b981'>{{minScore}}</strong> or higher. For each one, confirm whether the detection event contains one or more individuals of the species <strong style='color:#10b981'>{{species}}</strong>. If you confirm the species' presence in a detection event, its presence will be considered verified for that location during the corresponding sampling occasion, and no further detection events from that same occasion will need to be reviewed. If you cannot confirm its presence, a new detection event captured at the same location and during the same sampling occasion will be shown to continue the verification.",
     "round_hint": "In round {{n}}, each sampling occasion is represented by the detection event with the highest detection confidence among those not yet reviewed.",
     "back": "Back",
     "confirm_all": "Confirm all",
@@ -292,7 +299,9 @@
     "lb_decision_title": "This card",
     "open_tip_title": "Tip:",
     "open_tip": "review in the large view (click a photo or the button on the right of the location). There you see every photo of the detection event, can zoom and change brightness, and decide with the keyboard: Y confirmed, U unsure, N rejected; ← → change photo, ↑ ↓ change detection event.",
-    "open_large": "Review in large view"
+    "open_large": "Review in large view",
+    "round_hint_time": "In round {{n}}, each sampling occasion is represented by its earliest detection event among those not yet reviewed.",
+    "round_hint_unsure_time": "In round {{n}}, each sampling occasion is represented by its earliest detection event among those not yet reviewed. If you are not sure, mark it «Unsure»: it counts as not confirmed for the next round, but the occasion will not be set to not detected until someone reviews it."
   },
   "help": {
     "title": "Help — CamTrap Verify",
@@ -402,7 +411,7 @@
     "reference_hint": "Photos are matched by mediaID: every folder must use the same IDs.",
     "folder_picker_title": "CamtrapDP folder of the classifier",
     "period_title": "Study period, sampling occasions and detection events",
-    "occasion_days": "Sampling occasion (days)",
+    "occasion_days": "Sampling occasion",
     "gap": "Gap between detection events (s)",
     "period_hint": "{{n}} photos in the AI classifiers' folders. The session will use this same study period, sampling occasion length and gap.",
     "species_title": "Target species and groups",
@@ -537,5 +546,14 @@
     "cancel": "Cancel",
     "session": "Session:",
     "none": "no name"
+  },
+  "duration": {
+    "days_one": "{{count}} day",
+    "days_other": "{{count}} days",
+    "hours_one": "{{count}} hour",
+    "hours_other": "{{count}} hours",
+    "unit": "Unit",
+    "unit_days": "days",
+    "unit_hours": "hours"
   }
 }

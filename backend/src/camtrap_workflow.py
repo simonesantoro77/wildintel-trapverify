@@ -10,7 +10,8 @@ import logging
 import os
 import re
 import sys
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
+import math
 from functools import lru_cache
 from pathlib import Path
 from typing import Optional
@@ -1213,6 +1214,8 @@ def build_candidates(
     include_burst_context: bool = False,
     min_score: float = 0.0,
     min_score_by_species: Optional[dict[str, float]] = None,
+    occasion_hours: Optional[int] = None,
+    review_order: str = "score",
 ) -> pd.DataFrame:
     """Build the verification candidate manifest from CamtrapDP tables.
 
@@ -1239,6 +1242,12 @@ def build_candidates(
         study_start: First date of the study period (inclusive).
         study_end: Last date of the study period (inclusive).
         occasion_days: Width of each sampling occasion in days.
+        occasion_hours: Width in hours instead of days (e.g. 1 for activity
+            patterns); ``None`` or 0 uses ``occasion_days``.
+        review_order: ``"score"`` (default) ranks the detection events of a
+            cell by their highest score; ``"time"`` by their start, earliest
+            first, so the first confirmed event is the first true detection
+            (time-to-detection).
         total_iterations: Maximum number of bursts to keep per cell (caps rank).
         gap_seconds: Maximum gap in seconds between frames of the same burst.
             Defaults to 60.
@@ -1324,8 +1333,8 @@ def build_candidates(
     # with the last one clipped to study_end: exactly the windows
     # _occasion_windows() uses for the occupancy matrices, so every candidate
     # key has a matching column there (a trailing partial window included).
-    day_offset = (joined["ts"].dt.normalize() - pd.Timestamp(study_start)).dt.days
-    joined["occasion"] = (day_offset // occasion_days + 1).astype(int)
+    occ_len = pd.Timedelta(hours=occasion_length_hours(occasion_days, occasion_hours))
+    joined["occasion"] = ((joined["ts"] - pd.Timestamp(study_start)) // occ_len + 1).astype(int)
     joined = joined[joined["occasion"] >= 1].copy()
 
     joined["species_safe"] = joined["scientificName"].map(
@@ -1356,17 +1365,22 @@ def build_candidates(
         starts_burst.groupby(joined["site_occasion_key"], sort=False).cumsum() - 1
     ).astype(int)
 
-    # Rank bursts by max prob within each cell (highest prob = rank 1)
+    # Rank bursts within each cell: by max prob (highest = rank 1) or, for
+    # time-to-detection, by start (earliest = rank 1; burst_id already follows
+    # time within the cell).
     burst_max = (
         joined.groupby(["site_occasion_key", "burst_id"])["prob"]
         .max()
         .reset_index(name="burst_max_prob")
     )
-    burst_max["rank"] = (
-        burst_max.groupby("site_occasion_key")["burst_max_prob"]
-        .rank(method="first", ascending=False)
-        .astype(int)
-    )
+    if review_order == "time":
+        burst_max["rank"] = burst_max["burst_id"].astype(int) + 1
+    else:
+        burst_max["rank"] = (
+            burst_max.groupby("site_occasion_key")["burst_max_prob"]
+            .rank(method="first", ascending=False)
+            .astype(int)
+        )
 
     joined = joined.merge(burst_max[["site_occasion_key", "burst_id", "rank"]],
                           on=["site_occasion_key", "burst_id"])
@@ -2393,6 +2407,40 @@ def export_verified_camtrapdp(
 
 # ─── Occasion windows helper ──────────────────────────────────────────────────
 
+def _candidate_times(candidates: pd.DataFrame) -> pd.Series:
+    """Timestamps of the candidate frames (``ts`` when present, else the
+    displayed time), as naive datetimes."""
+    if "ts" in candidates and not pd.api.types.is_datetime64_any_dtype(candidates["ts"]):
+        return parse_timestamps(candidates["ts"].astype(str))
+    if "ts" in candidates:
+        return candidates["ts"]
+    return parse_timestamps(candidates["timestamp_display"].astype(str))
+
+
+def occasion_length_hours(occasion_days: int, occasion_hours: Optional[int] = None) -> int:
+    """Length of a sampling occasion in hours: ``occasion_hours`` when set
+    (sub-day occasions, e.g. 1 h for activity patterns), else days × 24."""
+    return int(occasion_hours) if occasion_hours else int(occasion_days) * 24
+
+
+def config_occasion_hours(config: dict) -> int:
+    """Occasion length in hours of a session ``config`` (older ones: days)."""
+    return occasion_length_hours(int(config.get("occasion_days") or 1), config.get("occasion_hours"))
+
+
+def occasion_windows_dt(study_start: date, study_end: date, hours: int) -> list[tuple[datetime, datetime]]:
+    """Consecutive ``[lo, hi)`` windows of ``hours`` from ``study_start`` 00:00
+    to the end of ``study_end``; the last one is clipped and may be shorter."""
+    lo = datetime.combine(study_start, datetime.min.time())
+    end = datetime.combine(study_end, datetime.min.time()) + timedelta(days=1)
+    step = timedelta(hours=hours)
+    out: list[tuple[datetime, datetime]] = []
+    while lo < end:
+        out.append((lo, min(lo + step, end)))
+        lo += step
+    return out
+
+
 def _occasion_windows(
     study_start: date, study_end: date, occasion_days: int
 ) -> list[tuple[date, date]]:
@@ -2457,9 +2505,17 @@ def build_occupancy_inputs(
     study_end      = date.fromisoformat(config["study_end"])
     occasion_days  = int(config["occasion_days"])
     target_species = config["target_species"]
+    # Sub-day occasions (occasion_hours): windows and camera operation in hours.
+    hours_mode     = bool(config.get("occasion_hours"))
+    occ_hours      = config_occasion_hours(config)
 
     windows   = _occasion_windows(study_start, study_end, occasion_days)
-    n_occ     = len(windows)
+    if hours_mode:
+        windows_dt = occasion_windows_dt(study_start, study_end, occ_hours)
+    else:
+        windows_dt = [(datetime.combine(lo, datetime.min.time()),
+                       datetime.combine(hi, datetime.min.time()) + timedelta(days=1)) for lo, hi in windows]
+    n_occ     = len(windows_dt)
     occ_cols  = [f"occ{j + 1}" for j in range(n_occ)]
 
     # Universo de sitios: todo despliegue CLASIFICADO (presente en deployments.csv),
@@ -2478,9 +2534,15 @@ def build_occupancy_inputs(
     op = np.zeros((n_sites, n_occ), dtype=int)
 
     activity: dict[str, list[tuple[date, date]]] = {}
+    activity_dt: dict[str, list[tuple[datetime, datetime]]] = {}
     if dep_path is not None:
         if "deploymentStart" in dep.columns and "deploymentEnd" in dep.columns:
-            for _, row in dep.iterrows():
+            starts = parse_timestamps(dep["deploymentStart"])
+            ends = parse_timestamps(dep["deploymentEnd"])
+            # a date-only end means the whole of that day (as in days mode)
+            date_only = dep["deploymentEnd"].astype(str).str.strip().str.fullmatch(r"\d{4}-\d{2}-\d{2}")
+            ends = ends.where(~date_only, ends + pd.Timedelta(days=1))
+            for k, (_, row) in enumerate(dep.iterrows()):
                 s = str(row[site_col])
                 try:
                     s_d = date.fromisoformat(str(row["deploymentStart"])[:10])
@@ -2488,8 +2550,21 @@ def build_occupancy_inputs(
                     activity.setdefault(s, []).append((s_d, e_d))
                 except Exception:
                     pass
+                if pd.notna(starts.iloc[k]) and pd.notna(ends.iloc[k]):
+                    activity_dt.setdefault(s, []).append((starts.iloc[k].to_pydatetime(), ends.iloc[k].to_pydatetime()))
 
-    for i, site in enumerate(sites):
+    if hours_mode:
+        # Hours of operation per window (deploymentStart/End to the second).
+        for i, site in enumerate(sites):
+            periods = activity_dt.get(site, [])
+            for j, (lo, hi) in enumerate(windows_dt):
+                full = (hi - lo).total_seconds() / 3600
+                if not periods:
+                    op[i, j] = math.ceil(full)
+                else:
+                    active = sum(max(0.0, (min(hi, pe) - max(lo, ps)).total_seconds()) for ps, pe in periods) / 3600
+                    op[i, j] = math.ceil(min(active, full))   # any operation counts, like days
+    for i, site in enumerate(sites) if not hours_mode else ():
         periods = activity.get(site, [])
         for j, (lo, hi) in enumerate(windows):
             full = (hi - lo).days + 1
@@ -2518,6 +2593,32 @@ def build_occupancy_inputs(
 
     # ── Historiales de detección por especie ─────────────────────────────────
     summary_rows = []
+
+    # Time to detection (review order "time"): hours from the start of the
+    # occasion to the first detection event, naive and verified.
+    ttd = config.get("review_order") == "time"
+    if ttd:
+        frame_ts = _candidate_times(candidates)
+        real = candidates.assign(_ts=frame_ts)
+        if "is_context" in real:
+            real = real[~real["is_context"].fillna(False).astype(bool)]
+        first_ts = real.groupby("site_occasion_key")["_ts"].min()
+        event_start = real.groupby(["site_occasion_key", "burst_id"])["_ts"].min()
+        obs_event = real.drop_duplicates("observationID").set_index("observationID")[["site_occasion_key", "burst_id"]]
+        conf_ts: dict[str, pd.Timestamp] = {}
+        dec = load_all_decisions(decisions_dir) if decisions_dir.exists() else pd.DataFrame()
+        for oid in dec.get("observationID", pd.Series(dtype=str)).dropna():
+            if oid in obs_event.index:
+                k, b = obs_event.loc[oid, "site_occasion_key"], obs_event.loc[oid, "burst_id"]
+                t = event_start.get((k, b))
+                if t is not None and (k not in conf_ts or t < conf_ts[k]):
+                    conf_ts[k] = t
+        media_ts = real.drop_duplicates("mediaID").set_index("mediaID")["_ts"]
+        for _, row in load_cross(decisions_dir).iterrows():
+            k, mid = row.get("site_occasion_key", ""), row.get("mediaID", "")
+            t = media_ts.get(mid)
+            if k and t is not None and pd.notna(t) and (k not in conf_ts or t < conf_ts[k]):
+                conf_ts[k] = t
 
     for sp in target_species:
         sp_safe   = sanitize(sp)
@@ -2560,6 +2661,35 @@ def build_occupancy_inputs(
 
         _to_df(yN).to_csv(out_dir / f"dethist_naive_{sp_safe}.csv", index=False)
         _to_df(yV).to_csv(out_dir / f"dethist_verified_{sp_safe}.csv", index=False)
+
+        if ttd:
+            # Hours to the first detection event; a cell without detection is
+            # censored at the occasion length (as unmarked::occuTTD expects);
+            # NA where the camera was off or the cell is pending/unreviewed.
+            tN = np.full((n_sites, n_occ), np.nan)
+            tV = np.full((n_sites, n_occ), np.nan)
+            for i, site in enumerate(sites):
+                for j, (lo, hi) in enumerate(windows_dt):
+                    if op[i, j] == 0:
+                        continue
+                    length = (hi - lo).total_seconds() / 3600
+                    key = f"{site}_occ{j + 1}_{sp_safe}"
+                    t0 = first_ts.get(key)
+                    if yN[i, j] == 1:
+                        tN[i, j] = round((t0 - lo).total_seconds() / 3600, 3) if t0 is not None else np.nan
+                    else:
+                        tN[i, j] = length
+                    if np.isnan(yV[i, j]) or status[i, j] == "unreviewed":
+                        continue
+                    t1 = conf_ts.get(key)
+                    if yV[i, j] == 1:
+                        tV[i, j] = round((t1 - lo).total_seconds() / 3600, 3) if t1 is not None else np.nan
+                    else:
+                        tV[i, j] = length
+            for name, arr in (("naive", tN), ("verified", tV)):
+                df = pd.DataFrame(arr, columns=occ_cols)
+                df.insert(0, "siteID", sites)
+                df.to_csv(out_dir / f"ttd_{name}_{sp_safe}.csv", index=False)
         status_df = pd.DataFrame(status, columns=occ_cols)
         status_df.insert(0, "siteID", sites)
         status_df.to_csv(out_dir / f"cell_status_{sp_safe}.csv", index=False)

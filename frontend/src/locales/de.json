@@ -110,8 +110,8 @@
     "step3_desc": "Passen Sie an, wie Bilder in <b>Stichprobenanlässe</b> und <b>Detektionsereignisse</b> gruppiert werden.",
     "section_sampling": "Stichprobenparameter",
     "section_confirmation": "Bestätigungsparameter",
-    "label_occasion_days": "Dauer jedes Stichprobenanlasses in Tagen",
-    "hint_occasion_days": "Ein Stichprobenanlass gruppiert Bilder eines Standorts innerhalb eines N-Tage-Fensters.",
+    "label_occasion_days": "Dauer jedes Stichprobenanlasses",
+    "hint_occasion_days": "Ein Stichprobenanlass fasst die Bilder eines Standorts innerhalb eines Zeitfensters dieser Länge zusammen: Tage, oder Stunden für Anlässe unter einem Tag.",
     "label_gap": "Pause zwischen Detektionsereignissen (Sekunden)",
     "hint_gap": "Bilder mit weniger als N Sekunden Abstand werden zum selben Detektionsereignis gruppiert.",
     "label_min_score": "Minimale Erkennungskonfidenz",
@@ -181,13 +181,20 @@
     "err_end_too_late": "Das Enddatum ({{date}}) liegt nach dem letzten Eintrag im CamtrapDP ({{max}}).",
     "err_unknown": "Unbekannter Fehler",
     "mc_locked": "Durch die Kombination der Klassifizierer festgelegt. Um es zu ändern, die Kombination mit anderen Werten wiederholen.",
-    "mc_locked_score": "Keine: Die Ereignisse wurden beim Kombinieren der Klassifizierer bereits pro Art gefiltert."
+    "mc_locked_score": "Keine: Die Ereignisse wurden beim Kombinieren der Klassifizierer bereits pro Art gefiltert.",
+    "hint_occasion_hours": "Anlässe von wenigen Stunden (z. B. 1 Stunde, um für Aktivitätsmuster einen Nachweis pro Art und Stunde zu prüfen) ergeben viel mehr Anlässe und damit mehr zu prüfende Detektionsereignisse.",
+    "label_review_order": "Reihenfolge der Detektionsereignisse in jedem Anlass",
+    "review_order_score": "Nach Score: das sicherste zuerst (Standard)",
+    "review_order_time": "Nach Zeit: das früheste zuerst (Zeit bis zur Detektion)",
+    "hint_review_order_score": "Die Überprüfung endet meist früher, weil das erste gezeigte Ereignis am wahrscheinlichsten richtig ist. Die Detektionshistorien sind bei beiden Reihenfolgen gleich.",
+    "hint_review_order_time": "Jeder Anlass wird ab seinem frühesten Detektionsereignis geprüft, sodass das erste bestätigte die erste echte Detektion ist. Neben den Detektionshistorien (gleich wie nach Score) enthalten die Ergebnisse die Zeit bis zur ersten Detektion (ttd_*.csv, in Stunden ab Beginn des Anlasses) für Time-to-Detection-Modelle. Es braucht meist einige Ereignisse mehr als nach Score.",
+    "review_order_mc_warning": "Dieser Datensatz wurde nach Zellen gefiltert; das erhält das Vorkommen, kann aber das früheste Detektionsereignis eines Anlasses entfernen. Für die Zeit bis zur Detektion die Klassifizierer erneut mit „None“ in den erweiterten Optionen kombinieren."
   },
   "index": {
     "title": "Erkennungsüberprüfung",
     "periods_reviewed": "{{resolved}} / {{total}} Stichprobenanlässe überprüft",
     "confirmed": "{{n}} bestätigt",
-    "subtitle": "Wählen Sie die Art aus, deren Vorkommen an Standorten und Stichprobenanlässen Sie überprüfen möchten. Die Anlässe erstrecken sich von <strong style='color:#10b981'>{{start}}</strong> bis <strong style='color:#10b981'>{{end}}</strong> und umfassen jeweils <strong style='color:#10b981'>{{days}} Tage</strong>.",
+    "subtitle": "Wählen Sie die Art aus, deren Vorkommen an Standorten und Stichprobenanlässen Sie überprüfen möchten. Die Anlässe erstrecken sich von <strong style='color:#10b981'>{{start}}</strong> bis <strong style='color:#10b981'>{{end}}</strong> und umfassen jeweils <strong style='color:#10b981'>{{duration}}</strong>.",
     "see_results": "Ergebnisse anzeigen",
     "confirmed_periods": "{{n}} Stichprobenanlässe mit bestätigter Detektion",
     "reviewed_periods": "{{resolved}} von {{total}} Stichprobenanlässen überprüft ({{pct}}%)",
@@ -206,7 +213,7 @@
     "round": "Runde {{n}}",
     "confirmed_periods": "{{n}} Stichprobenanlässe mit bestätigter Detektion",
     "reviewed": "{{resolved}} von {{total}} überprüft",
-    "intro_hint": "Im Folgenden werden Detektionsereignisse gezeigt, die durch <strong style='color:#10b981'>{{gap}} Sekunden</strong> getrennt sind und an verschiedenen Standorten und Stichprobenanlässen von <strong style='color:#10b981'>{{days}} Tagen</strong> aufgenommen wurden, entsprechend Beobachtungen mit einer Erkennungskonfidenz von <strong style='color:#10b981'>{{minScore}}</strong> oder höher. Bestätigen Sie für jedes von ihnen, ob das Detektionsereignis ein oder mehrere Exemplare der Art <strong style='color:#10b981'>{{species}}</strong> enthält. Wenn Sie das Vorhandensein der Art in einem Detektionsereignis bestätigen, gilt ihr Vorkommen an diesem Standort während des entsprechenden Anlasses als verifiziert, und es müssen keine weiteren Detektionsereignisse desselben Anlasses überprüft werden. Wenn Sie das Vorhandensein nicht bestätigen können, wird ein neues Detektionsereignis vom selben Standort und Anlass angezeigt, um die Überprüfung fortzusetzen.",
+    "intro_hint": "Im Folgenden werden Detektionsereignisse gezeigt, die durch <strong style='color:#10b981'>{{gap}} Sekunden</strong> getrennt sind und an verschiedenen Standorten und Stichprobenanlässen von <strong style='color:#10b981'>(je {{duration}})</strong> aufgenommen wurden, entsprechend Beobachtungen mit einer Erkennungskonfidenz von <strong style='color:#10b981'>{{minScore}}</strong> oder höher. Bestätigen Sie für jedes von ihnen, ob das Detektionsereignis ein oder mehrere Exemplare der Art <strong style='color:#10b981'>{{species}}</strong> enthält. Wenn Sie das Vorhandensein der Art in einem Detektionsereignis bestätigen, gilt ihr Vorkommen an diesem Standort während des entsprechenden Anlasses als verifiziert, und es müssen keine weiteren Detektionsereignisse desselben Anlasses überprüft werden. Wenn Sie das Vorhandensein nicht bestätigen können, wird ein neues Detektionsereignis vom selben Standort und Anlass angezeigt, um die Überprüfung fortzusetzen.",
     "round_hint": "In Runde {{n}} wird jeder Stichprobenanlass durch das Detektionsereignis mit der höchsten Erkennungskonfidenz unter den noch nicht überprüften repräsentiert.",
     "back": "Zurück",
     "confirm_all": "Alle bestätigen",
@@ -292,7 +299,9 @@
     "lb_decision_title": "Diese Karte",
     "open_tip_title": "Tipp:",
     "open_tip": "in der Großansicht prüfen (auf ein Foto oder die Schaltfläche rechts neben dem Standort klicken). Dort sehen Sie jedes Foto des Detektionsereignisses, können zoomen und die Helligkeit ändern und per Tastatur entscheiden: Y bestätigt, U unsicher, N abgelehnt; ← → wechseln das Foto, ↑ ↓ das Detektionsereignis.",
-    "open_large": "In Großansicht prüfen"
+    "open_large": "In Großansicht prüfen",
+    "round_hint_time": "In Runde {{n}} wird jeder Stichprobenanlass durch sein frühestes noch nicht geprüftes Detektionsereignis vertreten.",
+    "round_hint_unsure_time": "In Runde {{n}} wird jeder Stichprobenanlass durch sein frühestes noch nicht geprüftes Detektionsereignis vertreten. Wenn Sie unsicher sind, markieren Sie es als «Unsicher»: Es zählt für die nächste Runde als nicht bestätigt, aber der Stichprobenanlass gilt erst als nicht nachgewiesen, wenn jemand ihn geprüft hat."
   },
   "help": {
     "title": "Hilfe — CamTrap Verify",
@@ -402,7 +411,7 @@
     "reference_hint": "Fotos werden über die mediaID zugeordnet: Alle Ordner müssen dieselben IDs verwenden.",
     "folder_picker_title": "CamtrapDP-Ordner des Klassifizierers",
     "period_title": "Untersuchungszeitraum, Stichprobenanlässe und Detektionsereignisse",
-    "occasion_days": "Stichprobenanlass (Tage)",
+    "occasion_days": "Stichprobenanlass",
     "gap": "Abstand zwischen Detektionsereignissen (s)",
     "period_hint": "{{n}} Fotos in den Ordnern der KI-Klassifizierer. Die Sitzung verwendet denselben Untersuchungszeitraum, dieselbe Länge der Stichprobenanlässe und denselben Abstand.",
     "species_title": "Zielarten und Gruppen",
@@ -537,5 +546,14 @@
     "cancel": "Abbrechen",
     "session": "Sitzung:",
     "none": "ohne Namen"
+  },
+  "duration": {
+    "days_one": "{{count}} Tag",
+    "days_other": "{{count}} Tage",
+    "hours_one": "{{count}} Stunde",
+    "hours_other": "{{count}} Stunden",
+    "unit": "Einheit",
+    "unit_days": "Tage",
+    "unit_hours": "Stunden"
   }
 }

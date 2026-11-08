@@ -340,7 +340,8 @@ These control how the data is segmented into reviewable units.
 
 | Parameter | Default | Description |
 |---|---|---|
-| **Sampling occasion duration (days)** | 5 | Groups images at a location into windows of N days. The number of occasions adapts automatically to the study duration. |
+| **Duration of each sampling occasion** | 5 days | Groups images at a location into windows of N days, or of N hours (choose *hours* next to the number). The number of occasions adapts automatically to the study duration. Occasions of a few hours suit activity patterns (e.g. 1 hour: one verified record per species, location and hour), but give many more occasions, so there are more detection events to review. |
+| **Order of the detection events in each occasion** | By score | *By score*: each occasion is reviewed from its most confident detection event, so the review usually ends sooner. *By time*: from its earliest one, so the first event confirmed is the first true detection; the results then also include the time to the first detection (`ttd_*.csv`), for time-to-detection models. The detection histories are the same with either order; only the number of events looked at changes. With a dataset from *Classifiers and reference* filtered *By cells*, the earliest event of an occasion may have been removed: for time to detection, combine with *None*. |
 | **Gap between detection events (seconds)** | 60 | Images less than N seconds apart at the same site belong to the same detection event. |
 | **Minimum detection confidence** | 0.5 | Photos whose detection confidence (`classificationProbability`) for the species is below this value are not shown. Not used with *Classifiers and reference*, which already filters the detection events. |
 
@@ -376,7 +377,7 @@ Under the title, **Session:** shows the session's name with a **✎** button to 
 *Info panel showing overall progress, the study period and the sampling occasion length.*
 
 - **Overall progress** — how many sampling occasions have been reviewed out of the total, how many are confirmed, and the percentage complete.
-- **Study period and sampling occasion length** — the date range being reviewed and the N-day window each sampling occasion spans.
+- **Study period and sampling occasion length** — the date range being reviewed and the window (days or hours) each sampling occasion spans.
 - **← Back** — return to the Welcome Screen.
 - **Export session**: download a small `.zip` with the session's decisions (no photos) to continue it on another computer.
 - **See results**: navigate to the Results page. It becomes active once every round of every species is done; occasions still [pending expert review](#pending-expert-review) then appear as NA in the results.
@@ -590,11 +591,12 @@ Each session is saved in a timestamped subfolder inside the output directory (e.
 
 | File | Description |
 |---|---|
-| `camera_operation.csv` | Camera operation matrix (sites × sampling occasions). |
+| `camera_operation.csv` | Camera operation matrix (sites × sampling occasions): days of operation per occasion, or hours with occasions in hours. |
 | `dethist_naive_{sp}.csv` | Naive detection history per species (AI detections, not human-validated). One file per species. |
 | `dethist_verified_{sp}.csv` | Verified detection history per species (confirmed by expert). One file per species. Occasions pending expert review are NA, like inactive-camera occasions. |
 | `cell_status_{sp}.csv` | Same sites × occasions layout, with the status of each cell: `1` (confirmed), `0` (not detected), `pending` (pending expert review), `unreviewed` (rounds not finished) or `inactive` (camera not operating). Use it to tell the two kinds of NA apart. |
 | `verification_summary.csv` | Per-species summary: naive and verified detections, false-positive cells, `pending_cells`, `unreviewed_cells` and observed occupancy. |
+| `ttd_naive_{sp}.csv`, `ttd_verified_{sp}.csv` | Only with *Order: by time*. Hours from the start of each occasion to its first detection event (naive) or first confirmed one (verified). An occasion without detection holds the occasion length (censored, as `unmarked::occuTTD` expects); NA where the camera was off or the occasion is pending or unreviewed. An occasion confirmed only from another species' photo takes the time of that photo. |
 | `review_effort.csv` | Total review effort: number of detection events and images inspected. |
 
 ---

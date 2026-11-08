@@ -4,6 +4,7 @@ import { api } from '../api'
 import type { McClassifier, McJob, McLabels, McResult } from '../types'
 import DirectoryPicker from './DirectoryPicker'
 import { McHowItWorks, McResultSummary } from './McExplain'
+import OccasionLength from './OccasionLength'
 
 /**
  * Combine one or more AI classifiers (e.g. DeepFaune, a YOLO model) and,
@@ -17,6 +18,8 @@ export interface McParams {
   study_start: string
   study_end: string
   occasion_days: number
+  occasion_hours?: number
+  filter_mode?: string
   gap_seconds: number
   species: string[]
 }
@@ -67,6 +70,7 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
   const [loadingLabels, setLoadingLabels] = useState(false)
   const [dates, setDates] = useState({ start: '', end: '' })
   const [occasionDays, setOccasionDays] = useState(5)
+  const [occasionHours, setOccasionHours] = useState(0)
   const [gapSeconds, setGapSeconds] = useState(60)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   // Group of each selected species: proposed by the backend (genus or family
@@ -219,6 +223,7 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
         date_start: dates.start,
         date_end: dates.end,
         occasion_days: occasionDays,
+        occasion_hours: occasionHours,
         gap_seconds: gapSeconds,
         filter_mode: hasReference ? filterMode : 'none',
         retention: retention / 100,
@@ -273,6 +278,8 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
         study_start: r.study_start,
         study_end: r.study_end,
         occasion_days: r.occasion_days,
+        occasion_hours: r.occasion_hours ?? 0,
+        filter_mode: r.filter_mode,
         gap_seconds: r.gap_seconds,
         species: [...selected],
       })
@@ -362,8 +369,8 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
               </div>
               <div>
                 <label htmlFor="mc-occ" className={labelClass}>{t('mc.occasion_days')}</label>
-                <input id="mc-occ" type="number" min={1} className={plainInput} value={occasionDays}
-                  onChange={e => setOccasionDays(Math.max(1, Number(e.target.value) || 1))} />
+                <OccasionLength id="mc-occ" days={occasionDays} hours={occasionHours} inputClass={plainInput}
+                  onChange={(d, h) => { setOccasionDays(d); setOccasionHours(h) }} />
               </div>
               <div>
                 <label htmlFor="mc-gap" className={labelClass}>{t('mc.gap')}</label>

@@ -129,6 +129,8 @@ def run_setup(req: SetupRequest) -> dict:
         study_start=date.fromisoformat(req.study_start),
         study_end=date.fromisoformat(req.study_end),
         occasion_days=req.occasion_days,
+        occasion_hours=req.occasion_hours or None,
+        review_order=req.review_order,
         total_iterations=req.total_iterations,
         gap_seconds=req.gap_seconds,
         include_burst_context=req.include_burst_context,

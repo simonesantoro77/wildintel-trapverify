@@ -48,7 +48,7 @@ Six steps run in one go when **Combine** is pressed (about 75 s for 548,000 phot
 5. **Filter** (`evaluate.py`). A threshold per species removes the events not worth reviewing.
 6. **Export** (`pipeline.py`). Writes one CamtrapDP (one observation per photo × target species, the score in `classificationProbability`, the breakdown in `observationComments`) and a `multiclassifier/` folder with the diagnostics. Paths are made relative and boxes are clipped to 0–1 so the package validates.
 
-"Use this dataset" then opens the review with the same period, occasion length (5 days) and event gap (60 s), which are locked, because the thresholds were computed on those cells. The minimum detection confidence is 0: the filter is already applied.
+"Use this dataset" then opens the review with the same period, occasion length (5 days here; occasions can also be set in hours) and event gap (60 s), which are locked, because the thresholds were computed on those cells. The minimum detection confidence is 0: the filter is already applied.
 
 ## The score
 

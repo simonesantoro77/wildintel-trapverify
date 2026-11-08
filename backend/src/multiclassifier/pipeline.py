@@ -364,6 +364,6 @@ def run(cfg: PipelineConfig, out_dir: Path, log: Log = lambda _m: None,
         "strategies": [] if choice is None else choice.replace({np.nan: None}).to_dict("records"),
         "classifiers": ing.summary.to_dict("records"),
         "study_start": cfg.date_start, "study_end": cfg.date_end,
-        "occasion_days": cfg.occasion_days, "gap_seconds": cfg.gap_seconds,
+        "occasion_days": cfg.occasion_days, "occasion_hours": cfg.occasion_hours, "gap_seconds": cfg.gap_seconds,
         "warnings": warnings,
     })

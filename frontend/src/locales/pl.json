@@ -110,8 +110,8 @@
     "step3_desc": "Dostosuj sposób grupowania zdjęć w <b>okazje próbkowania</b> i <b>zdarzenia detekcji</b>.",
     "section_sampling": "Parametry próbkowania",
     "section_confirmation": "Parametry potwierdzenia",
-    "label_occasion_days": "Czas trwania każdej okazji próbkowania w dniach",
-    "hint_occasion_days": "Okazja próbkowania grupuje zdjęcia wykonane w danej lokalizacji w oknie N dni.",
+    "label_occasion_days": "Długość każdej okazji próbkowania",
+    "hint_occasion_days": "Okazja próbkowania grupuje zdjęcia z danej lokalizacji w oknie o tej długości: dni, lub godziny dla okazji krótszych niż dzień.",
     "label_gap": "Przerwa między zdarzeniami detekcji (sekundy)",
     "hint_gap": "Zdjęcia z odstępem mniejszym niż N sekund są grupowane w to samo zdarzenie detekcji.",
     "label_min_score": "Minimalna pewność wykrycia",
@@ -181,13 +181,20 @@
     "err_end_too_late": "Data zakończenia ({{date}}) jest późniejsza niż ostatni rekord w CamtrapDP ({{max}}).",
     "err_unknown": "Nieznany błąd",
     "mc_locked": "Ustalone przez połączenie klasyfikatorów. Aby to zmienić, powtórz łączenie z innymi wartościami.",
-    "mc_locked_score": "Brak: zdarzenia zostały już przefiltrowane dla każdego gatunku podczas łączenia klasyfikatorów."
+    "mc_locked_score": "Brak: zdarzenia zostały już przefiltrowane dla każdego gatunku podczas łączenia klasyfikatorów.",
+    "hint_occasion_hours": "Okazje kilkugodzinne (np. 1 godzina, aby zweryfikować jeden zapis na gatunek i godzinę dla wzorców aktywności) dają znacznie więcej okazji, więc jest więcej zdarzeń detekcji do przejrzenia.",
+    "label_review_order": "Kolejność zdarzeń detekcji w każdej okazji",
+    "review_order_score": "Według wyniku: najpewniejsze najpierw (domyślnie)",
+    "review_order_time": "Według czasu: najwcześniejsze najpierw (czas do detekcji)",
+    "hint_review_order_score": "Przegląd zwykle kończy się szybciej, bo pierwsze pokazane zdarzenie jest najbardziej prawdopodobnie poprawne. Historie detekcji są takie same przy obu kolejnościach.",
+    "hint_review_order_time": "Każdą okazję przegląda się od jej najwcześniejszego zdarzenia detekcji, więc pierwsze potwierdzone jest pierwszą prawdziwą detekcją. Oprócz historii detekcji (takich samych jak według wyniku) wyniki zawierają czas do pierwszej detekcji (ttd_*.csv, w godzinach od początku okazji) dla modeli czasu do detekcji. Zwykle wymaga to kilku zdarzeń więcej niż według wyniku.",
+    "review_order_mc_warning": "Ten zbiór filtrowano według komórek, co zachowuje obecność, ale może usunąć najwcześniejsze zdarzenie detekcji okazji. Dla czasu do detekcji połącz klasyfikatory ponownie z opcją „None” w opcjach zaawansowanych."
   },
   "index": {
     "title": "Weryfikacja wykryć",
     "periods_reviewed": "{{resolved}} / {{total}} okazji próbkowania przejrzanych",
     "confirmed": "{{n}} potwierdzone",
-    "subtitle": "Wybierz gatunek, którego obecność w lokalizacjach i okazjach próbkowania chcesz zweryfikować. Okazje próbkowania obejmują zakres od <strong style='color:#10b981'>{{start}}</strong> do <strong style='color:#10b981'>{{end}}</strong> i trwają <strong style='color:#10b981'>{{days}} dni</strong>.",
+    "subtitle": "Wybierz gatunek, którego obecność w lokalizacjach i okazjach próbkowania chcesz zweryfikować. Okazje próbkowania obejmują zakres od <strong style='color:#10b981'>{{start}}</strong> do <strong style='color:#10b981'>{{end}}</strong> i trwają <strong style='color:#10b981'>{{duration}}</strong>.",
     "see_results": "Zobacz wyniki",
     "confirmed_periods": "{{n}} okazji próbkowania z potwierdzonym wykryciem",
     "reviewed_periods": "Przejrzano {{resolved}} z {{total}} okazji próbkowania ({{pct}}%)",
@@ -206,7 +213,7 @@
     "round": "Runda {{n}}",
     "confirmed_periods": "{{n}} okazji próbkowania z potwierdzonym wykryciem",
     "reviewed": "Przejrzano {{resolved}} z {{total}}",
-    "intro_hint": "Poniżej pokazane zostaną zdarzenia detekcji oddzielone <strong style='color:#10b981'>{{gap}} sekundami</strong>, zarejestrowane w różnych lokalizacjach i okazjach próbkowania wynoszących <strong style='color:#10b981'>{{days}} dni</strong>, odpowiadające obserwacjom o pewności wykrycia równej co najmniej <strong style='color:#10b981'>{{minScore}}</strong>. Dla każdego z nich potwierdź, czy zdarzenie detekcji zawiera jeden lub więcej osobników gatunku <strong style='color:#10b981'>{{species}}</strong>. Jeśli potwierdzisz obecność gatunku w zdarzeniu detekcji, jego obecność w tej lokalizacji w danej okazji zostanie uznana za zweryfikowaną i nie trzeba będzie przeglądać kolejnych zdarzeń detekcji z tej samej okazji. Jeśli nie możesz potwierdzić obecności, zostanie pokazane nowe zdarzenie detekcji zarejestrowane w tej samej lokalizacji i w tej samej okazji, aby kontynuować weryfikację.",
+    "intro_hint": "Poniżej pokazane zostaną zdarzenia detekcji oddzielone <strong style='color:#10b981'>{{gap}} sekundami</strong>, zarejestrowane w różnych lokalizacjach i okazjach próbkowania wynoszących <strong style='color:#10b981'>{{duration}}</strong>, odpowiadające obserwacjom o pewności wykrycia równej co najmniej <strong style='color:#10b981'>{{minScore}}</strong>. Dla każdego z nich potwierdź, czy zdarzenie detekcji zawiera jeden lub więcej osobników gatunku <strong style='color:#10b981'>{{species}}</strong>. Jeśli potwierdzisz obecność gatunku w zdarzeniu detekcji, jego obecność w tej lokalizacji w danej okazji zostanie uznana za zweryfikowaną i nie trzeba będzie przeglądać kolejnych zdarzeń detekcji z tej samej okazji. Jeśli nie możesz potwierdzić obecności, zostanie pokazane nowe zdarzenie detekcji zarejestrowane w tej samej lokalizacji i w tej samej okazji, aby kontynuować weryfikację.",
     "round_hint": "W rundzie {{n}} każda okazja próbkowania jest reprezentowana przez zdarzenie detekcji z najwyższą ufnością wykrycia spośród jeszcze nieprzejrzanych.",
     "back": "Wstecz",
     "confirm_all": "Potwierdź wszystkie",
@@ -292,7 +299,9 @@
     "lb_decision_title": "Ta karta",
     "open_tip_title": "Wskazówka:",
     "open_tip": "przeglądaj w dużym widoku (kliknij zdjęcie lub przycisk po prawej stronie lokalizacji). Tam widać każde zdjęcie zdarzenia detekcji, można powiększać i zmieniać jasność oraz decydować klawiaturą: Y potwierdzone, U niepewne, N odrzucone; ← → zmieniają zdjęcie, ↑ ↓ zdarzenie detekcji.",
-    "open_large": "Przeglądaj w dużym widoku"
+    "open_large": "Przeglądaj w dużym widoku",
+    "round_hint_time": "W rundzie {{n}} każdą okazję próbkowania reprezentuje jej najwcześniejsze zdarzenie detekcji spośród jeszcze nieprzejrzanych.",
+    "round_hint_unsure_time": "W rundzie {{n}} każdą okazję próbkowania reprezentuje jej najwcześniejsze zdarzenie detekcji spośród jeszcze nieprzejrzanych. Jeśli nie masz pewności, oznacz je jako «Niepewne»: liczy się jako niepotwierdzone przy przejściu do następnej rundy, ale okazja nie zostanie uznana za niewykrytą, dopóki ktoś jej nie przejrzy."
   },
   "help": {
     "title": "Pomoc — CamTrap Verify",
@@ -402,7 +411,7 @@
     "reference_hint": "Zdjęcia są dopasowywane po mediaID: wszystkie foldery muszą używać tych samych identyfikatorów.",
     "folder_picker_title": "Folder CamtrapDP klasyfikatora",
     "period_title": "Okres badania, okazje próbkowania i zdarzenia detekcji",
-    "occasion_days": "Okazja próbkowania (dni)",
+    "occasion_days": "Okazja próbkowania",
     "gap": "Odstęp między zdarzeniami detekcji (s)",
     "period_hint": "{{n}} zdjęć w folderach klasyfikatorów AI. Sesja użyje tego samego okresu badania, długości okazji próbkowania i odstępu.",
     "species_title": "Gatunki docelowe i grupy",
@@ -539,5 +548,18 @@
     "cancel": "Anuluj",
     "session": "Sesja:",
     "none": "bez nazwy"
+  },
+  "duration": {
+    "days_one": "{{count}} dzień",
+    "days_few": "{{count}} dni",
+    "days_many": "{{count}} dni",
+    "days_other": "{{count}} dnia",
+    "hours_one": "{{count}} godzina",
+    "hours_few": "{{count}} godziny",
+    "hours_many": "{{count}} godzin",
+    "hours_other": "{{count}} godziny",
+    "unit": "Jednostka",
+    "unit_days": "dni",
+    "unit_hours": "godziny"
   }
 }

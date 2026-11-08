@@ -59,6 +59,7 @@ class RunRequest(BaseModel):
     date_start: str
     date_end: str
     occasion_days: int = 5
+    occasion_hours: int = 0
     gap_seconds: int = 60
     filter_mode: Literal["cells", "events", "none"] = "cells"
     retention: float = Field(0.99, gt=0, le=1)
@@ -243,7 +244,7 @@ def start(req: RunRequest) -> dict:
     cfg = PipelineConfig(
         classifiers=sources, groups=groups, aliases=aliases,
         date_start=req.date_start, date_end=req.date_end,
-        occasion_days=req.occasion_days, gap_seconds=req.gap_seconds,
+        occasion_days=req.occasion_days, occasion_hours=req.occasion_hours, gap_seconds=req.gap_seconds,
         filter_mode=req.filter_mode, cell_retention=req.retention, event_retention=req.retention,
         tie_break=req.tie_break, use_reference_in_output=req.use_reference_in_output,
         strict_taxonomy=req.strict_taxonomy,

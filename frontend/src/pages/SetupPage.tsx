@@ -8,6 +8,7 @@ import SessionNameEditor from '../components/SessionNameEditor'
 import MultiClassifierForm, { type McParams } from '../components/MultiClassifierForm'
 import RelinkDialog from '../components/RelinkDialog'
 import type { RecentSession, RelinkStatus, WorkflowConfig } from '../types'
+import OccasionLength from '../components/OccasionLength'
 
 interface Props { onSetup: () => void; ready: boolean }
 
@@ -21,6 +22,8 @@ const DEFAULT: WorkflowConfig = {
   study_start: '',
   study_end: '',
   occasion_days: 5,
+  occasion_hours: 0,
+  review_order: 'score',
   total_iterations: 100000,
   gap_seconds: 60,
   min_score: 0.5,
@@ -64,6 +67,7 @@ export default function SetupPage({ onSetup, ready }: Props) {
   // Dataset made by "Several classifiers": period, occasions, gap and minimum
   // score were fixed when it was scored and can't change here.
   const [mcLocked, setMcLocked] = useState(false)
+  const [mcFilter, setMcFilter] = useState<string | null>(null)
   const [sourceType, setSourceType] = useState<'local' | 'trapper' | null>(null)
   const [trapperForm, setTrapperForm] = useState({ url: '', user: '', password: '', researchProject: '', classificationProject: '' })
   const [trapperConn, setTrapperConn] = useState<{ status: 'idle' | 'testing' | 'ok' | 'error'; message: string }>({ status: 'idle', message: '' })
@@ -208,6 +212,7 @@ export default function SetupPage({ onSetup, ready }: Props) {
       study_start: p.study_start,
       study_end: p.study_end,
       occasion_days: p.occasion_days,
+      occasion_hours: p.occasion_hours ?? 0,
       gap_seconds: p.gap_seconds,
       min_score: 0,
       min_score_by_species: {},
@@ -215,6 +220,7 @@ export default function SetupPage({ onSetup, ready }: Props) {
     setDataRange({ min: p.study_start, max: p.study_end })
     setSelectedSpecies(new Set(p.species))
     setMcLocked(true)
+    setMcFilter(p.filter_mode ?? null)
   }
 
   async function handleDeepfauneConvert() {
@@ -1208,11 +1214,26 @@ export default function SetupPage({ onSetup, ready }: Props) {
             dangerouslySetInnerHTML={{ __html: t('setup.step3_desc') }} />
 
           <div className="mb-6">
-            <label className={labelClass}>{t('setup.label_occasion_days')}</label>
-            <input type="number" className={inputClass} min={1} value={form.occasion_days} disabled={mcLocked}
-              onChange={(e) => set('occasion_days', Number(e.target.value))} />
+            <label htmlFor="setup-occ" className={labelClass}>{t('setup.label_occasion_days')}</label>
+            <OccasionLength id="setup-occ" days={form.occasion_days} hours={form.occasion_hours} disabled={mcLocked}
+              inputClass={inputClass}
+              onChange={(d, h) => setForm((f) => ({ ...f, occasion_days: d, occasion_hours: h }))} />
             <p className={hintClass}>{t('setup.hint_occasion_days')}</p>
+            {!!form.occasion_hours && <p className={hintClass}>{t('setup.hint_occasion_hours')}</p>}
             {mcLocked && <p className={hintClass}>{t('setup.mc_locked')}</p>}
+          </div>
+
+          <div className="mb-6">
+            <label htmlFor="setup-order" className={labelClass}>{t('setup.label_review_order')}</label>
+            <select id="setup-order" className={inputClass} value={form.review_order ?? 'score'}
+              onChange={(e) => set('review_order', e.target.value as 'score' | 'time')}>
+              <option value="score">{t('setup.review_order_score')}</option>
+              <option value="time">{t('setup.review_order_time')}</option>
+            </select>
+            <p className={hintClass}>{t(form.review_order === 'time' ? 'setup.hint_review_order_time' : 'setup.hint_review_order_score')}</p>
+            {form.review_order === 'time' && mcLocked && mcFilter === 'cells' && (
+              <p className="text-xs mt-1 text-amber-600 dark:text-amber-400">{t('setup.review_order_mc_warning')}</p>
+            )}
           </div>
 
           <div className="mb-6">

@@ -110,8 +110,8 @@
     "step3_desc": "Ajusta cómo se agrupan las imágenes en <b>ocasiones de muestreo</b> y cómo se dividirán en <b>eventos de detección</b>.",
     "section_sampling": "Parámetros de muestreo",
     "section_confirmation": "Parámetros de confirmación",
-    "label_occasion_days": "Duración de cada ocasión de muestreo en días",
-    "hint_occasion_days": "Una ocasión de muestreo agrupa las imágenes tomadas en una localización dentro de una ventana de N días.",
+    "label_occasion_days": "Duración de cada ocasión de muestreo",
+    "hint_occasion_days": "Una ocasión de muestreo agrupa las imágenes tomadas en una localización dentro de una ventana de esta duración: días, u horas para ocasiones de menos de un día.",
     "label_gap": "Gap entre eventos de detección (segundos)",
     "hint_gap": "Imágenes con menos de N segundos de diferencia se agrupan en el mismo evento de detección.",
     "label_min_score": "Confianza de detección mínima",
@@ -181,13 +181,20 @@
     "err_end_too_late": "La fecha de fin ({{date}}) es posterior al último registro del CamtrapDP ({{max}}).",
     "err_unknown": "Error desconocido",
     "mc_locked": "Fijado por la combinación de clasificadores. Para cambiarlo, repite la combinación con otros valores.",
-    "mc_locked_score": "Ninguna: los eventos ya se filtraron por especie al combinar los clasificadores."
+    "mc_locked_score": "Ninguna: los eventos ya se filtraron por especie al combinar los clasificadores.",
+    "hint_occasion_hours": "Las ocasiones de pocas horas (p. ej. 1 hora, para verificar un registro por especie y hora para patrones de actividad) dan muchas más ocasiones, así que hay más eventos de detección que revisar.",
+    "label_review_order": "Orden de los eventos de detección en cada ocasión",
+    "review_order_score": "Por score: el más seguro primero (por defecto)",
+    "review_order_time": "Por tiempo: el más temprano primero (tiempo hasta la detección)",
+    "hint_review_order_score": "La revisión suele acabar antes, porque el primer evento que se muestra es el que más probablemente es correcto. Las historias de detección son las mismas con cualquier orden.",
+    "hint_review_order_time": "Cada ocasión se revisa desde su evento de detección más temprano, así que el primero confirmado es la primera detección verdadera. Además de las historias de detección (las mismas que por score), los resultados incluyen el tiempo hasta la primera detección (ttd_*.csv, en horas desde el inicio de la ocasión) para modelos de tiempo hasta la detección. Suele costar algunos eventos más que por score.",
+    "review_order_mc_warning": "Este conjunto se filtró por celdas, que conserva la presencia pero puede quitar el evento de detección más temprano de una ocasión. Para el tiempo hasta la detección, combina de nuevo los clasificadores con «None» en las opciones avanzadas."
   },
   "index": {
     "title": "Verificación de detecciones",
     "periods_reviewed": "{{resolved}} / {{total}} ocasiones de muestreo revisadas",
     "confirmed": "{{n}} confirmadas",
-    "subtitle": "Seleccione la especie cuya presencia en una determinada localización y ocasión de muestreo desea verificar. Las ocasiones de muestreo están comprendidas entre <strong style='color:#10b981'>{{start}}</strong> y <strong style='color:#10b981'>{{end}}</strong>, y son ocasiones de <strong style='color:#10b981'>{{days}} días</strong>.",
+    "subtitle": "Seleccione la especie cuya presencia en una determinada localización y ocasión de muestreo desea verificar. Las ocasiones de muestreo están comprendidas entre <strong style='color:#10b981'>{{start}}</strong> y <strong style='color:#10b981'>{{end}}</strong>, y son ocasiones de <strong style='color:#10b981'>{{duration}}</strong>.",
     "see_results": "Ver resultados",
     "confirmed_periods": "{{n}} ocasiones de muestreo con detección confirmada",
     "reviewed_periods": "Revisado {{resolved}} de {{total}} ocasiones de muestreo ({{pct}}%)",
@@ -206,7 +213,7 @@
     "round": "Ronda {{n}}",
     "confirmed_periods": "{{n}} ocasiones de muestreo con detección confirmada",
     "reviewed": "Revisadas {{resolved}} de {{total}}",
-    "intro_hint": "A continuación se mostrarán eventos de detección separados por <strong style='color:#10b981'>{{gap}} segundos</strong> capturados en distintas localizaciones y ocasiones de muestreo de <strong style='color:#10b981'>{{days}} días</strong>, correspondientes a observaciones con una confianza de detección igual o superior a <strong style='color:#10b981'>{{minScore}}</strong>. Para cada uno de ellos, confirme si el evento de detección contiene uno o más ejemplares de la especie <strong style='color:#10b981'>{{species}}</strong>. Si confirma la presencia de la especie en un evento de detección, se considerará verificada su presencia en esa localización durante la ocasión de muestreo correspondiente y no será necesario revisar más eventos de detección de esa misma ocasión. Si no puede confirmar la presencia, se mostrará un nuevo evento de detección capturado en la misma localización y durante la misma ocasión de muestreo para continuar con la verificación.",
+    "intro_hint": "A continuación se mostrarán eventos de detección separados por <strong style='color:#10b981'>{{gap}} segundos</strong> capturados en distintas localizaciones y ocasiones de muestreo de <strong style='color:#10b981'>{{duration}}</strong>, correspondientes a observaciones con una confianza de detección igual o superior a <strong style='color:#10b981'>{{minScore}}</strong>. Para cada uno de ellos, confirme si el evento de detección contiene uno o más ejemplares de la especie <strong style='color:#10b981'>{{species}}</strong>. Si confirma la presencia de la especie en un evento de detección, se considerará verificada su presencia en esa localización durante la ocasión de muestreo correspondiente y no será necesario revisar más eventos de detección de esa misma ocasión. Si no puede confirmar la presencia, se mostrará un nuevo evento de detección capturado en la misma localización y durante la misma ocasión de muestreo para continuar con la verificación.",
     "round_hint": "En la ronda {{n}} cada ocasión de muestreo se representa por el evento de detección con mayor confianza de detección entre los aún no revisados.",
     "back": "Volver",
     "confirm_all": "Confirmar todas",
@@ -292,7 +299,9 @@
     "lb_decision_title": "Esta tarjeta",
     "open_tip_title": "Consejo:",
     "open_tip": "revisa en la vista grande (haz clic en una foto o en el botón a la derecha de la localización). Ahí ves todas las fotos del evento de detección, puedes ampliar y cambiar el brillo, y decidir con el teclado: Y confirmada, U dudosa, N no confirmada; ← → cambian de foto, ↑ ↓ cambian de evento de detección.",
-    "open_large": "Revisar en vista grande"
+    "open_large": "Revisar en vista grande",
+    "round_hint_time": "En la ronda {{n}}, cada ocasión de muestreo se representa con su evento de detección más temprano entre los aún no revisados.",
+    "round_hint_unsure_time": "En la ronda {{n}}, cada ocasión de muestreo se representa con su evento de detección más temprano entre los aún no revisados. Si no lo tienes claro, márcalo como «Dudosa»: cuenta como no confirmado para avanzar de ronda, pero la ocasión no se dará por no detectada sin que alguien la revise."
   },
   "help": {
     "title": "Ayuda — CamTrap Verify",
@@ -402,7 +411,7 @@
     "reference_hint": "Las fotos se emparejan por mediaID: todas las carpetas deben usar los mismos identificadores.",
     "folder_picker_title": "Carpeta CamtrapDP del clasificador",
     "period_title": "Periodo de estudio, ocasiones de muestreo y eventos de detección",
-    "occasion_days": "Ocasión de muestreo (días)",
+    "occasion_days": "Ocasión de muestreo",
     "gap": "Separación entre eventos de detección (s)",
     "period_hint": "{{n}} fotos en las carpetas de los clasificadores de IA. La sesión usará este mismo periodo de estudio, duración de la ocasión de muestreo y separación.",
     "species_title": "Especies objetivo y grupos",
@@ -537,5 +546,14 @@
     "cancel": "Cancelar",
     "session": "Sesión:",
     "none": "sin nombre"
+  },
+  "duration": {
+    "days_one": "{{count}} día",
+    "days_other": "{{count}} días",
+    "hours_one": "{{count}} hora",
+    "hours_other": "{{count}} horas",
+    "unit": "Unidad",
+    "unit_days": "días",
+    "unit_hours": "horas"
   }
 }

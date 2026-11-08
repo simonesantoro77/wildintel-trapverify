@@ -82,6 +82,7 @@ class PipelineConfig:
     date_start: Optional[str] = None
     date_end: Optional[str] = None
     occasion_days: int = 5
+    occasion_hours: int = 0          # > 0: occasions of this many hours instead of days
     gap_seconds: int = 60            # detection events: photos less than this apart
     context_window_s: int = 20       # neighbours: same camera, +-20 s
 

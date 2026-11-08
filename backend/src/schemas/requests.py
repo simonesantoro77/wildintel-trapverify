@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -12,6 +14,11 @@ class SetupRequest(BaseModel):
     study_start: str
     study_end: str
     occasion_days: int = 5
+    # Sub-day occasions: length in hours (e.g. 1 for activity patterns); 0 = use occasion_days.
+    occasion_hours: int = Field(0, ge=0, le=24 * 365)
+    # "score": detection events reviewed from the highest score; "time": from
+    # the earliest, for time-to-detection (writes ttd_*.csv).
+    review_order: Literal["score", "time"] = "score"
     total_iterations: int = 100000
     gap_seconds: int = 60
     min_score: float = 0.5

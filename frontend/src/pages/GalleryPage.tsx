@@ -10,6 +10,7 @@ import { api } from '../api'
 import EventCard from '../components/EventCard'
 import type { CrossSpecies, DecisionValue, DetectionEvent } from '../types'
 import { clearDraft, draftKey, loadDraft, saveDraft } from '../utils/draft'
+import { occasionDuration } from '../components/OccasionLength'
 
 interface EventSlide extends SlideImage {
   eventKey: string
@@ -40,7 +41,7 @@ export default function GalleryPage() {
   const [mode, setMode] = useState<Mode>('rounds')
   const [events, setEvents] = useState<DetectionEvent[]>([])
   const [spStats, setSpStats] = useState<{ species_name: string; n_total_combos: number; n_confirmed_combos: number; n_resolved: number; n_pending: number; current_iteration?: number } | null>(null)
-  const [reviewParams, setReviewParams] = useState<{ gap_seconds: number; occasion_days: number; min_score: number } | null>(null)
+  const [reviewParams, setReviewParams] = useState<{ gap_seconds: number; occasion_days: number; occasion_hours?: number; review_order?: string; min_score: number } | null>(null)
   const [iteration, setIteration] = useState(1)
   const [totalIterations, setTotalIterations] = useState(1)
   const [sessionId, setSessionId] = useState('')
@@ -110,7 +111,7 @@ export default function GalleryPage() {
       const sid = state.session_dir ?? ''
       setSessionId(sid)
       if (state.config?.total_iterations) setTotalIterations(state.config.total_iterations)
-      if (state.config) setReviewParams({ gap_seconds: state.config.gap_seconds, occasion_days: state.config.occasion_days, min_score: state.config.min_score_by_species?.[sp?.species_name ?? ''] ?? state.config.min_score })
+      if (state.config) setReviewParams({ gap_seconds: state.config.gap_seconds, occasion_days: state.config.occasion_days, occasion_hours: state.config.occasion_hours, review_order: state.config.review_order, min_score: state.config.min_score_by_species?.[sp?.species_name ?? ''] ?? state.config.min_score })
       if (sp) setSpStats(sp)
       setTargetSpecies(state.config?.target_species ?? [])
 
@@ -723,7 +724,7 @@ export default function GalleryPage() {
             dangerouslySetInnerHTML={{
               __html: t('gallery.intro_hint', {
                 gap: reviewParams.gap_seconds,
-                days: reviewParams.occasion_days,
+                duration: occasionDuration(t, reviewParams.occasion_days, reviewParams.occasion_hours),
                 minScore: reviewParams.min_score,
                 species: spStats?.species_name ?? species?.replace(/_/g, ' '),
               }),
@@ -769,7 +770,7 @@ export default function GalleryPage() {
                     ? (locked ? t('gallery.review_hint_locked') : t('gallery.review_hint_unlocked'))
                     : mode === 'pending'
                     ? t('gallery.pending_hint')
-                    : t('gallery.round_hint_unsure', { n: iteration })}
+                    : t(reviewParams?.review_order === 'time' ? 'gallery.round_hint_unsure_time' : 'gallery.round_hint_unsure', { n: iteration })}
                   {mode === 'rounds' && <><br /><strong>{t('gallery.open_tip_title')}</strong> {t('gallery.open_tip')}</>}
                 </span>
               </div>

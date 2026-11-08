@@ -59,7 +59,8 @@ def events(X: pd.DataFrame, P: Prepared, cfg: PipelineConfig) -> pd.DataFrame:
     E["ev"] = new.groupby([E["deploymentID"], E["especie"]], sort=False).cumsum()
     E["evento"] = E["deploymentID"].astype(str) + "#" + E["especie"] + "#" + E["ev"].astype(str)
     ini = study_start_epoch(cfg, P.C["ts"])
-    E["ocasion"] = np.floor((E["ts"] - ini) / (86400 * cfg.occasion_days)) + 1
+    occ_seconds = 3600 * cfg.occasion_hours if cfg.occasion_hours else 86400 * cfg.occasion_days
+    E["ocasion"] = np.floor((E["ts"] - ini) / occ_seconds) + 1
     return E
 
 

@@ -7,6 +7,7 @@ import SessionNameEditor from '../components/SessionNameEditor'
 import type { RelinkStatus, SpeciesStats } from '../types'
 import { isPermissionDenied } from '../utils/imageError'
 import { downloadFile } from '../utils/download'
+import { occasionDuration } from '../components/OccasionLength'
 
 function Spinner() {
   return <div className="w-8 h-8 border-2 border-zinc-600 border-t-blue-500 rounded-full animate-spin" />
@@ -19,7 +20,7 @@ export default function IndexPage() {
   const [species, setSpecies] = useState<SpeciesStats[]>([])
   const [sessionInfo, setSessionInfo] = useState<{
     start: string; end: string
-    occasion_days: number; gap_seconds: number; min_score: number
+    occasion_days: number; occasion_hours?: number; gap_seconds: number; min_score: number
   } | null>(null)
   const [sessionName, setSessionName] = useState('')
   const [loading, setLoading] = useState(true)
@@ -38,6 +39,7 @@ export default function IndexPage() {
           start: state.config.study_start,
           end: state.config.study_end,
           occasion_days: state.config.occasion_days,
+          occasion_hours: state.config.occasion_hours,
           gap_seconds: state.config.gap_seconds,
           min_score: state.config.min_score,
         })
@@ -161,7 +163,7 @@ export default function IndexPage() {
             __html: t('index.subtitle', {
               start: sessionInfo.start,
               end: sessionInfo.end,
-              days: sessionInfo.occasion_days,
+              duration: occasionDuration(t, sessionInfo.occasion_days, sessionInfo.occasion_hours),
             }),
           }}
         />

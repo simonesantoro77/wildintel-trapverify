@@ -1717,3 +1717,75 @@ def test_export_rejected_photo_with_another_species(camtrap_dir, tmp_path, candi
     assert photo.loc["Vulpes vulpes", "classificationMethod"] == "machine"
     assert photo.loc["Meles meles", "observationTags"] == "camtrapverify:confirmed"
     assert photo.loc["Meles meles", "classificationMethod"] == "human"
+
+
+# ─── Review order by time and sub-day occasions ───────────────────────────────
+
+def _fixture_with_late_high_score(camtrap_dir):
+    obs = pd.read_csv(camtrap_dir / "observations.csv", dtype=str)
+    obs.loc[obs["mediaID"] == "m005", "classificationProbability"] = "0.95"   # SITE_A occ1, 12:00
+    obs.to_csv(camtrap_dir / "observations.csv", index=False)
+    from camtrap_workflow import load_camtrapdp
+    return load_camtrapdp(camtrap_dir)
+
+
+def _build(dep, med, obs, **kw):
+    from camtrap_workflow import build_candidates
+    return build_candidates(dep, med, obs, target_species=["Vulpes vulpes"], study_start=date(2025, 11, 1),
+                            study_end=date(2025, 11, 10), occasion_days=5, total_iterations=100_000,
+                            gap_seconds=60, **kw)
+
+
+def test_review_order_time_ranks_earliest_event_first(camtrap_dir):
+    dep, med, obs = _fixture_with_late_high_score(camtrap_dir)
+    key = "SITE_A_occ1_Vulpes_vulpes"
+    by_score = _build(dep, med, obs)
+    by_time = _build(dep, med, obs, review_order="time")
+    first = lambda c: set(c[(c["site_occasion_key"] == key) & (c["rank"] == 1)]["mediaID"])
+    assert first(by_score) == {"m005"}            # 0.95 at 12:00
+    assert first(by_time) == {"m001", "m002"}     # 10:00 event, though lower score
+    # same events and cells either way
+    assert set(by_score["site_occasion_key"]) == set(by_time["site_occasion_key"])
+
+
+def test_time_to_detection_outputs(camtrap_dir, tmp_path, session_config):
+    from camtrap_workflow import build_occupancy_inputs, save_decisions
+    dep, med, obs = _fixture_with_late_high_score(camtrap_dir)
+    c = _build(dep, med, obs, review_order="time")
+    d = tmp_path / "dec"
+    d.mkdir()
+    oid = c[(c["site_occasion_key"] == "SITE_A_occ1_Vulpes_vulpes") & (c["rank"] == 1)].iloc[0]["observationID"]
+    save_decisions(d, c, "Vulpes_vulpes", 1, [oid])          # round 1 done: occ2 and SITE_B rejected
+    out = tmp_path / "occ"
+    build_occupancy_inputs(c, d, {**session_config, "review_order": "time"}, out)
+    v = pd.read_csv(out / "ttd_verified_Vulpes_vulpes.csv").set_index("siteID")
+    n = pd.read_csv(out / "ttd_naive_Vulpes_vulpes.csv").set_index("siteID")
+    assert v.loc["SITE_A", "occ1"] == 34.0        # 1 Nov 00:00 -> 2 Nov 10:00
+    assert v.loc["SITE_A", "occ2"] == 120.0       # rejected: censored at the occasion length
+    assert v.loc["SITE_B", "occ1"] == 120.0
+    assert n.loc["SITE_A", "occ2"] == 38.0        # 6 Nov 00:00 -> 7 Nov 14:00
+    assert n.loc["SITE_B", "occ1"] == 57.0
+    # score order writes no time-to-detection files
+    out2 = tmp_path / "occ2"
+    build_occupancy_inputs(c, d, session_config, out2)
+    assert not list(out2.glob("ttd_*.csv"))
+
+
+def test_occasions_in_hours(camtrap_dir, tmp_path, session_config, candidates):
+    from camtrap_workflow import build_occupancy_inputs, load_camtrapdp
+    dep, med, obs = load_camtrapdp(camtrap_dir)
+    c = _build(dep, med, obs, occasion_hours=12)
+    occ = c.set_index("mediaID")["occasion"]
+    assert occ["m001"] == 3       # 2 Nov 10:00 is 34 h in: third 12-h window
+    assert occ["m005"] == 4       # 2 Nov 12:00
+    assert occ["m003"] == 14      # 7 Nov 14:00 is 158 h in (158 // 12 + 1)
+    out = tmp_path / "occ"
+    build_occupancy_inputs(c, tmp_path / "none", {**session_config, "occasion_hours": 12}, out)
+    op = pd.read_csv(out / "camera_operation.csv").set_index("siteID")
+    assert list(op.columns) == [f"occ{j}" for j in range(1, 21)]    # 10 days × 2
+    assert (op.loc["SITE_A"] == 12).all()                            # hours active, last day included
+    h = pd.read_csv(out / "dethist_naive_Vulpes_vulpes.csv").set_index("siteID")
+    assert h.loc["SITE_A", "occ3"] == 1 and h.loc["SITE_A", "occ1"] == 0
+    # days mode is unchanged: 5-day occasions, 5 days of operation each
+    c5 = _build(dep, med, obs, occasion_hours=0)
+    assert c5.set_index("mediaID")["occasion"].equals(candidates.set_index("mediaID")["occasion"])

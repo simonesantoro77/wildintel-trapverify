@@ -47,6 +47,10 @@ export interface WorkflowConfig {
   study_start: string
   study_end: string
   occasion_days: number
+  /** > 0: sampling occasions of this many hours instead of days. */
+  occasion_hours?: number
+  /** Order of the detection events of a cell: by score (default) or by time. */
+  review_order?: 'score' | 'time'
   total_iterations: number
   gap_seconds: number
   min_score: number
@@ -135,6 +139,7 @@ export interface McRunRequest {
   date_start: string
   date_end: string
   occasion_days: number
+  occasion_hours?: number
   gap_seconds: number
   filter_mode: 'cells' | 'events' | 'none'
   retention: number
@@ -185,6 +190,8 @@ export interface McResult {
   study_start: string
   study_end: string
   occasion_days: number
+  occasion_hours?: number
+  filter_mode?: string
   gap_seconds: number
   warnings: string[]
 }

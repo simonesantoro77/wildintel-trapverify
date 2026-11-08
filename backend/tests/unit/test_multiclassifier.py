@@ -433,3 +433,18 @@ def test_classifier_that_never_names_a_group_has_not_seen_it(archive, tmp_path):
     assert np.allclose(b["p_pres"], b["p_A"])
     res = run(cfg, tmp_path / "out_noboar")
     assert any("B never names Sus scrofa" in w for w in res["warnings"])
+
+
+def test_occasions_in_hours(archive, tmp_path):
+    """Cells of 12-hour occasions: more of them than with 5-day occasions, and
+    the result tells the session to use the same length."""
+    base = dict(classifiers=[ClassifierSource("A", str(archive / "A")), ClassifierSource("B", str(archive / "B")),
+                             ClassifierSource("R", str(archive / "R"), role="reference")],
+                groups=GROUPS, date_start="2024-03-01", date_end="2024-04-30", filter_mode="none")
+    r5 = run(PipelineConfig(**base), tmp_path / "d5")
+    r12 = run(PipelineConfig(**base, occasion_hours=12), tmp_path / "h12")
+    assert r12["occasion_hours"] == 12 and r5["occasion_hours"] == 0
+    def cells(d):
+        e = pd.read_csv(d / "multiclassifier" / "events_with_score.csv")
+        return len(e[["siteID", "ocasion", "especie"]].drop_duplicates())
+    assert cells(tmp_path / "h12") > cells(tmp_path / "d5")
