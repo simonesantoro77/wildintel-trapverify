@@ -204,6 +204,17 @@ def test_run_writes_a_camtrapdp_the_app_can_load(archive, tmp_path):
     # the events the app builds are the ones the pipeline kept
     ev = pd.read_csv(out / "multiclassifier" / "events_with_score.csv")
     assert len(cands[["site_occasion_key", "burst_id"]].drop_duplicates()) == int(ev["keep"].sum())
+    # removed detection events stay in observations.csv, tagged, one row per photo
+    tags = obs["observationTags"].fillna("")
+    filtered_events = set(obs.loc[tags.eq("camtrapverify:filtered"), "eventID"])
+    removed = ev.loc[~ev["keep"], "evento"].str.replace(" ", "_")
+    assert int((~ev["keep"]).sum()) > 0 and filtered_events == set(removed)
+    assert not cands["observationID"].isin(obs.loc[tags.eq("camtrapverify:filtered"), "observationID"]).any()
+    # reference confirmations: human, classified by the reference, tagged
+    human = obs[obs["classificationMethod"] == "human"]
+    assert len(human) > 0 and (human["classifiedBy"] == "R").all()
+    assert (human["observationTags"] == "camtrapverify:reference").all()
+    assert obs.loc[obs["classificationMethod"] == "machine", "classifiedBy"].str.startswith("consensus(").all()
 
 
 def test_media_source_gives_local_photo_paths(archive, tmp_path):

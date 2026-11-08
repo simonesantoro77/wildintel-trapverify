@@ -28,6 +28,9 @@ from .ingest import Ingested, ingest, relative_file_paths
 from .model import Prediction, all_rows, combine, fit, predict
 from .prepare import Prepared, prepare
 
+TAG_FILTERED = "camtrapverify:filtered"    # same values as camtrap_workflow.TAG_*
+TAG_REFERENCE = "camtrapverify:reference"
+
 Log = Callable[[str], None]
 
 OBS_COLUMNS = [
@@ -159,6 +162,8 @@ def _observations(keep: pd.DataFrame, ing: Ingested, pr: Prediction, P: Prepared
         + "; raw_score=" + keep["score_raw"].map(_fmt)
 
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    ref_pos = keep["ref_pos"].fillna(False).astype(bool).to_numpy()
+    kept = keep["keep"].fillna(True).astype(bool).to_numpy() if "keep" in keep else np.ones(len(keep), bool)
     clf = "consensus(" + ",".join(P.A + (P.R if use_ref else [])) + ")"
     count = keep["count"].where(keep["count"].notna() & keep["count"].astype(str).ne(""), "1") if "count" in keep else "1"
     obs = pd.DataFrame({
@@ -172,10 +177,11 @@ def _observations(keep: pd.DataFrame, ing: Ingested, pr: Prediction, P: Prepared
         "observationType": "animal",
         "scientificName": keep["especie"],
         "count": count,
-        "classificationMethod": np.where(keep["ref_pos"], "human", "machine"),
-        "classifiedBy": clf,
+        "classificationMethod": np.where(ref_pos, "human", "machine"),
+        "classifiedBy": np.where(ref_pos, "+".join(P.R) if P.R else clf, clf),
         "classificationTimestamp": now,
         "classificationProbability": keep["score"].map(lambda v: f"{v:.4f}"),
+        "observationTags": np.where(~kept, TAG_FILTERED, np.where(ref_pos, TAG_REFERENCE, "")),
         "observationComments": comment,
     })
     for c in ("lifeStage", "sex", "behavior"):
@@ -296,9 +302,10 @@ def run(cfg: PipelineConfig, out_dir: Path, log: Log = lambda _m: None,
     E = events(X, P, cfg)
     ev = apply_filter(summarize_events(E), th, cfg.top_per_cell)
     E = E.merge(ev[["evento", "especie", "keep"]], on=["evento", "especie"], how="left")
-    keep = E[E["keep"]].copy()
-
-    obs = _observations(keep, ing, pr, P, cfg, strategy, use_ref)
+    E["keep"] = E["keep"].fillna(True).astype(bool)
+    # Removed detection events stay in observations.csv, tagged, so the dataset
+    # is complete; the review skips them (see camtrap_workflow.TAG_FILTERED).
+    obs = _observations(E, ing, pr, P, cfg, strategy, use_ref)
     if cfg.export_rows == "all" and len(ing.others):
         obs = pd.concat([obs, ing.others.reindex(columns=OBS_COLUMNS)], ignore_index=True)
     obs.to_csv(out_dir / "observations.csv", index=False)
@@ -312,7 +319,8 @@ def run(cfg: PipelineConfig, out_dir: Path, log: Log = lambda _m: None,
     if ing.datapackage is not None:
         desc = (f"CamTrap Verify dataset: {', '.join(P.A)}"
                 + (f" with reference {', '.join(P.R)}" if use_ref else "")
-                + f"; strategy {strategy}; one observation per photo and target species with recalculated probability.")
+                + f"; strategy {strategy}; one observation per photo and target species with recalculated probability"
+                + f"; detection events removed from the review are tagged {TAG_FILTERED} in observationTags.")
         write_datapackage(ing.datapackage, out_dir / "datapackage.json", cfg, ing.media, desc)
     else:
         warnings.append("No datapackage.json in the AI classifiers' folders: none written.")
