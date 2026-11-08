@@ -1311,13 +1311,7 @@ def build_candidates(
     # the same burst can tie; a trailing numeric suffix in the file name
     # (e.g. "..._1.JPEG" -> 1) recovers true capture order. Matches the
     # reference R tool; unparseable/absent suffixes sort last.
-    joined["capture_seq"] = pd.to_numeric(
-        joined["filePath"].astype(str).str.extract(r"_(\d+)\.[^/]*$")[0],
-        errors="coerce",
-    )
-    joined = joined.sort_values(
-        ["site_occasion_key", "ts", "capture_seq"], na_position="last"
-    )
+    joined = _sort_frames(joined, ["site_occasion_key", "ts"])
 
     # Assign burst IDs (consecutive frames within gap_seconds form one burst):
     # a new burst starts at the first frame of each cell and wherever the gap
@@ -1406,8 +1400,8 @@ def build_candidates(
         if context_rows:
             ctx_df = pd.DataFrame(context_rows)
             candidates = pd.concat([candidates, ctx_df], ignore_index=True)
-            candidates = candidates.sort_values(
-                ["site_occasion_key", "burst_id", "ts"]
+            candidates = _sort_frames(
+                candidates, ["site_occasion_key", "burst_id", "ts"]
             ).reset_index(drop=True)
 
     return candidates[[
@@ -1879,6 +1873,34 @@ _EVENT_COLUMNS = [
 ]
 
 
+
+_CAPTURE_SEQ = r"_(\d+)\.[^./\\]+$"
+
+
+def capture_seq(df: pd.DataFrame) -> pd.Series:
+    """Capture number from the trailing ``_<n>`` of the file name
+    (``..._127.JPEG`` -> 127), used to order frames that share a timestamp
+    (many cameras and exports only keep whole seconds).
+
+    ``fileName`` is tried first because ``filePath`` may be a web address
+    without the name (e.g. Trapper's ``.../media/4897674/file/``); ``filePath``
+    is the fallback. Frames without a number get NaN and sort last.
+    """
+    seq = pd.Series(float("nan"), index=df.index)
+    for col in ("fileName", "filePath"):
+        if col in df:
+            n = pd.to_numeric(df[col].astype(str).str.extract(_CAPTURE_SEQ)[0], errors="coerce")
+            seq = seq.fillna(n)
+    return seq
+
+
+def _sort_frames(df: pd.DataFrame, by: list[str]) -> pd.DataFrame:
+    """Sort by ``by`` and then by capture number, keeping the order of rows
+    that still tie (stable sort)."""
+    return (df.assign(_seq=capture_seq(df))
+              .sort_values(by + ["_seq"], kind="stable", na_position="last")
+              .drop(columns="_seq"))
+
 def _event_records(rows: pd.DataFrame) -> dict[str, list[dict]]:
     """Group candidate rows into plain per-cell record lists, keeping row order.
 
@@ -2032,7 +2054,7 @@ def get_events(
     total_seqs_by_key = all_sp.groupby("site_occasion_key")["rank"].max().to_dict()
 
     frame_url = _frame_url_factory(image_base_dir, fallback_base, flat_search, resolver, token)
-    grouped = _event_records(sp_cands.sort_values(["burst_id", "ts"]))
+    grouped = _event_records(_sort_frames(sp_cands, ["burst_id", "ts"]))
     return [
         _build_event(key, recs, total_seqs_by_key.get(key, 1), frame_url)
         for key, recs in grouped.items()
@@ -2093,7 +2115,7 @@ def get_review_events(
 
     frame_url = _frame_url_factory(image_base_dir, fallback_base, flat_search, resolver, token)
     events = []
-    for key, recs in _event_records(rows.sort_values(["burst_id", "ts"])).items():
+    for key, recs in _event_records(_sort_frames(rows, ["burst_id", "ts"])).items():
         event = _build_event(key, recs, total_seqs_by_key.get(key, 1), frame_url)
         event["status"] = "confirmed" if key in conf_keys else "not_confirmed"
         obs = confirmed_obs.get(key)
@@ -2139,7 +2161,7 @@ def get_pending_events(
 
     frame_url = _frame_url_factory(image_base_dir, fallback_base, flat_search, resolver, token)
     events = []
-    for key, recs in _event_records(rows.sort_values(["rank", "ts"], kind="stable")).items():
+    for key, recs in _event_records(_sort_frames(rows, ["rank", "ts"])).items():
         event = _build_event(key, recs, total_seqs_by_key.get(key, 1), frame_url, with_burst_reps=True)
         event["status"] = "pending"
         events.append(event)

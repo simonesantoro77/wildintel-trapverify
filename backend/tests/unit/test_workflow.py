@@ -466,6 +466,37 @@ def test_build_candidates_same_timestamp_frames_ordered_by_capture_seq(tmp_path)
     ordered = result.sort_values("burst_seq")
     assert list(ordered["mediaID"]) == ["m001", "m002"]
 
+def test_same_timestamp_frames_ordered_by_file_name_when_file_path_is_a_url():
+    """Combined datasets keep Trapper web addresses in filePath, which carry no
+    file name; the capture number must then come from fileName."""
+    dep = pd.DataFrame({"deploymentID": ["DEP1"], "locationID": ["SITE_A"]})
+    med = pd.DataFrame({
+        "mediaID":      ["m3", "m1", "m2"],   # fed out of capture order
+        "deploymentID": ["DEP1"] * 3,
+        "timestamp":    ["2025-11-02 10:00:00"] * 3,
+        "filePath":     [f"https://trap.example/storage/resource/media/{i}/file/" for i in (3, 1, 2)],
+        "fileName":     ["CAM__20251102_10.JPEG", "CAM__20251102_8.JPEG", "CAM__20251102_9.JPEG"],
+    })
+    obs = pd.DataFrame({
+        "observationID":             ["o3", "o1", "o2"],
+        "deploymentID":              ["DEP1"] * 3,
+        "mediaID":                   ["m3", "m1", "m2"],
+        "observationLevel":          ["media"] * 3,
+        "observationType":           ["animal"] * 3,
+        "scientificName":            ["Vulpes vulpes"] * 3,
+        "classificationProbability": [0.9, 0.5, 0.7],
+    })
+    result = build_candidates(
+        dep, med, obs, target_species=["Vulpes vulpes"], study_start=date(2025, 11, 1),
+        study_end=date(2025, 11, 10), occasion_days=5, total_iterations=100_000, gap_seconds=60,
+    )
+    assert list(result.sort_values("burst_seq")["mediaID"]) == ["m1", "m2", "m3"]
+    # the gallery re-sorts its rows: the capture order must survive a shuffle
+    from camtrap_workflow import _sort_frames
+    shuffled = result.sample(frac=1, random_state=1)
+    assert list(_sort_frames(shuffled, ["burst_id", "ts"])["mediaID"]) == ["m1", "m2", "m3"]
+
+
 def test_build_candidates_occasion_assignment(candidates):
     # m003 at 2025-11-07 must be in occ2 (days 6-10)
     occ = candidates[candidates["mediaID"] == "m003"]["occasion"].iloc[0]
