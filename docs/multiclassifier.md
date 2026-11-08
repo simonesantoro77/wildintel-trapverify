@@ -116,7 +116,7 @@ Per species, the threshold is the highest score that still leaves a true event t
 
 A species is filtered only with at least 100 reference cells; with fewer, a 1 % loss cannot be estimated and nothing is removed.
 
-**By cells keeps presence, not every event.** On the 2023 data 83 % of the true events survive with the chosen method (97 % with Highest probability). If the events will be used for counts or detection rates, choose *By detection events* in Advanced options: it keeps 99 % of the true events instead. *None* only reorders.
+**By cells keeps presence, not every event.** On the 2023 data 83 % of the true events survive with the chosen method (97 % with Highest probability). That is what the review needs: it verifies the species cell by cell, and once a detection event is confirmed the rest of its cell is not shown. The form offers *By cells* and *None* (which only reorders and keeps every detection event). A filter that keeps 99 % of the confirmed detection events instead (`filter_mode="events"`) remains available to scripts, but not in the form: it would only leave more unreviewed machine rows in the combined CamtrapDP, and anyone who wants every detection event can use *None*.
 
 ## Results on Doñana, spring 2023
 
@@ -150,7 +150,11 @@ The fallow deer threshold is low because the AIs often take fallow deer for red 
 
 ## Outputs and limits
 
-The combined dataset is saved in the folder chosen in the form (by default `Documents\camtrap_verify\conversions\multiclassifier_<date and time>`; a folder that already holds files is never overwritten). Its `multiclassifier/` subfolder holds the diagnostics:
+The combined dataset is saved in the folder chosen in the form (by default `Documents\camtrap_verify\conversions\multiclassifier_<date and time>`; a folder that already holds files is never overwritten).
+
+**What the combined CamtrapDP holds.** `deployments.csv` and `media.csv` keep every photo. `observations.csv` has one row per photo × target species of the detection events that were kept, each with the species and its new probability in `classificationProbability`; rows the reference confirmed are `classificationMethod = human`, all others `machine`. Removed detection events have no row (their photos stay in `media.csv`), and empty photos, people and non-target species are not carried over. On Doñana 2023: 547,916 photos, 215,506 rows from 176,240 photos and 19,377 detection events, 19,653 of them `human`. It is the input of the review, not a final dataset: the review confirms one detection event per cell, and the final products are the detection history per cell and `camtrap_dp_verified`, where the confirmed observations become `human` with probability 1.
+
+Its `multiclassifier/` subfolder holds the diagnostics:
 
 | File | Contents |
 | --- | --- |

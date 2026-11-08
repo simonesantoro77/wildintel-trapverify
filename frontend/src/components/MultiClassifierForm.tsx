@@ -77,7 +77,7 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
   // '' (not a target). Remembered values come from the backend.
   const [labelMeaning, setLabelMeaning] = useState<Record<string, string>>({})
   const [rememberedMeaning, setRememberedMeaning] = useState<Record<string, string>>({})
-  const [filterMode, setFilterMode] = useState<'cells' | 'events' | 'none'>('cells')
+  const [filterMode, setFilterMode] = useState<'cells' | 'none'>('cells')
   const [retention, setRetention] = useState(99)
   const [tieBreak, setTieBreak] = useState<'ambiguous' | 'simple' | 'none'>('ambiguous')
   const [refVerdict, setRefVerdict] = useState(true)
@@ -502,7 +502,6 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
                     <select id="mc-filter" className={selectClass} value={filterMode} disabled={!hasReference}
                       onChange={e => setFilterMode(e.target.value as typeof filterMode)}>
                       <option value="cells">{t('mc.filter_cells')}</option>
-                      <option value="events">{t('mc.filter_events')}</option>
                       <option value="none">{t('mc.filter_none')}</option>
                     </select>
                     <p className={hintClass}>{t(`mc.filter_${filterMode}_hint`)}</p>
