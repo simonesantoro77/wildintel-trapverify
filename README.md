@@ -26,6 +26,7 @@ Once the review is complete, **CamTrap Verify** exports a verified CamtrapDP pac
 - Accepts any [CamtrapDP v1.0](https://camtrap-dp.tdwg.org/) directory directly
 - Built-in converter for [DeepFaune](https://www.deepfaune.cnrs.fr/) CSV exports
 - Generic CSV importer with configurable column mapping and interactive species-name editor for any AI classifier output
+- **Classifiers and reference**: combines the CamtrapDP folders of one or more AI classifiers and, optionally, a human reference (e.g. Zooniverse) into one CamtrapDP with a recalculated probability per photo and species, chosen and filtered against the reference so fewer detection events need review (see [methods](docs/multiclassifier.md))
 
 **Review workflow**
 - Iterative review by rounds: for each site × sampling-occasion × species cell, the highest-confidence detection event is always shown first
@@ -41,7 +42,7 @@ Once the review is complete, **CamTrap Verify** exports a verified CamtrapDP pac
 - Full-screen lightbox
 
 **Output**
-- Exports `camtrap_dp_verified/` with confirmed observations tagged as human classifications; configurable `classifiedBy` label
+- Exports `camtrap_dp_verified/` with confirmed observations tagged as human classifications; configurable `classifiedBy` label; `observationTags` records the review (`camtrapverify:confirmed`, `:rejected`, `:unsure`)
 - Generates naive vs. verified detection histories and camera-operation matrices ready for occupancy models (`occupancy_inputs/`)
 
 **General**

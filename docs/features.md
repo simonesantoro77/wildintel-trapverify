@@ -5,6 +5,7 @@
 - **CamtrapDP v1.0** — loads any directory with `deployments.csv`, `media.csv`, and `observations.csv` produced by an AI classifier or citizen-science platform. No conversion required.
 - **DeepFaune CSV importer** — converts DeepFaune classification exports directly to CamtrapDP format; species labels are mapped automatically to scientific names via a built-in lookup table.
 - **Generic CSV importer** — accepts any classifier CSV with configurable column mapping (image path, datetime, species label, confidence score, site). An interactive species-name editor allows mapping custom labels to scientific names; non-animal labels (`empty`, `human`, `blank`, etc.) are handled automatically.
+- **Classifiers and reference** — combines the CamtrapDP folders of one or more AI classifiers and, optionally, a human reference (e.g. Zooniverse) into one CamtrapDP with a recalculated probability per photo and target species. With a reference, five methods are compared out of sample and per-species thresholds take out of the review the detection events not worth reviewing; they stay in the dataset tagged `camtrapverify:filtered`. See [Classifiers and reference](multiclassifier.md).
 - **Flexible timestamp parsing** — accepts ISO 8601 and EXIF-style (`YYYY:MM:DD HH:MM:SS`) timestamps transparently.
 - **Automatic metadata detection** — infers available species and the study date range directly from `observations.csv` on load.
 - **Site resolution** — uses `locationID` when present; falls back to `deploymentID`, so both survey designs are supported.
@@ -16,7 +17,7 @@
 - **Configurable sampling occasions** — divides the study window into fixed-length windows (`occasion_days`, default 5 days) per deployment. The number of occasions adapts automatically to the study duration.
 - **Detection event grouping** — consecutive frames at the same location separated by less than `gap_seconds` (default 60 s) are grouped into a single reviewable detection event.
 - **Confidence ranking** — within each site × occasion × species cell, detection events are ranked by the maximum `classificationProbability` across their frames, so round 1 always shows the most likely true detection.
-- **Score filtering** — frames below `min_score` (default 0.5) are excluded from the candidate manifest, avoiding the lowest-confidence noise.
+- **Minimum detection confidence** — frames below `min_score` (default 0.5, optionally per species) are excluded from the candidate manifest, avoiding the lowest-confidence noise.
 
 ---
 
@@ -31,7 +32,7 @@
     - Brightness and contrast controls
     - Tonal inversion (useful for night-vision / near-infrared images)
     - Left / right arrows to move between occasions without closing
-- **Keyboard navigation** — arrow keys advance frames; `C` confirms, `R` rejects (configurable).
+- **Keyboard navigation** — in the large view, `Y` confirms, `U` marks unsure, `N` rejects, `Backspace` goes back to the previous card; ← → change frame, ↑ ↓ change detection event.
 - **Per-species progress bars** — a coloured badge on each species card shows the current round; the bar fills as cells are resolved.
 
 ---
@@ -56,6 +57,7 @@
     | `classifiedBy` | configurable (default `"expert_review"`) |
     | `classificationTimestamp` | current UTC timestamp |
 
+- **`observationTags`** — records the review: `camtrapverify:confirmed`, `camtrapverify:rejected` (shown in a finished round and not confirmed) or `camtrapverify:unsure` (still pending expert review). Observations never shown are untouched.
 - **Configurable `classifiedBy` label** — the value written to `classifiedBy` can be set per session (e.g. `"expert_review"`, `"ornithologist_A"`).
 - **Extended confirmation** — when enabled, all observations in the confirmed burst (not just the highest-confidence representative frame) are marked as human-verified in the output.
 - **`occupancy_inputs/`** — ready-to-use files for single-species occupancy models:
