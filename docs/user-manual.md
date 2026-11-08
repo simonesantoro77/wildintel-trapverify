@@ -295,6 +295,8 @@ Click **Combine**. On large archives it takes a minute or two. The result first 
 
 **How the method is chosen.** Each method is evaluated out of sample (cross-validation by camera: every photo is scored by a model that never saw its camera). For each species, the threshold is the highest one that still leaves a true event in 99 % of the cells (site × occasion) where the reference confirms the species. The method that leaves the fewest events to look at wins; if others are not distinguishable from it (bootstrap by site), the one whose species are clearest is chosen (lowest average probability of the second species in photos of red/fallow deer or hare/rabbit). Events are never removed when the reference confirmed them or marked an animal it could not identify, and the best event of every cell is always kept. Species with fewer than 100 reference cells are not filtered.
 
+> **Note:** the removed detection events are not deleted: they stay in the combined `observations.csv` tagged `camtrapverify:filtered` (column `observationTags`), and the review skips them.
+
 > **Note:** filtering by cells keeps the presence in each cell, not every confirmed detection event, which is what the review verifies. To keep every detection event in the new CamtrapDP, choose **None** in the advanced options.
 
 The five methods, the choice and the filter are explained step by step, with the results on a real archive, in [Combining several classifiers: methods and workflow](multiclassifier.md).
@@ -578,7 +580,7 @@ Each session is saved in a timestamped subfolder inside the output directory (e.
 |---|---|
 | `deployments.csv` | Original deployment table (unchanged). |
 | `media.csv` | Original media table (unchanged). |
-| `observations.csv` | Confirmed observations updated with `classificationMethod='human'`, `classificationProbability=1.0`, `classifiedBy=<configured value>` and `classificationTimestamp`. |
+| `observations.csv` | Every observation of the source. Confirmed ones are updated with `classificationMethod='human'`, `classificationProbability=1.0`, `classifiedBy=<configured value>` and `classificationTimestamp`. `observationTags` records the review: `camtrapverify:confirmed`, `camtrapverify:rejected` (shown in a round and not confirmed) or `camtrapverify:unsure` (still pending expert review); events never shown are untouched. With a dataset from *Classifiers and reference*, `camtrapverify:filtered` marks detection events that were left out of the review and `camtrapverify:reference` those the reference confirmed. |
 
 **`occupancy_inputs/`** — ready-to-use files for occupancy models
 

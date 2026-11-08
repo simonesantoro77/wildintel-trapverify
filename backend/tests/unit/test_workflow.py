@@ -981,6 +981,40 @@ def test_export_no_decisions_all_unchanged(camtrap_dir, tmp_path):
     obs_new  = pd.read_csv(out / "observations.csv", dtype=str)
     assert obs_orig["classificationMethod"].tolist() == obs_new["classificationMethod"].tolist()
 
+def test_export_tags_review_outcomes(camtrap_dir, tmp_path, decisions_dir, candidates):
+    """Round 1 showed the rank-1 event of every cell: SITE_A occ1 was confirmed,
+    the others were rejected; the export says so in observationTags."""
+    out = tmp_path / "verified"
+    export_verified_camtrapdp(camtrap_dir, out, decisions_dir, set(), candidates=candidates)
+    obs = pd.read_csv(out / "observations.csv", dtype=str)
+    tags = obs.set_index("observationID")["observationTags"].fillna("")
+    conf_id = pd.read_csv(decisions_dir / "decisions_Vulpes_vulpes_iter1.csv", dtype=str)["observationID"].iloc[0]
+    assert tags[conf_id] == "camtrapverify:confirmed"
+    rank1 = candidates[(candidates["rank"] == 1) & (candidates["site_occasion_key"] != "SITE_A_occ1_Vulpes_vulpes")]
+    assert len(rank1) > 0
+    for oid in rank1["observationID"]:
+        assert tags[oid] == "camtrapverify:rejected"
+    # events never shown (rank 2 and later) carry no review tag
+    later = candidates[candidates["rank"] > 1]["observationID"]
+    assert all(tags[o] == "" for o in later)
+    cols = list(obs.columns)
+    assert cols.index("observationTags") < cols.index("observationComments") if "observationComments" in cols else True
+
+
+def test_export_unsure_tag(camtrap_dir, tmp_path, candidates):
+    from camtrap_workflow import save_decisions
+    d = tmp_path / "decisions"
+    d.mkdir()
+    key = "SITE_A_occ1_Vulpes_vulpes"
+    oid = candidates[(candidates["rank"] == 1) & (candidates["site_occasion_key"] == key)].iloc[0]["observationID"]
+    save_decisions(d, candidates, "Vulpes_vulpes", 1, [], unsure_ids=[oid])
+    out = tmp_path / "verified"
+    export_verified_camtrapdp(camtrap_dir, out, d, set(), candidates=candidates)
+    obs = pd.read_csv(out / "observations.csv", dtype=str).set_index("observationID")
+    assert obs.loc[oid, "observationTags"] == "camtrapverify:unsure"
+    assert obs.loc[oid, "classificationMethod"] == "machine"
+
+
 # ─── classified_by parameter ──────────────────────────────────────────────────
 
 def test_export_default_classified_by_is_expert_review(camtrap_dir, tmp_path, decisions_dir):

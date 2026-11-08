@@ -190,7 +190,35 @@ WORKFLOW_MEDIA_COLUMNS = ("mediaID", "deploymentID", "timestamp", "filePath", "f
 WORKFLOW_OBS_COLUMNS = (
     "observationID", "deploymentID", "mediaID", "observationLevel",
     "observationType", "scientificName", "classificationProbability",
+    "observationTags",
 )
+
+# observationTags written by CamTrap Verify (CamtrapDP "key:value" pairs, "|"-separated).
+TAG_FILTERED = "camtrapverify:filtered"    # removed by "Classifiers and reference": not reviewed
+TAG_REFERENCE = "camtrapverify:reference"  # the reference (e.g. Zooniverse) confirmed it
+TAG_CONFIRMED = "camtrapverify:confirmed"  # confirmed in the review
+TAG_REJECTED = "camtrapverify:rejected"    # rejected in the review
+TAG_UNSURE = "camtrapverify:unsure"        # marked unsure in the review
+
+
+def has_tag(tags: pd.Series, tag: str) -> pd.Series:
+    """True where the ``|``-separated ``observationTags`` contain ``tag``."""
+    pattern = r"(?:^|\|)\s*" + re.escape(tag) + r"\s*(?:\||$)"
+    return tags.fillna("").astype(str).str.contains(pattern, regex=True)
+
+
+def _drop_review_tags(tags: pd.Series) -> pd.Series:
+    """``observationTags`` without the rejected / unsure tags of the review."""
+    drop = {TAG_REJECTED, TAG_UNSURE}
+    return tags.fillna("").astype(str).map(
+        lambda t: "|".join(x for x in t.split("|") if x.strip() and x.strip() not in drop))
+
+
+def add_tag(tags: pd.Series, tag: str) -> pd.Series:
+    """``observationTags`` with ``tag`` appended (once)."""
+    t = tags.fillna("").astype(str)
+    out = (t + "|" + tag).where(t.ne(""), tag)
+    return t.where(has_tag(t, tag), out)
 
 
 def load_camtrapdp(
@@ -1239,8 +1267,13 @@ def build_candidates(
     if "fileName" not in med.columns:
         med["fileName"] = basename_series(med["filePath"])
 
+    # Detection events that "Classifiers and reference" removed stay in its
+    # observations.csv (tagged) so the dataset is complete, but are not reviewed.
+    not_filtered = ~has_tag(obs["observationTags"], TAG_FILTERED) if "observationTags" in obs \
+        else pd.Series(True, index=obs.index)
     target_obs = obs[
-        (obs["observationLevel"] == "media")
+        not_filtered
+        & (obs["observationLevel"] == "media")
         & (obs["observationType"] == "animal")
         & (obs["scientificName"].isin(target_species))
     ].copy()
@@ -2171,6 +2204,54 @@ def get_pending_events(
 
 # ─── Export verified CamtrapDP ────────────────────────────────────────────────
 
+
+def review_outcomes(candidates: pd.DataFrame, decisions_dir: Path) -> dict[str, str]:
+    """``observationID -> tag`` for the detection events rejected or marked
+    unsure in finished rounds (``TAG_REJECTED`` / ``TAG_UNSURE``).
+
+    Round ``N`` of a species showed, for every cell not confirmed in an
+    earlier round, its rank-``N`` detection event; the ones neither confirmed
+    nor marked unsure in ``decisions_<sp>_iter<N>.csv`` / ``unsure_<sp>_iter<N>.csv``
+    were rejected. Unsure events of cells the expert later set to not detected
+    (``unsure_cleared_<sp>.csv``) count as rejected; those confirmed later are
+    confirmed by the caller. Context frames are not part of the event.
+    """
+    out: dict[str, str] = {}
+    if candidates is None or candidates.empty or not decisions_dir.exists():
+        return out
+    rounds: dict[str, list[int]] = {}
+    for f in decisions_dir.glob("decisions_*_iter*.csv"):
+        m = re.fullmatch(r"decisions_(.+)_iter(\d+)\.csv", f.name)
+        if m:
+            rounds.setdefault(m.group(1), []).append(int(m.group(2)))
+    real = candidates
+    if "is_context" in real:
+        real = real[~real["is_context"].fillna(False).astype(bool)]
+    rank = pd.to_numeric(real["rank"], errors="coerce")
+
+    def keys(path: Path) -> set:
+        if not path.exists():
+            return set()
+        d = pd.read_csv(path, dtype=str)
+        return set(d["site_occasion_key"].dropna()) if "site_occasion_key" in d else set()
+
+    for sp, ns in rounds.items():
+        earlier: set = set()
+        for n in sorted(ns):
+            conf = keys(decisions_dir / f"decisions_{sp}_iter{n}.csv")
+            uns = keys(decisions_dir / f"unsure_{sp}_iter{n}.csv")
+            shown = real[(real["species_safe"] == sp) & (rank == n) & ~real["site_occasion_key"].isin(earlier)]
+            unsure_rows = shown[shown["site_occasion_key"].isin(uns)]
+            # pending cells the expert later set to not detected: rejected
+            cleared = keys(decisions_dir / f"unsure_cleared_{sp}.csv")
+            for oid, key in zip(unsure_rows["observationID"], unsure_rows["site_occasion_key"]):
+                if pd.notna(oid):
+                    out[oid] = TAG_REJECTED if key in cleared else TAG_UNSURE
+            for oid in shown.loc[~shown["site_occasion_key"].isin(conf | uns), "observationID"].dropna():
+                out[oid] = TAG_REJECTED
+            earlier |= conf
+    return out
+
 def export_verified_camtrapdp(
     camtrap_dir: Path,
     out_dir: Path,
@@ -2246,6 +2327,24 @@ def export_verified_camtrapdp(
         burst_mates = real_cands.merge(burst_keys, on=["site_occasion_key", "burst_id"])
         confirmed_ids = set(burst_mates["observationID"].dropna().tolist())
 
+    if "observationTags" not in obs.columns:
+        # CamtrapDP's place for it: just before observationComments
+        at = obs.columns.get_loc("observationComments") if "observationComments" in obs.columns else len(obs.columns)
+        obs.insert(at, "observationTags", "")
+
+    def _sibling_mask(ids) -> pd.Series:
+        rows = obs[obs["observationID"].isin(set(ids))]
+        pairs_set = set(zip(rows["mediaID"], rows["scientificName"]))
+        return pd.Series(list(zip(obs["mediaID"], obs["scientificName"])), index=obs.index).isin(pairs_set)
+
+    # Rejected / unsure detection events of finished rounds (confirmed wins below)
+    outcomes = review_outcomes(candidates, decisions_dir) if candidates is not None else {}
+    for tag in (TAG_REJECTED, TAG_UNSURE):
+        ids = [k for k, v in outcomes.items() if v == tag]
+        if ids:
+            m = _sibling_mask(ids)
+            obs.loc[m, "observationTags"] = add_tag(obs.loc[m, "observationTags"], tag)
+
     if confirmed_ids:
         # build_candidates() collapses duplicate observation rows for the same
         # (mediaID, scientificName) to one representative, so confirmed_ids
@@ -2262,6 +2361,7 @@ def export_verified_camtrapdp(
         obs.loc[mask, "classificationProbability"] = "1.0"
         obs.loc[mask, "classifiedBy"] = classified_by_label
         obs.loc[mask, "classificationTimestamp"] = now_ts
+        obs.loc[mask, "observationTags"] = add_tag(_drop_review_tags(obs.loc[mask, "observationTags"]), TAG_CONFIRMED)
 
     # Species confirmed from another species' gallery (see load_cross)
     cross = load_cross(decisions_dir) if decisions_dir.exists() else pd.DataFrame()
@@ -2275,7 +2375,10 @@ def export_verified_camtrapdp(
         obs.loc[cmask, "classificationProbability"] = "1.0"
         obs.loc[cmask, "classifiedBy"] = classified_by_label
         obs.loc[cmask, "classificationTimestamp"] = now_ts
+        obs.loc[cmask, "observationTags"] = add_tag(_drop_review_tags(obs.loc[cmask, "observationTags"]), TAG_CONFIRMED)
         if not added.empty:
+            added = added.copy()
+            added["observationTags"] = TAG_CONFIRMED
             obs = pd.concat([obs, added], ignore_index=True)
 
     obs.to_csv(out_dir / "observations.csv", index=False)

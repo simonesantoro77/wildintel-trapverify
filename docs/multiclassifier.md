@@ -152,7 +152,26 @@ The fallow deer threshold is low because the AIs often take fallow deer for red 
 
 The combined dataset is saved in the folder chosen in the form (by default `Documents\camtrap_verify\conversions\multiclassifier_<date and time>`; a folder that already holds files is never overwritten).
 
-**What the combined CamtrapDP holds.** `deployments.csv` and `media.csv` keep every photo. `observations.csv` has one row per photo × target species of the detection events that were kept, each with the species and its new probability in `classificationProbability`; rows the reference confirmed are `classificationMethod = human`, all others `machine`. Removed detection events have no row (their photos stay in `media.csv`), and empty photos, people and non-target species are not carried over. On Doñana 2023: 547,916 photos, 215,506 rows from 176,240 photos and 19,377 detection events, 19,653 of them `human`. It is the input of the review, not a final dataset: the review confirms one detection event per cell, and the final products are the detection history per cell and `camtrap_dp_verified`, where the confirmed observations become `human` with probability 1.
+**What the combined CamtrapDP holds.** `deployments.csv` and `media.csv` keep every photo. `observations.csv` has one row per photo × target species of every detection event, each with the species and its new probability in `classificationProbability`. Nothing is deleted: the filter only tags. `observationTags` (a standard CamtrapDP column of `key:value` tags) says what happened to each row:
+
+| Row | `classificationMethod` | `classifiedBy` | `observationTags` |
+| --- | --- | --- | --- |
+| AI classifiers only | machine | `consensus(<classifiers>)` | (empty) |
+| The reference confirmed it | human | the reference (e.g. `Zooniverse`) | `camtrapverify:reference` |
+| Removed by the filter | machine | `consensus(<classifiers>)` | `camtrapverify:filtered` |
+
+The review skips the `camtrapverify:filtered` rows, so it shows exactly the detection events that were kept. Empty photos, people and non-target species are not carried over. On Doñana 2023: 547,916 photos and 19,377 detection events to review, 19,653 rows confirmed by the reference.
+
+The combined CamtrapDP is the input of the review, not a final dataset. After the review, `camtrap_dp_verified` keeps every row and adds the outcome of the review:
+
+| Row | `classificationMethod` | `classifiedBy` | `observationTags` |
+| --- | --- | --- | --- |
+| Confirmed in the review | human (probability 1) | *Classified by* of the session (default `expert_review`) | `camtrapverify:confirmed` added |
+| Rejected in the review | unchanged | unchanged | `camtrapverify:rejected` added |
+| Marked unsure, still pending | unchanged | unchanged | `camtrapverify:unsure` added |
+| Not shown (its cell was confirmed earlier) | unchanged | unchanged | unchanged |
+
+The detection history per cell is in `occupancy_inputs/`.
 
 Its `multiclassifier/` subfolder holds the diagnostics:
 

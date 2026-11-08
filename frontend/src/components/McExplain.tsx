@@ -127,6 +127,7 @@ export function McResultSummary({ r, retention, tieBreak }: SummaryProps) {
         })}
       </p>
       <p className="text-xs text-zinc-500 dark:text-zinc-400">{t('mc.sum_check')}</p>
+      <p className="text-xs text-zinc-500 dark:text-zinc-400">{t('mc.sum_tags')}</p>
     </div>
   )
 }

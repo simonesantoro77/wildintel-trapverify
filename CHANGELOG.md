@@ -40,6 +40,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - **Classifiers and reference**: the five methods have consistent names everywhere (*Highest probability*, *Agreement probability*, *Calibrated agreement probability*, *Learned probability*, *Learned probability with neighbouring photos*); *Highest probability* can now be chosen like the others; a classifier that never names a group counts, for that group, as not having seen the photos (also the reference), with a warning in the result; the explanations say how boxes are matched (intersection over union ≥ 0.3), what cells and detection events mean in the filter, and what each column of the comparison table means.
 - The setup parameter is now called **Minimum detection confidence**, the same term the review uses; the review speaks of *sampling occasions* everywhere (it said *time occasions* in places).
 - **Classifiers and reference**: the advanced options offer *By cells* and *None*; the filter by detection events stays available to scripts only, because the review verifies cells and it only left more unreviewed rows in the combined CamtrapDP. The methods page says what the combined CamtrapDP holds.
+- **Classifiers and reference** keeps every detection event in the combined CamtrapDP: removed ones are tagged `camtrapverify:filtered` in `observationTags` and the review skips them; reference confirmations are `classifiedBy=<reference>` and tagged `camtrapverify:reference`.
+- The **verified CamtrapDP** records the review in `observationTags`: `camtrapverify:confirmed`, `camtrapverify:rejected` or `camtrapverify:unsure`.
 - The review has a **Review in large view** button next to the location and a tip on the large view and its keys.
 
 #### Fixed
