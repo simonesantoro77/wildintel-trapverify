@@ -376,7 +376,10 @@ def add_cross(species: str, site_id: str, occasion: int, media_id: str,
         session_service.paths()["decisions"], species, site_id, occasion,
         media_id, observation_id, source_species,
     )
-    rebuild_outputs()
+    # The click must answer at once: on long studies rebuilding every output
+    # (histories and occupancy fits of all species) takes seconds. Mark them
+    # stale; saving a round or opening Results/downloading rebuilds them.
+    session_service.mark_outputs_stale()
     logger.info("Cross-species confirmation: %s from a photo of %s (%s)", key, source_species, media_id)
     return {"success": True, "key": key}
 
@@ -387,5 +390,5 @@ def remove_cross(species: str, site_id: str, occasion: int) -> dict:
         session_service.paths()["decisions"], sp_safe, {cross_key(site_id, occasion, sp_safe)},
     )
     if n:
-        rebuild_outputs()
+        session_service.mark_outputs_stale()   # rebuilt on save / Results
     return {"success": True, "removed": n}
