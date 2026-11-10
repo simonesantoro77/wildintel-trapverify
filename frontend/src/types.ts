@@ -193,6 +193,8 @@ export interface McResult {
   occasion_hours?: number
   gap_seconds: number
   warnings: string[]
+  /** Folder the photo paths were made relative to, if it exists here. */
+  images_dir?: string | null
 }
 
 export interface McJob {

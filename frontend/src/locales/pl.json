@@ -188,7 +188,10 @@
     "review_order_time": "Według czasu: najwcześniejsze najpierw (czas do detekcji)",
     "hint_review_order_score": "Przegląd zwykle kończy się szybciej, bo pierwsze pokazane zdarzenie jest najbardziej prawdopodobnie poprawne. Historie detekcji są takie same przy obu kolejnościach.",
     "hint_review_order_time": "Każdą okazję przegląda się od jej najwcześniejszego zdarzenia detekcji, więc pierwsze potwierdzone jest pierwszą prawdziwą detekcją. Oprócz historii detekcji (takich samych jak według wyniku) wyniki zawierają czas do pierwszej detekcji (ttd_*.csv, w godzinach od początku okazji) dla modeli czasu do detekcji. Zwykle wymaga to kilku zdarzeń więcej niż według wyniku.",
-    "review_order_mc_warning": "Ten zbiór filtrowano według komórek, co zachowuje obecność, ale może usunąć najwcześniejsze zdarzenie detekcji okazji. Dla czasu do detekcji połącz klasyfikatory ponownie z opcją „None” w opcjach zaawansowanych."
+    "review_order_mc_warning": "Ten zbiór filtrowano według komórek, co zachowuje obecność, ale może usunąć najwcześniejsze zdarzenie detekcji okazji. Dla czasu do detekcji połącz klasyfikatory ponownie z opcją „None” w opcjach zaawansowanych.",
+    "mc_dataset_title": "Połączony zbiór danych",
+    "mc_dataset_desc": "Klasyfikatory zostały połączone w ten CamtrapDP. Sprawdź tylko, gdzie są zdjęcia: okres badań, okazje próbkowania i zdarzenia detekcji pochodzą z połączenia.",
+    "mc_sampling_summary": "Ustalone przez połączenie klasyfikatorów: okres badań od {{start}} do {{end}}, okazje próbkowania po {{duration}} i zdarzenia detekcji ze zdjęć oddalonych o najwyżej {{gap}} s. Aby je zmienić, połącz klasyfikatory ponownie."
   },
   "index": {
     "title": "Weryfikacja wykryć",
@@ -301,7 +304,9 @@
     "open_tip": "przeglądaj w dużym widoku (kliknij zdjęcie lub przycisk po prawej stronie lokalizacji). Tam widać każde zdjęcie zdarzenia detekcji, można powiększać i zmieniać jasność oraz decydować klawiaturą: Y potwierdzone, U niepewne, N odrzucone; ← → zmieniają zdjęcie, ↑ ↓ zdarzenie detekcji.",
     "open_large": "Przeglądaj w dużym widoku",
     "round_hint_time": "W rundzie {{n}} każdą okazję próbkowania reprezentuje jej najwcześniejsze zdarzenie detekcji spośród jeszcze nieprzejrzanych.",
-    "round_hint_unsure_time": "W rundzie {{n}} każdą okazję próbkowania reprezentuje jej najwcześniejsze zdarzenie detekcji spośród jeszcze nieprzejrzanych. Jeśli nie masz pewności, oznacz je jako «Niepewne»: liczy się jako niepotwierdzone przy przejściu do następnej rundy, ale okazja nie zostanie uznana za niewykrytą, dopóki ktoś jej nie przejrzy."
+    "round_hint_unsure_time": "W rundzie {{n}} każdą okazję próbkowania reprezentuje jej najwcześniejsze zdarzenie detekcji spośród jeszcze nieprzejrzanych. Jeśli nie masz pewności, oznacz je jako «Niepewne»: liczy się jako niepotwierdzone przy przejściu do następnej rundy, ale okazja nie zostanie uznana za niewykrytą, dopóki ktoś jej nie przejrzy.",
+    "cross_elsewhere": "już potwierdzony w tej okazji",
+    "cross_elsewhere_tooltip": "{{species}} został potwierdzony w tej lokalizacji i okazji z innego zdjęcia. Można to cofnąć tylko z tamtego zdjęcia."
   },
   "help": {
     "title": "Pomoc — CamTrap Verify",
@@ -432,7 +437,7 @@
     "tie_ambiguous": "Najwyraźniejsze gatunki (najniższe prawdopodobieństwo drugiego gatunku)",
     "tie_simple": "Najprostsza metoda",
     "tie_none": "Najmniej zdarzeń, bez rozstrzygania",
-    "use_reference": "Zdjęcia sprawdzone przez referencję: użyj jej werdyktu (potwierdzone w górę, odrzucone w dół)",
+    "use_reference": "Użyj odpowiedzi referencji do skorygowania prawdopodobieństwa",
     "run": "Połącz",
     "running_btn": "Łączenie…",
     "running": "W toku: przy dużych archiwach może to potrwać kilka minut.",
@@ -508,11 +513,11 @@
     "how_more": "Pełne wyjaśnienie, z wynikami w archiwum testowym, jest w dokumentacji (strona pojawi się po opublikowaniu tej wersji):",
     "how_more_link": "Combining several classifiers: methods and workflow (po angielsku)",
     "retention_hint": "Te 99 % filtra: odsetek komórek, w których referencja potwierdza gatunek, które muszą zachować potwierdzone zdarzenie detekcji. Niższa wartość usuwa więcej i dopuszcza większe straty: przy 95 % mniej więcej co 20. komórka z gatunkiem może nie zachować żadnego potwierdzonego zdarzenia do przejrzenia i skończyć jako niewykryta.",
-    "tie_ambiguous_hint": "Spośród metod zremisowanych ta o najniższym średnim prawdopodobieństwie drugiego gatunku na zdjęciach grup z kilkoma gatunkami: ta, która najczęściej jasno mówi, jaki gatunek jest na zdjęciu.",
+    "tie_ambiguous_hint": "Jeśli kilka metod zostawia tyle samo zdarzeń detekcji do przejrzenia – ta, która najlepiej rozdziela podobne gatunki z tej samej grupy (np. jelenia i daniela): ta, która daje drugiemu gatunkowi najniższe średnie prawdopodobieństwo na ich zdjęciach.",
     "tie_simple_hint": "Spośród metod zremisowanych pierwsza z listy: ta z najmniejszą liczbą założeń, bezpieczniejsza, jeśli zdjęcia referencji nie przypominają pozostałych.",
     "tie_none_hint": "Metoda z najmniejszą liczbą zdarzeń do przejrzenia, nawet gdy różnica nie jest istotna.",
-    "use_reference_hint": "Zalecane: wykorzystuje to, co ludzie już sprawdzili. Potwierdzone zdjęcia trafiają na samą górę i nigdy nie są usuwane; zdjęcia odrzucone przez referencję są obniżane (×0,05 dla innego zwierzęcia lub człowieka, ×0,10 dla pustych), a nie usuwane.",
-    "always_kept": "Zawsze zachowywane, niezależnie od opcji: najlepsze zdarzenie detekcji każdej komórki, zdarzenia potwierdzone przez referencję i te ze zwierzęciem, którego nie mogła rozpoznać.",
+    "use_reference_hint": "Zalecane. Niektóre zdjęcia mają już klasyfikację człowieka z referencji (np. Zooniverse). Jeśli zgadza się z ocenianym gatunkiem, zdjęcie otrzymuje najwyższe prawdopodobieństwo i jest pokazywane jako pierwsze w swojej komórce. Jeśli referencja sklasyfikowała je jako inne zwierzę lub człowieka, prawdopodobieństwo jest mnożone przez 0,05; jako puste – przez 0,10, łagodniejsza kara, bo małe lub odległe zwierzęta mogą zostać przeoczone. Zdjęcia bez klasyfikacji referencji zachowują prawdopodobieństwo klasyfikatorów.",
+    "always_kept": "Przy opcji „Według komórek” zdarzenia detekcji poniżej progu ich gatunku są usuwane z przeglądu, z wyjątkiem: (1) zdarzenia detekcji o najwyższym prawdopodobieństwie w każdej komórce (lokalizacja × okazja próbkowania × gatunek), aby żadna komórka nie została bez zdarzeń detekcji do przejrzenia; (2) zdarzeń detekcji, które referencja sklasyfikowała jako ten gatunek; (3) zdarzeń detekcji, które referencja sklasyfikowała jako niezidentyfikowane zwierzę.",
     "sum_title": "Co zrobiło połączenie",
     "sum_method": "Wybrana metoda: {{name}}. Spośród metod, które zachowują potwierdzone zdarzenie detekcji w {{share}} komórek z gatunkiem, zostawia najmniej zdarzeń do obejrzenia ({{rounds}}).",
     "sum_rule_ambiguous": "remis rozstrzygnięto według najwyraźniejszego gatunku (średnie prawdopodobieństwo drugiego gatunku: {{value}}).",

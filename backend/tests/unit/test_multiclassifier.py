@@ -262,6 +262,20 @@ def test_combined_dataset_photos_are_found_under_the_images_folder(archive, tmp_
     r = out[out["mediaID"] == row["mediaID"]].iloc[0]
     found = resolve_media_path(r["filePath"], r["deploymentID"], r["fileName"], str(imgs), Path(res["camtrap_dir"]))
     assert found.exists()
+    assert res["images_dir"] is None        # that folder is not on this computer
+
+
+def test_images_dir_is_suggested_when_the_photo_folder_exists_here(archive, tmp_path):
+    """The wizard pre-fills the images directory with the common folder of the photos."""
+    src = tmp_path / "local"
+    src.mkdir()
+    photos = tmp_path / "photos"
+    photos.mkdir()
+    med = pd.read_csv(archive / "A" / "media.csv", dtype=str)
+    med["filePath"] = photos.as_posix() + "/" + med["deploymentID"] + "/" + med["mediaID"] + ".jpg"
+    med.to_csv(src / "media.csv", index=False)
+    res = run(_cfg(archive, filter_mode="none", media_source=str(src)), tmp_path / "out6")
+    assert Path(res["images_dir"]) == photos
 
 
 def test_learned_strategy_beats_raw_on_fallow_deer_mistakes(archive, tmp_path):

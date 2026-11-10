@@ -8,7 +8,7 @@ import SessionNameEditor from '../components/SessionNameEditor'
 import MultiClassifierForm, { type McParams } from '../components/MultiClassifierForm'
 import RelinkDialog from '../components/RelinkDialog'
 import type { RecentSession, RelinkStatus, WorkflowConfig } from '../types'
-import OccasionLength from '../components/OccasionLength'
+import OccasionLength, { occasionDuration } from '../components/OccasionLength'
 
 interface Props { onSetup: () => void; ready: boolean }
 
@@ -216,6 +216,7 @@ export default function SetupPage({ onSetup, ready }: Props) {
       gap_seconds: p.gap_seconds,
       min_score: 0,
       min_score_by_species: {},
+      image_base_dir: p.images_dir || f.image_base_dir,
     }))
     setDataRange({ min: p.study_start, max: p.study_end })
     setSelectedSpecies(new Set(p.species))
@@ -282,7 +283,9 @@ export default function SetupPage({ onSetup, ready }: Props) {
     const err = validate(currentDataRange)
     if (err) { setStepError(err); return }
     setStepError(null)
-    setStep((s) => s + 1)
+    // The study period of a combined dataset was set when combining the
+    // classifiers: skip that step (it is summarised in the last one).
+    setStep((s) => (mcLocked && s + 1 === 2 ? 3 : s + 1))
   }
 
   function goBack() {
@@ -296,7 +299,7 @@ export default function SetupPage({ onSetup, ready }: Props) {
       setLocalFormat(null)
       setMcLocked(false)
     } else {
-      setStep((s) => s - 1)
+      setStep((s) => (mcLocked && s - 1 === 2 ? 1 : s - 1))
     }
   }
 
@@ -925,9 +928,14 @@ export default function SetupPage({ onSetup, ready }: Props) {
       {/* ── Step 0d: CamtrapDP directory ── */}
       {step === 0 && sourceType === 'local' && localFormat === 'camtrapdp' && (
         <div>
-          <h4 className="text-lg font-semibold mb-1">{t('setup.step0_title')}</h4>
-          <p className="text-zinc-500 dark:text-zinc-400 mb-6 text-sm">{t('setup.step0_desc')}</p>
-
+          <h4 className="text-lg font-semibold mb-1">{t(mcLocked ? 'setup.mc_dataset_title' : 'setup.step0_title')}</h4>
+          <p className="text-zinc-500 dark:text-zinc-400 mb-6 text-sm">{t(mcLocked ? 'setup.mc_dataset_desc' : 'setup.step0_desc')}</p>
+          {mcLocked ? (
+          <div className="mb-6">
+            <label className={labelClass}>{t('setup.label_data_dir')}</label>
+            <p className="font-mono text-sm break-all text-zinc-800 dark:text-zinc-200" data-testid="mc-dataset-path">{form.camtrap_dir}</p>
+          </div>
+          ) : (
           <div className="mb-6">
             <label className={labelClass}>{t('setup.label_data_dir')}</label>
             <div className="flex">
@@ -943,6 +951,7 @@ export default function SetupPage({ onSetup, ready }: Props) {
               </button>
             </div>
           </div>
+          )}
 
           <div className="mb-6">
             <label className={labelClass}>
@@ -1210,9 +1219,20 @@ export default function SetupPage({ onSetup, ready }: Props) {
           <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-1">
             {t('setup.section_sampling')}
           </p>
+          {!mcLocked && (
           <p className="text-zinc-500 dark:text-zinc-400 mb-4 text-sm"
             dangerouslySetInnerHTML={{ __html: t('setup.step3_desc') }} />
+          )}
 
+          {mcLocked && (
+            <div className="mb-6 px-3.5 py-2.5 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 text-sm" data-testid="mc-sampling-summary">
+              {t('setup.mc_sampling_summary', {
+                start: formatDate(form.study_start), end: formatDate(form.study_end),
+                duration: occasionDuration(t, form.occasion_days, form.occasion_hours), gap: form.gap_seconds,
+              })}
+            </div>
+          )}
+          {!mcLocked && (
           <div className="mb-6">
             <label htmlFor="setup-occ" className={labelClass}>{t('setup.label_occasion_days')}</label>
             <OccasionLength id="setup-occ" days={form.occasion_days} hours={form.occasion_hours} disabled={mcLocked}
@@ -1220,8 +1240,8 @@ export default function SetupPage({ onSetup, ready }: Props) {
               onChange={(d, h) => setForm((f) => ({ ...f, occasion_days: d, occasion_hours: h }))} />
             <p className={hintClass}>{t('setup.hint_occasion_days')}</p>
             {!!form.occasion_hours && <p className={hintClass}>{t('setup.hint_occasion_hours')}</p>}
-            {mcLocked && <p className={hintClass}>{t('setup.mc_locked')}</p>}
           </div>
+          )}
 
           <div className="mb-6">
             <label htmlFor="setup-order" className={labelClass}>{t('setup.label_review_order')}</label>
@@ -1236,13 +1256,14 @@ export default function SetupPage({ onSetup, ready }: Props) {
             )}
           </div>
 
+          {!mcLocked && (
           <div className="mb-6">
             <label className={labelClass}>{t('setup.label_gap')}</label>
-            <input type="number" className={inputClass} min={1} value={form.gap_seconds} disabled={mcLocked}
+            <input type="number" className={inputClass} min={1} value={form.gap_seconds}
               onChange={(e) => set('gap_seconds', Number(e.target.value))} />
             <p className={hintClass}>{t('setup.hint_gap')}</p>
-            {mcLocked && <p className={hintClass}>{t('setup.mc_locked')}</p>}
           </div>
+          )}
 
           {mcLocked ? (
           <div className="mb-6">

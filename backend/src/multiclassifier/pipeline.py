@@ -310,6 +310,7 @@ def run(cfg: PipelineConfig, out_dir: Path, log: Log = lambda _m: None,
         obs = pd.concat([obs, ing.others.reindex(columns=OBS_COLUMNS)], ignore_index=True)
     obs.to_csv(out_dir / "observations.csv", index=False)
     media_out = ing.media.copy()
+    prefix = None
     if "filePath" in media_out:
         media_out["filePath"], prefix = relative_file_paths(media_out["filePath"])
         if prefix:
@@ -366,4 +367,7 @@ def run(cfg: PipelineConfig, out_dir: Path, log: Log = lambda _m: None,
         "study_start": cfg.date_start, "study_end": cfg.date_end,
         "occasion_days": cfg.occasion_days, "occasion_hours": cfg.occasion_hours, "gap_seconds": cfg.gap_seconds,
         "warnings": warnings,
+        # Folder the photo paths were made relative to, when it exists on this
+        # computer: the session wizard pre-fills it as the images directory.
+        "images_dir": prefix if prefix and Path(prefix).is_dir() else None,
     })

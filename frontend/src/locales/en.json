@@ -188,7 +188,10 @@
     "review_order_time": "By time: the earliest first (time to detection)",
     "hint_review_order_score": "The review usually ends sooner, because the first event shown is the most likely to be right. The detection histories are the same with either order.",
     "hint_review_order_time": "Each occasion is reviewed from its earliest detection event, so the first one confirmed is the first true detection. Besides the detection histories (the same as by score), the results include the time to the first detection (ttd_*.csv, in hours from the start of the occasion) for time-to-detection models. It usually takes a few more events than by score.",
-    "review_order_mc_warning": "This dataset was filtered by cells, which keeps presence but can remove the earliest detection event of an occasion. For time to detection, combine the classifiers again with “None” in the advanced options."
+    "review_order_mc_warning": "This dataset was filtered by cells, which keeps presence but can remove the earliest detection event of an occasion. For time to detection, combine the classifiers again with “None” in the advanced options.",
+    "mc_dataset_title": "Combined dataset",
+    "mc_dataset_desc": "The classifiers were combined into this CamtrapDP. Only check where the photos are: the study period, sampling occasions and detection events come from the combination.",
+    "mc_sampling_summary": "Set by the classifier combination: study period from {{start}} to {{end}}, sampling occasions of {{duration}}, and detection events made of photos up to {{gap}} s apart. To change them, combine the classifiers again."
   },
   "index": {
     "title": "Detection verification",
@@ -301,7 +304,9 @@
     "open_tip": "review in the large view (click a photo or the button on the right of the location). There you see every photo of the detection event, can zoom and change brightness, and decide with the keyboard: Y confirmed, U unsure, N rejected; ← → change photo, ↑ ↓ change detection event.",
     "open_large": "Review in large view",
     "round_hint_time": "In round {{n}}, each sampling occasion is represented by its earliest detection event among those not yet reviewed.",
-    "round_hint_unsure_time": "In round {{n}}, each sampling occasion is represented by its earliest detection event among those not yet reviewed. If you are not sure, mark it «Unsure»: it counts as not confirmed for the next round, but the occasion will not be set to not detected until someone reviews it."
+    "round_hint_unsure_time": "In round {{n}}, each sampling occasion is represented by its earliest detection event among those not yet reviewed. If you are not sure, mark it «Unsure»: it counts as not confirmed for the next round, but the occasion will not be set to not detected until someone reviews it.",
+    "cross_elsewhere": "already confirmed in this occasion",
+    "cross_elsewhere_tooltip": "{{species}} was confirmed in this location and occasion from another photo. It can only be undone from that photo."
   },
   "help": {
     "title": "Help — CamTrap Verify",
@@ -432,7 +437,7 @@
     "tie_ambiguous": "Clearest species (lowest second-species probability)",
     "tie_simple": "Simplest method",
     "tie_none": "Fewest events, no tie-break",
-    "use_reference": "Photos reviewed by the reference: use its verdict (confirmed go up, rejected go down)",
+    "use_reference": "Use the reference's answers to adjust the probability",
     "run": "Combine",
     "running_btn": "Combining…",
     "running": "Running: this can take a few minutes on large archives.",
@@ -508,11 +513,11 @@
     "how_more": "The full explanation, with the results on a test archive, is in the documentation (the page is there once this version is published):",
     "how_more_link": "Combining several classifiers: methods and workflow",
     "retention_hint": "The 99 % used by the filter: the share of the cells where the reference confirms the species that must keep a confirmed detection event. A lower value removes more and accepts losing more: at 95 %, about 1 cell in 20 where the species is present may keep no confirmed detection event to review, and could end up as not detected.",
-    "tie_ambiguous_hint": "Among the tied methods, the one with the lowest mean probability of the second species in photos of groups with several species: the one that most often says clearly which species each photo is.",
+    "tie_ambiguous_hint": "If several methods leave the same number of detection events to review, the one that best separates similar species of the same group (e.g. red and fallow deer): the one giving the lowest average probability to the second species in their photos.",
     "tie_simple_hint": "Among the tied methods, the first of the list: the one with fewest assumptions, safer if the reference photos are not like the rest.",
     "tie_none_hint": "The method with fewest events to look at, even when the difference is not significant.",
-    "use_reference_hint": "Recommended: it uses what people already checked. Confirmed photos go to the top and are never removed; photos the reference rejected are lowered (×0.05 for another animal or a person, ×0.10 for empty), not deleted.",
-    "always_kept": "Always kept, whatever the options: the best detection event of each cell, the detection events the reference confirmed and those with an animal it couldn't identify.",
+    "use_reference_hint": "Recommended. Some photos already have a human classification from the reference (e.g. Zooniverse). If it matches the species being scored, the photo gets the highest probability and is shown first in its cell. If the reference classified it as another animal or a person, the probability is multiplied by 0.05; if as empty, by 0.10, a milder penalty because small or distant animals can be missed. Photos without a reference classification keep the classifiers' probability.",
+    "always_kept": "With “By cells”, detection events below their species' threshold are removed from the review, except: (1) the highest-probability detection event of each cell (location × sampling occasion × species), so no cell is left without detection events to review; (2) detection events the reference classified as the species; (3) detection events the reference classified as an unidentified animal.",
     "sum_title": "What the combination did",
     "sum_method": "Method chosen: {{name}}. Among the methods that keep a confirmed detection event in {{share}} of the cells with the species, it leaves the fewest detection events to look at ({{rounds}}).",
     "sum_rule_ambiguous": "the tie was broken by the clearest species (mean probability of the second species: {{value}}).",

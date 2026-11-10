@@ -188,7 +188,10 @@
     "review_order_time": "Nach Zeit: das früheste zuerst (Zeit bis zur Detektion)",
     "hint_review_order_score": "Die Überprüfung endet meist früher, weil das erste gezeigte Ereignis am wahrscheinlichsten richtig ist. Die Detektionshistorien sind bei beiden Reihenfolgen gleich.",
     "hint_review_order_time": "Jeder Anlass wird ab seinem frühesten Detektionsereignis geprüft, sodass das erste bestätigte die erste echte Detektion ist. Neben den Detektionshistorien (gleich wie nach Score) enthalten die Ergebnisse die Zeit bis zur ersten Detektion (ttd_*.csv, in Stunden ab Beginn des Anlasses) für Time-to-Detection-Modelle. Es braucht meist einige Ereignisse mehr als nach Score.",
-    "review_order_mc_warning": "Dieser Datensatz wurde nach Zellen gefiltert; das erhält das Vorkommen, kann aber das früheste Detektionsereignis eines Anlasses entfernen. Für die Zeit bis zur Detektion die Klassifizierer erneut mit „None“ in den erweiterten Optionen kombinieren."
+    "review_order_mc_warning": "Dieser Datensatz wurde nach Zellen gefiltert; das erhält das Vorkommen, kann aber das früheste Detektionsereignis eines Anlasses entfernen. Für die Zeit bis zur Detektion die Klassifizierer erneut mit „None“ in den erweiterten Optionen kombinieren.",
+    "mc_dataset_title": "Kombinierter Datensatz",
+    "mc_dataset_desc": "Die Klassifizierer wurden zu diesem CamtrapDP kombiniert. Prüfen Sie nur, wo die Fotos liegen: Untersuchungszeitraum, Erfassungsperioden und Detektionsereignisse stammen aus der Kombination.",
+    "mc_sampling_summary": "Durch die Kombination der Klassifizierer festgelegt: Untersuchungszeitraum vom {{start}} bis {{end}}, Erfassungsperioden von {{duration}} und Detektionsereignisse aus Fotos mit höchstens {{gap}} s Abstand. Um sie zu ändern, die Klassifizierer erneut kombinieren."
   },
   "index": {
     "title": "Erkennungsüberprüfung",
@@ -301,7 +304,9 @@
     "open_tip": "in der Großansicht prüfen (auf ein Foto oder die Schaltfläche rechts neben dem Standort klicken). Dort sehen Sie jedes Foto des Detektionsereignisses, können zoomen und die Helligkeit ändern und per Tastatur entscheiden: Y bestätigt, U unsicher, N abgelehnt; ← → wechseln das Foto, ↑ ↓ das Detektionsereignis.",
     "open_large": "In Großansicht prüfen",
     "round_hint_time": "In Runde {{n}} wird jeder Stichprobenanlass durch sein frühestes noch nicht geprüftes Detektionsereignis vertreten.",
-    "round_hint_unsure_time": "In Runde {{n}} wird jeder Stichprobenanlass durch sein frühestes noch nicht geprüftes Detektionsereignis vertreten. Wenn Sie unsicher sind, markieren Sie es als «Unsicher»: Es zählt für die nächste Runde als nicht bestätigt, aber der Stichprobenanlass gilt erst als nicht nachgewiesen, wenn jemand ihn geprüft hat."
+    "round_hint_unsure_time": "In Runde {{n}} wird jeder Stichprobenanlass durch sein frühestes noch nicht geprüftes Detektionsereignis vertreten. Wenn Sie unsicher sind, markieren Sie es als «Unsicher»: Es zählt für die nächste Runde als nicht bestätigt, aber der Stichprobenanlass gilt erst als nicht nachgewiesen, wenn jemand ihn geprüft hat.",
+    "cross_elsewhere": "in dieser Periode bereits bestätigt",
+    "cross_elsewhere_tooltip": "{{species}} wurde an diesem Standort und in dieser Periode auf einem anderen Foto bestätigt. Rückgängig machen geht nur von jenem Foto aus."
   },
   "help": {
     "title": "Hilfe — CamTrap Verify",
@@ -432,7 +437,7 @@
     "tie_ambiguous": "Eindeutigste Arten (geringste Wahrscheinlichkeit der zweiten Art)",
     "tie_simple": "Einfachste Methode",
     "tie_none": "Wenigste Ereignisse, ohne Entscheidung",
-    "use_reference": "Von der Referenz geprüfte Fotos: ihr Urteil verwenden (bestätigte steigen, abgelehnte sinken)",
+    "use_reference": "Die Antworten der Referenz zur Anpassung der Wahrscheinlichkeit verwenden",
     "run": "Kombinieren",
     "running_btn": "Wird kombiniert…",
     "running": "Läuft: Bei großen Archiven kann es einige Minuten dauern.",
@@ -508,11 +513,11 @@
     "how_more": "Die vollständige Erklärung mit den Ergebnissen in einem Testarchiv steht in der Dokumentation (die Seite erscheint, sobald diese Version veröffentlicht ist):",
     "how_more_link": "Combining several classifiers: methods and workflow (auf Englisch)",
     "retention_hint": "Die 99 % des Filters: der Anteil der Zellen, in denen die Referenz die Art bestätigt, die ein bestätigtes Detektionsereignis behalten müssen. Ein niedrigerer Wert entfernt mehr und nimmt mehr Verlust in Kauf: Bei 95 % kann etwa jede 20. Zelle mit der Art kein bestätigtes Ereignis zur Überprüfung behalten und als nicht nachgewiesen enden.",
-    "tie_ambiguous_hint": "Unter den gleichauf liegenden Methoden die mit der niedrigsten mittleren Wahrscheinlichkeit der zweiten Art in Fotos von Gruppen mit mehreren Arten: die, die am häufigsten klar sagt, welche Art jedes Foto zeigt.",
+    "tie_ambiguous_hint": "Wenn mehrere Methoden gleich viele Detektionsereignisse zur Prüfung übrig lassen, die, die ähnliche Arten derselben Gruppe am besten trennt (z. B. Rot- und Damhirsch): die, die der zweiten Art in ihren Fotos die niedrigste mittlere Wahrscheinlichkeit gibt.",
     "tie_simple_hint": "Unter den gleichauf liegenden Methoden die erste der Liste: die mit den wenigsten Annahmen, sicherer, wenn die Referenzfotos dem Rest nicht ähneln.",
     "tie_none_hint": "Die Methode mit den wenigsten zu prüfenden Ereignissen, auch wenn der Unterschied nicht signifikant ist.",
-    "use_reference_hint": "Empfohlen: Es nutzt, was Menschen schon geprüft haben. Bestätigte Fotos kommen ganz nach oben und werden nie entfernt; von der Referenz abgelehnte Fotos werden herabgesetzt (×0,05 bei einem anderen Tier oder einem Menschen, ×0,10 bei leer), nicht gelöscht.",
-    "always_kept": "Immer behalten, unabhängig von den Optionen: das beste Detektionsereignis jeder Zelle, die von der Referenz bestätigten Ereignisse und die mit einem Tier, das sie nicht bestimmen konnte.",
+    "use_reference_hint": "Empfohlen. Einige Fotos haben bereits eine menschliche Klassifizierung aus der Referenz (z. B. Zooniverse). Stimmt sie mit der bewerteten Art überein, erhält das Foto die höchste Wahrscheinlichkeit und wird in seiner Zelle zuerst gezeigt. Hat die Referenz es als anderes Tier oder als Mensch klassifiziert, wird die Wahrscheinlichkeit mit 0,05 multipliziert; als leer mit 0,10, eine mildere Strafe, weil kleine oder entfernte Tiere übersehen werden können. Fotos ohne Klassifizierung der Referenz behalten die Wahrscheinlichkeit der Klassifizierer.",
+    "always_kept": "Mit „Nach Zellen“ werden Detektionsereignisse unter dem Schwellenwert ihrer Art aus der Prüfung entfernt, außer: (1) das Detektionsereignis mit der höchsten Wahrscheinlichkeit jeder Zelle (Standort × Erfassungsperiode × Art), damit keine Zelle ohne zu prüfende Detektionsereignisse bleibt; (2) Detektionsereignisse, die die Referenz als die Art klassifiziert hat; (3) Detektionsereignisse, die die Referenz als nicht bestimmtes Tier klassifiziert hat.",
     "sum_title": "Was die Kombination getan hat",
     "sum_method": "Gewählte Methode: {{name}}. Unter den Methoden, die in {{share}} der Zellen mit der Art ein bestätigtes Detektionsereignis behalten, lässt sie die wenigsten Ereignisse zu prüfen ({{rounds}}).",
     "sum_rule_ambiguous": "wurde der Gleichstand über die deutlichste Art aufgelöst (mittlere Wahrscheinlichkeit der zweiten Art: {{value}}).",

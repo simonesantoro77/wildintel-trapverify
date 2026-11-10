@@ -188,7 +188,10 @@
     "review_order_time": "Por tiempo: el más temprano primero (tiempo hasta la detección)",
     "hint_review_order_score": "La revisión suele acabar antes, porque el primer evento que se muestra es el que más probablemente es correcto. Las historias de detección son las mismas con cualquier orden.",
     "hint_review_order_time": "Cada ocasión se revisa desde su evento de detección más temprano, así que el primero confirmado es la primera detección verdadera. Además de las historias de detección (las mismas que por score), los resultados incluyen el tiempo hasta la primera detección (ttd_*.csv, en horas desde el inicio de la ocasión) para modelos de tiempo hasta la detección. Suele costar algunos eventos más que por score.",
-    "review_order_mc_warning": "Este conjunto se filtró por celdas, que conserva la presencia pero puede quitar el evento de detección más temprano de una ocasión. Para el tiempo hasta la detección, combina de nuevo los clasificadores con «None» en las opciones avanzadas."
+    "review_order_mc_warning": "Este conjunto se filtró por celdas, que conserva la presencia pero puede quitar el evento de detección más temprano de una ocasión. Para el tiempo hasta la detección, combina de nuevo los clasificadores con «None» en las opciones avanzadas.",
+    "mc_dataset_title": "Conjunto combinado",
+    "mc_dataset_desc": "Los clasificadores se han combinado en este CamtrapDP. Solo comprueba dónde están las fotos: el periodo de estudio, las ocasiones de muestreo y los eventos de detección vienen de la combinación.",
+    "mc_sampling_summary": "Fijado por la combinación de clasificadores: periodo de estudio del {{start}} al {{end}}, ocasiones de muestreo de {{duration}} y eventos de detección formados por fotos separadas como máximo {{gap}} s. Para cambiarlos, vuelve a combinar los clasificadores."
   },
   "index": {
     "title": "Verificación de detecciones",
@@ -301,7 +304,9 @@
     "open_tip": "revisa en la vista grande (haz clic en una foto o en el botón a la derecha de la localización). Ahí ves todas las fotos del evento de detección, puedes ampliar y cambiar el brillo, y decidir con el teclado: Y confirmada, U dudosa, N no confirmada; ← → cambian de foto, ↑ ↓ cambian de evento de detección.",
     "open_large": "Revisar en vista grande",
     "round_hint_time": "En la ronda {{n}}, cada ocasión de muestreo se representa con su evento de detección más temprano entre los aún no revisados.",
-    "round_hint_unsure_time": "En la ronda {{n}}, cada ocasión de muestreo se representa con su evento de detección más temprano entre los aún no revisados. Si no lo tienes claro, márcalo como «Dudosa»: cuenta como no confirmado para avanzar de ronda, pero la ocasión no se dará por no detectada sin que alguien la revise."
+    "round_hint_unsure_time": "En la ronda {{n}}, cada ocasión de muestreo se representa con su evento de detección más temprano entre los aún no revisados. Si no lo tienes claro, márcalo como «Dudosa»: cuenta como no confirmado para avanzar de ronda, pero la ocasión no se dará por no detectada sin que alguien la revise.",
+    "cross_elsewhere": "ya confirmada en esta ocasión",
+    "cross_elsewhere_tooltip": "{{species}} se confirmó en esta localización y ocasión desde otra foto. Solo se puede deshacer desde esa foto."
   },
   "help": {
     "title": "Ayuda — CamTrap Verify",
@@ -432,7 +437,7 @@
     "tie_ambiguous": "Especies más claras (menor probabilidad de la segunda especie)",
     "tie_simple": "El método más simple",
     "tie_none": "Menos eventos, sin desempate",
-    "use_reference": "Fotos revisadas por la referencia: usar su veredicto (las confirmadas suben, las rechazadas bajan)",
+    "use_reference": "Usar las respuestas de la referencia para ajustar la probabilidad",
     "run": "Combinar",
     "running_btn": "Combinando…",
     "running": "En marcha: con archivos grandes puede tardar unos minutos.",
@@ -508,11 +513,11 @@
     "how_more": "La explicación completa, con los resultados en un archivo de prueba, está en la documentación (la página aparece cuando se publique esta versión):",
     "how_more_link": "Combining several classifiers: methods and workflow (en inglés)",
     "retention_hint": "El 99 % que usa el filtro: la parte de las celdas donde la referencia confirma la especie que debe conservar un evento de detección confirmado. Un valor más bajo quita más y acepta perder más: al 95 %, en 1 de cada 20 celdas donde está la especie puede no quedar ningún evento confirmado que revisar, y acabar como no detectada.",
-    "tie_ambiguous_hint": "Entre los métodos empatados, el de menor probabilidad media de la segunda especie en las fotos de grupos con varias especies: el que más a menudo dice con claridad qué especie es cada foto.",
+    "tie_ambiguous_hint": "Si varios métodos dejan el mismo número de eventos de detección por revisar, el que mejor separa especies parecidas del mismo grupo (p. ej., ciervo y gamo): el que da menor probabilidad media a la segunda especie en sus fotos.",
     "tie_simple_hint": "Entre los métodos empatados, el primero de la lista: el de menos supuestos, más seguro si las fotos de la referencia no se parecen al resto.",
     "tie_none_hint": "El método con menos eventos que mirar, aunque la diferencia no sea significativa.",
-    "use_reference_hint": "Recomendado: aprovecha lo que ya comprobaron las personas. Las fotos confirmadas suben arriba del todo y nunca se quitan; las que la referencia rechazó se bajan (×0,05 si es otro animal o una persona, ×0,10 si está vacía), no se borran.",
-    "always_kept": "Se mantienen siempre, sean cuales sean las opciones: el mejor evento de detección de cada celda, los eventos que confirmó la referencia y los que tienen un animal que no pudo identificar.",
+    "use_reference_hint": "Recomendado. Algunas fotos ya tienen una clasificación humana de la referencia (p. ej., Zooniverse). Si coincide con la especie que se puntúa, la foto recibe la probabilidad máxima y se muestra la primera de su celda. Si la referencia la clasificó como otro animal o una persona, la probabilidad se multiplica por 0,05; si como vacía, por 0,10, una penalización menor porque los animales pequeños o lejanos pueden pasar desapercibidos. Las fotos sin clasificación de la referencia mantienen la probabilidad de los clasificadores.",
+    "always_kept": "Con «Por celdas», los eventos de detección por debajo del umbral de su especie se quitan de la revisión, salvo: (1) el evento de detección de mayor probabilidad de cada celda (localización × ocasión de muestreo × especie), para que ninguna celda se quede sin eventos de detección que revisar; (2) los eventos de detección que la referencia clasificó como la especie; (3) los eventos de detección que la referencia clasificó como un animal no identificado.",
     "sum_title": "Qué ha hecho la combinación",
     "sum_method": "Método elegido: {{name}}. Entre los métodos que mantienen un evento de detección confirmado en el {{share}} de las celdas con la especie, es el que deja menos eventos a mirar ({{rounds}}).",
     "sum_rule_ambiguous": "el empate se resolvió por la especie más clara (probabilidad media de la segunda especie: {{value}}).",

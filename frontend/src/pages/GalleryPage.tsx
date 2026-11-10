@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { crossButtonState } from '../crossState'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import YARLightbox, { type ControllerRef, type SlideImage } from 'yet-another-react-lightbox'
@@ -370,6 +371,13 @@ export default function GalleryPage() {
     const cur = crossByCell[`${ev.siteId}|${ev.occasion}`]?.find((c) => c.scientificName === sp)
     if (cur?.status === 'confirmed') {
       showToast(t('gallery.cross_already', { species: sp }), 'warning')
+      return
+    }
+    // Confirmed from another photo of this occasion: undone only from that
+    // photo, so a click here (on a photo that may not even show it) can't
+    // erase it by mistake.
+    if (crossButtonState(cur, ev.frames) === 'elsewhere') {
+      showToast(t('gallery.cross_elsewhere_tooltip', { species: sp }), 'warning')
       return
     }
     setCrossBusy(true)
@@ -990,7 +998,7 @@ export default function GalleryPage() {
                     <span className="text-[11px] leading-tight text-white/70 mb-0.5">{t('gallery.cross_title')}</span>
                     {otherSpecies.map((sp, i) => {
                       const st = crossByCell[crossCell]?.find((c) => c.scientificName === sp)
-                      const status = st?.status ?? 'none'
+                      const status = crossButtonState(st, lbCurrentEv.frames)
                       return (
                         <button
                           key={sp}
@@ -999,19 +1007,29 @@ export default function GalleryPage() {
                               ? 'bg-sky-600 text-white hover:bg-sky-700'
                               : status === 'confirmed'
                               ? 'border border-emerald-700 bg-black/40 text-emerald-400 cursor-default'
+                              : status === 'elsewhere'
+                              ? 'border border-white/20 bg-white/10 text-white/60 cursor-default'
                               : 'border border-white/40 bg-black/40 text-white/90 hover:bg-sky-600 hover:border-sky-600 hover:text-white'
                           }`}
                           onClick={() => toggleCross(i)}
                           disabled={crossReadOnly}
+                          aria-disabled={status === 'elsewhere' || undefined}
                           title={status === 'confirmed'
                             ? t('gallery.cross_already', { species: sp })
+                            : status === 'elsewhere'
+                            ? t('gallery.cross_elsewhere_tooltip', { species: sp })
                             : status === 'cross'
                             ? t('gallery.cross_undo_tooltip', { species: sp })
                             : t('gallery.cross_tooltip', { species: sp, site: lbCurrentEv.siteId, occasion: lbCurrentEv.occasion })}
                         >
                           {i < 9 && <span className="text-[10px] opacity-60 font-mono w-3">{i + 1}</span>}
-                          <span className="italic flex-1 leading-tight break-words">{sp}</span>
-                          {status !== 'none' && <span aria-hidden="true">✓</span>}
+                          <span className="flex-1 leading-tight break-words">
+                            <span className="italic">{sp}</span>
+                            {status === 'elsewhere' && (
+                              <span className="block text-[10px] not-italic">{t('gallery.cross_elsewhere')}</span>
+                            )}
+                          </span>
+                          {(status === 'cross' || status === 'confirmed') && <span aria-hidden="true">✓</span>}
                         </button>
                       )
                     })}

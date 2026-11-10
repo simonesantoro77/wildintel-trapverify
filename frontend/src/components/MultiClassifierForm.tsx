@@ -22,6 +22,7 @@ export interface McParams {
   filter_mode?: string
   gap_seconds: number
   species: string[]
+  images_dir?: string | null
 }
 
 interface Props {
@@ -282,6 +283,7 @@ export default function MultiClassifierForm({ onConverted, onBack }: Props) {
         filter_mode: r.filter_mode,
         gap_seconds: r.gap_seconds,
         species: [...selected],
+        images_dir: r.images_dir ?? null,
       })
     } finally {
       setOpening(false)
