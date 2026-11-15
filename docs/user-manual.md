@@ -445,8 +445,8 @@ The lightbox shows:
 - The location and sampling occasion in the title bar.
 - Image adjustment controls in the toolbar.
 - A panel on the left with, from top to bottom:
-  - **Progress**: the round, how many cards of the round are decided (with a bar), how many at the current location, and how many cells of the species were resolved before this round.
-  - The other target species of the session (see below) and, right next to them, the decision buttons (**Confirmed**, **Unsure**, **Rejected**) stacked vertically, with **↶ Previous card** underneath.
+  - **Reviewing**: the species under review, and the **progress**: the round, how many detection events of the round are decided (with a bar), how many at the current location, and how many cells of the species were resolved before this round.
+  - The decision buttons for **this detection event** (**Confirmed**, **Unsure**, **Rejected**) stacked vertically, with **↶ Previous detection event** underneath, and, right next to them, the other target species of the session (see below).
 
 ### Another Species in the Photo
 
@@ -454,10 +454,9 @@ If the photo you are looking at shows another target species (for example a fall
 
 - The occasion counts as a detection of that species (`1` in its `dethist_verified_<sp>.csv`), also when the classifier never assigned it there; `verification_summary.csv` reports those cells as `false_negative_cells`.
 - If the occasion was still waiting in that species' own rounds, it will not be shown again there.
-- In the verified CamtrapDP, the photo gets a human-confirmed observation of that species (an existing one for the same photo and species is marked, otherwise a new one is added). The observation of the species being reviewed is not changed: decide on it as usual with the buttons below.
-- A species already confirmed in its own review at that location and occasion appears in green and cannot be clicked.
+- In the verified CamtrapDP, the photo gets a human-confirmed observation of that species (an existing one for the same photo and species is marked, otherwise a new one is added). The observation of the species being reviewed is not changed: decide on it as usual with the decision buttons.
 - A species confirmed from this list, from a photo of the detection event you are looking at, appears in blue with ✓; click it again to undo.
-- A species confirmed from a photo of another detection event of the same occasion (for example in an earlier round) appears in grey, marked *already confirmed in this occasion*. It cannot be clicked here, so it isn't undone by mistake from a photo that may not show it; undo it from the photo where it was marked.
+- A species already confirmed at that location and occasion, either in its own review or from a photo of another detection event (for example in an earlier round), appears in grey, marked *already confirmed in this occasion*, and cannot be clicked or selected with its number key: there is nothing to do, and it can't be undone by mistake from a photo that may not show it. Hover over it to see how it was confirmed; a confirmation made from another photo is undone from that photo.
 
 Confirmations made this way are saved at once (no need to finish the round) and travel in the session export (`decisions/cross_<sp>.csv`).
 

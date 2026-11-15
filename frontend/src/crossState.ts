@@ -2,12 +2,15 @@
  * State of an "Another species in this photo?" button for the detection event
  * open in the lightbox.
  *
- * - `confirmed`: the species was confirmed in its own review (green, fixed);
+ * - `confirmed`: the species was confirmed in its own review;
  * - `cross`: confirmed from a photo of this detection event (blue; a click undoes it);
  * - `elsewhere`: confirmed from a photo of another detection event of the same
- *   location and occasion (grey, fixed: it can only be undone from that photo,
- *   and showing it blue here would suggest this photo shows that species);
+ *   location and occasion (it can only be undone from that photo, and showing
+ *   it blue here would suggest this photo shows that species);
  * - `none`: not confirmed.
+ *
+ * The lightbox shows `confirmed` and `elsewhere` the same way (grey, "already
+ * confirmed in this occasion", disabled): for the reviewer they mean the same.
  */
 export type CrossButtonState = 'confirmed' | 'cross' | 'elsewhere' | 'none'
 

@@ -369,17 +369,11 @@ export default function GalleryPage() {
     const frame = ev?.frames[lbIndex]
     if (!sp || !ev || !frame || crossBusy || crossReadOnly) return
     const cur = crossByCell[`${ev.siteId}|${ev.occasion}`]?.find((c) => c.scientificName === sp)
-    if (cur?.status === 'confirmed') {
-      showToast(t('gallery.cross_already', { species: sp }), 'warning')
-      return
-    }
-    // Confirmed from another photo of this occasion: undone only from that
-    // photo, so a click here (on a photo that may not even show it) can't
-    // erase it by mistake.
-    if (crossButtonState(cur, ev.frames) === 'elsewhere') {
-      showToast(t('gallery.cross_elsewhere_tooltip', { species: sp }), 'warning')
-      return
-    }
+    // Already confirmed in this occasion (in its own review, or from a photo
+    // of another detection event): nothing to do here, and it can't be undone
+    // by mistake from a photo that may not even show it.
+    const state = crossButtonState(cur, ev.frames)
+    if (state === 'confirmed' || state === 'elsewhere') return
     setCrossBusy(true)
     try {
       if (cur?.status === 'cross') {
@@ -963,8 +957,8 @@ export default function GalleryPage() {
         captions={{ showToggle: false }}
         // Use the whole screen: photos are scaled up to fill it (see the
         // .yarl__slide_image rule), leaving room for the title, the decision
-        // panel on the left: progress, the other species and, next to them,
-        // the decision buttons (short mouse path between the two).
+        // panel on the left: progress, the decision buttons and, next to them,
+        // the other species (short mouse path between the two).
         styles={{
           slide: { padding: `44px 56px 40px ${otherSpecies.length ? 412 : 208}px` },
           navigationPrev: { left: otherSpecies.length ? 400 : 196 },
@@ -978,6 +972,9 @@ export default function GalleryPage() {
             >
               {/* Where the reviewer is in the work on this species. */}
               <div className="rounded-lg bg-black/55 border border-white/15 px-3 py-2 text-[11px] leading-snug text-white/80" aria-label={t('gallery.lb_progress_label')}>
+                <div className="text-sm text-white mb-1" data-testid="lb-reviewing">
+                  {t('gallery.lb_reviewing')}: <span className="italic font-semibold">{spStats?.species_name ?? (species ?? '').replace(/_/g, ' ')}</span>
+                </div>
                 {mode === 'rounds' && <div className="font-semibold text-white">{t('gallery.round', { n: iteration })}</div>}
                 <div>{t('gallery.decided_progress', { done: decidedCount, total: events.length })}</div>
                 <div className="h-1.5 rounded bg-white/15 my-1 overflow-hidden">
@@ -993,56 +990,6 @@ export default function GalleryPage() {
                 )}
               </div>
               <div className="flex gap-3 items-start">
-                {otherSpecies.length > 0 && (
-                  <div className="flex flex-col gap-1.5 w-48 shrink-0">
-                    <span className="text-[11px] leading-tight text-white/70 mb-0.5">{t('gallery.cross_title')}</span>
-                    {otherSpecies.map((sp, i) => {
-                      const st = crossByCell[crossCell]?.find((c) => c.scientificName === sp)
-                      const status = crossButtonState(st, lbCurrentEv.frames)
-                      return (
-                        <button
-                          key={sp}
-                          className={`px-2 py-1.5 text-left text-sm rounded transition-colors flex items-center gap-1.5 disabled:opacity-50 ${
-                            status === 'cross'
-                              ? 'bg-sky-600 text-white hover:bg-sky-700'
-                              : status === 'confirmed'
-                              ? 'border border-emerald-700 bg-black/40 text-emerald-400 cursor-default'
-                              : status === 'elsewhere'
-                              ? 'border border-white/20 bg-white/10 text-white/60 cursor-default'
-                              : 'border border-white/40 bg-black/40 text-white/90 hover:bg-sky-600 hover:border-sky-600 hover:text-white'
-                          }`}
-                          onClick={() => toggleCross(i)}
-                          disabled={crossReadOnly}
-                          aria-disabled={status === 'elsewhere' || undefined}
-                          title={status === 'confirmed'
-                            ? t('gallery.cross_already', { species: sp })
-                            : status === 'elsewhere'
-                            ? t('gallery.cross_elsewhere_tooltip', { species: sp })
-                            : status === 'cross'
-                            ? t('gallery.cross_undo_tooltip', { species: sp })
-                            : t('gallery.cross_tooltip', { species: sp, site: lbCurrentEv.siteId, occasion: lbCurrentEv.occasion })}
-                        >
-                          {i < 9 && <span className="text-[10px] opacity-60 font-mono w-3">{i + 1}</span>}
-                          <span className="flex-1 leading-tight break-words">
-                            <span className="italic">{sp}</span>
-                            {status === 'elsewhere' && (
-                              <span className="block text-[10px] not-italic">{t('gallery.cross_elsewhere')}</span>
-                            )}
-                          </span>
-                          {(status === 'cross' || status === 'confirmed') && <span aria-hidden="true">✓</span>}
-                        </button>
-                      )
-                    })}
-                    {lbDecision !== 'rejected' && lbCrossHere.length > 0 && (
-                      <p role="note" className="mt-1 text-[11px] leading-snug text-amber-300">
-                        {t(lbDecision === 'unsure' ? 'gallery.cross_unsure_note'
-                           : lbDecision === 'confirmed' ? 'gallery.cross_confirmed_note'
-                           : 'gallery.cross_pending_note',
-                           { species: lbCrossHere.join(', ') })}
-                      </p>
-                    )}
-                  </div>
-                )}
                 <div className="flex flex-col gap-2 w-40 shrink-0">
                   <span className="text-[11px] leading-tight text-white/70 mb-0.5">{t('gallery.lb_decision_title')}</span>
                   <div className="flex flex-col gap-2">
@@ -1092,6 +1039,57 @@ export default function GalleryPage() {
                     ↶ {t('gallery.prev_card')} <span className="opacity-60">(⌫)</span>
                   </button>
                 </div>
+                {otherSpecies.length > 0 && (
+                  <div className="flex flex-col gap-1.5 w-48 shrink-0">
+                    <span className="text-[11px] leading-tight text-white/70 mb-0.5">{t('gallery.cross_title')}</span>
+                    {otherSpecies.map((sp, i) => {
+                      const st = crossByCell[crossCell]?.find((c) => c.scientificName === sp)
+                      const status = crossButtonState(st, lbCurrentEv.frames)
+                      // Confirmed in its own review or from another detection event:
+                      // the same for the reviewer, so one look (origin in the tooltip).
+                      const already = status === 'confirmed' || status === 'elsewhere'
+                      return (
+                        <button
+                          key={sp}
+                          className={`px-2 py-1.5 text-left text-sm rounded transition-colors flex items-center gap-1.5 ${
+                            already
+                              ? 'border border-white/20 bg-white/10 text-white/60 cursor-default'
+                              : status === 'cross'
+                              ? 'bg-sky-600 text-white hover:bg-sky-700 disabled:opacity-50'
+                              : 'border border-white/40 bg-black/40 text-white/90 hover:bg-sky-600 hover:border-sky-600 hover:text-white disabled:opacity-50'
+                          }`}
+                          onClick={() => toggleCross(i)}
+                          // Already confirmed in this occasion: not a button any more.
+                          disabled={crossReadOnly || already}
+                          title={status === 'confirmed'
+                            ? t('gallery.cross_already', { species: sp })
+                            : status === 'elsewhere'
+                            ? t('gallery.cross_elsewhere_tooltip', { species: sp })
+                            : status === 'cross'
+                            ? t('gallery.cross_undo_tooltip', { species: sp })
+                            : t('gallery.cross_tooltip', { species: sp, site: lbCurrentEv.siteId, occasion: lbCurrentEv.occasion })}
+                        >
+                          {i < 9 && <span className="text-[10px] opacity-60 font-mono w-3">{i + 1}</span>}
+                          <span className="flex-1 leading-tight break-words">
+                            <span className="italic">{sp}</span>
+                            {already && (
+                              <span className="block text-[10px] not-italic">{t('gallery.cross_elsewhere')}</span>
+                            )}
+                          </span>
+                          {status === 'cross' && <span aria-hidden="true">✓</span>}
+                        </button>
+                      )
+                    })}
+                    {lbDecision !== 'rejected' && lbCrossHere.length > 0 && (
+                      <p role="note" className="mt-1 text-[11px] leading-snug text-amber-300">
+                        {t(lbDecision === 'unsure' ? 'gallery.cross_unsure_note'
+                           : lbDecision === 'confirmed' ? 'gallery.cross_confirmed_note'
+                           : 'gallery.cross_pending_note',
+                           { species: lbCrossHere.join(', ') })}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
             <div className="absolute bottom-0 right-0 flex flex-col items-center gap-3 px-4 pb-3" style={{ zIndex: 10000, left: otherSpecies.length ? 412 : 208 }}>
