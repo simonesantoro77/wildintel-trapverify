@@ -446,7 +446,7 @@ The lightbox shows:
 - Image adjustment controls in the toolbar.
 - A panel on the left with, from top to bottom:
   - **Reviewing**: the species under review, and the **progress**: the round, how many detection events of the round are decided (with a bar), how many at the current location, and how many cells of the species were resolved before this round.
-  - The decision buttons for **this detection event** (**Confirmed**, **Unsure**, **Rejected**) stacked vertically, with **↶ Previous detection event** underneath, and, right next to them, the other target species of the session (see below).
+  - The other target species of the session (see below) and, to their right, the decision buttons for **this detection event** (**Confirmed**, **Unsure**, **Rejected**) stacked vertically, with **↶ Previous detection event** underneath. The other species come first because a decision moves on to the next detection event: mark any other species in the photo before deciding.
 
 ### Another Species in the Photo
 

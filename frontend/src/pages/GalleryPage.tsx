@@ -990,55 +990,6 @@ export default function GalleryPage() {
                 )}
               </div>
               <div className="flex gap-3 items-start">
-                <div className="flex flex-col gap-2 w-40 shrink-0">
-                  <span className="text-[11px] leading-tight text-white/70 mb-0.5">{t('gallery.lb_decision_title')}</span>
-                  <div className="flex flex-col gap-2">
-                    <button
-                      className={`w-full py-3 text-base rounded font-medium transition-colors disabled:opacity-50 ${
-                        lbDecision === 'confirmed'
-                          ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                          : 'border border-emerald-600 bg-black/40 text-emerald-400 hover:bg-emerald-600 hover:text-white'
-                      }`}
-                      onClick={() => decideInLb('confirmed')}
-                      disabled={lbReadOnly}
-                    >
-                      {t('gallery.confirmed_btn')} <span className="opacity-60">(Y)</span>
-                    </button>
-                    {allowUnsure && (
-                      <button
-                        className={`w-full py-3 text-base rounded font-medium transition-colors disabled:opacity-50 ${
-                          lbDecision === 'unsure'
-                            ? 'bg-amber-500 text-white hover:bg-amber-600'
-                            : 'border border-amber-500 bg-black/40 text-amber-400 hover:bg-amber-500 hover:text-white'
-                        }`}
-                        onClick={() => decideInLb('unsure')}
-                      >
-                        {t('gallery.unsure_btn')} <span className="opacity-60">(U)</span>
-                      </button>
-                    )}
-                    <button
-                      className={`w-full py-3 text-base rounded font-medium transition-colors disabled:opacity-50 ${
-                        lbDecision === 'rejected'
-                          ? 'bg-red-600 text-white hover:bg-red-700'
-                          : 'border border-red-600 bg-black/40 text-red-400 hover:bg-red-600 hover:text-white'
-                      }`}
-                      onClick={() => decideInLb('rejected')}
-                      disabled={lbReadOnly}
-                    >
-                      {t('gallery.rejected_btn')} <span className="opacity-60">(N)</span>
-                    </button>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={lbGoBack}
-                    disabled={!lbCanGoBack}
-                    title={t('gallery.prev_card_tooltip')}
-                    className="mt-2 w-full py-1.5 text-xs rounded border border-white/40 bg-black/50 text-white/90 hover:bg-white/15 disabled:opacity-30 disabled:hover:bg-black/50"
-                  >
-                    ↶ {t('gallery.prev_card')} <span className="opacity-60">(⌫)</span>
-                  </button>
-                </div>
                 {otherSpecies.length > 0 && (
                   <div className="flex flex-col gap-1.5 w-48 shrink-0">
                     <span className="text-[11px] leading-tight text-white/70 mb-0.5">{t('gallery.cross_title')}</span>
@@ -1090,6 +1041,55 @@ export default function GalleryPage() {
                     )}
                   </div>
                 )}
+                <div className="flex flex-col gap-2 w-40 shrink-0">
+                  <span className="text-[11px] leading-tight text-white/70 mb-0.5">{t('gallery.lb_decision_title')}</span>
+                  <div className="flex flex-col gap-2">
+                    <button
+                      className={`w-full py-3 text-base rounded font-medium transition-colors disabled:opacity-50 ${
+                        lbDecision === 'confirmed'
+                          ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                          : 'border border-emerald-600 bg-black/40 text-emerald-400 hover:bg-emerald-600 hover:text-white'
+                      }`}
+                      onClick={() => decideInLb('confirmed')}
+                      disabled={lbReadOnly}
+                    >
+                      {t('gallery.confirmed_btn')} <span className="opacity-60">(Y)</span>
+                    </button>
+                    {allowUnsure && (
+                      <button
+                        className={`w-full py-3 text-base rounded font-medium transition-colors disabled:opacity-50 ${
+                          lbDecision === 'unsure'
+                            ? 'bg-amber-500 text-white hover:bg-amber-600'
+                            : 'border border-amber-500 bg-black/40 text-amber-400 hover:bg-amber-500 hover:text-white'
+                        }`}
+                        onClick={() => decideInLb('unsure')}
+                      >
+                        {t('gallery.unsure_btn')} <span className="opacity-60">(U)</span>
+                      </button>
+                    )}
+                    <button
+                      className={`w-full py-3 text-base rounded font-medium transition-colors disabled:opacity-50 ${
+                        lbDecision === 'rejected'
+                          ? 'bg-red-600 text-white hover:bg-red-700'
+                          : 'border border-red-600 bg-black/40 text-red-400 hover:bg-red-600 hover:text-white'
+                      }`}
+                      onClick={() => decideInLb('rejected')}
+                      disabled={lbReadOnly}
+                    >
+                      {t('gallery.rejected_btn')} <span className="opacity-60">(N)</span>
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={lbGoBack}
+                    disabled={!lbCanGoBack}
+                    title={t('gallery.prev_card_tooltip')}
+                    className="mt-2 w-full py-1.5 text-xs rounded border border-white/40 bg-black/50 text-white/90 hover:bg-white/15 disabled:opacity-30 disabled:hover:bg-black/50"
+                  >
+                    ↶ {t('gallery.prev_card')} <span className="opacity-60">(⌫)</span>
+                  </button>
+                </div>
               </div>
             </div>
             <div className="absolute bottom-0 right-0 flex flex-col items-center gap-3 px-4 pb-3" style={{ zIndex: 10000, left: otherSpecies.length ? 412 : 208 }}>
