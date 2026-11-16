@@ -265,7 +265,7 @@
     "needs_decision_count": "{{n}} detection events still need a decision before the round can be finished. Your progress is already saved: you can close and continue later.",
     "toast_rounds_done_pending": "Rounds finished. {{n}} occasions are pending expert review: review them now, or export the session so someone else can finish them.",
     "pending_badge": "Pending expert review",
-    "pending_hint": "These occasions ran out of detection events without a confirmation, and at least one was marked unsure. For each one, confirm presence (the event you are viewing is recorded), mark it as rejected, or leave it unsure for someone else to review. You can save without deciding all of them.",
+    "pending_hint": "These occasions ran out of detection events without a confirmation, and at least one was marked unsure. They are reviewed in rounds, one unsure event at a time: confirm presence, reject it (if the occasion has another unsure event, it is shown in the next round; if not, the occasion becomes not detected), or leave it unsure for someone else to review. You can save without deciding all of them.",
     "pending_count": "{{n}} pending expert review",
     "pending_nothing_to_save": "You have not confirmed or rejected any pending occasion.",
     "toast_pending_saved": "Saved. {{n}} occasions still pending expert review.",
@@ -310,7 +310,8 @@
     "lb_reviewing": "Reviewing",
     "cross_outside": "no candidates here: recorded apart",
     "cross_outside_tooltip": "The classifier did not flag {{species}} at this location and occasion. A confirmation here is recorded apart and does not count in its verified history, because only other species being reviewed can bring such cases to light.",
-    "cross_added_outside": "{{species}} recorded at {{site}}, occasion {{occasion}}, as an addition: the classifier had not flagged it here, so it is kept out of its verified history (see Results)."
+    "cross_added_outside": "{{species}} recorded at {{site}}, occasion {{occasion}}, as an addition: the classifier had not flagged it here, so it is kept out of its verified history (see Results).",
+    "pending_pos": "unsure event {{i}} of {{n}}"
   },
   "help": {
     "title": "Help — CamTrap Verify",

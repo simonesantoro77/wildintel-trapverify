@@ -275,8 +275,12 @@ def settle_pending(species_safe: str, confirmed_ids: list[str], rejected_keys: l
     )
     progress_service.clear_progress(species_safe, "pending", 0)
     rebuild_outputs()
-    logger.info("Pending cells settled for %s: confirmed=%d rejected=%d", species_safe, n_conf, n_rej)
-    return {"success": True, "confirmed": n_conf, "rejected": n_rej}
+    sp_cands = session_service.get_candidates()
+    sp_cands = sp_cands[sp_cands["species_safe"] == species_safe]
+    left = int((cell_states(sp_cands, p["decisions"])["status"] == "pending").sum())
+    logger.info("Pending cells settled for %s: confirmed=%d rejected=%d still pending=%d",
+                species_safe, n_conf, n_rej, left)
+    return {"success": True, "confirmed": n_conf, "rejected": n_rej, "pending": left}
 
 
 # ─── Going back to the previous round ────────────────────────────────────────
@@ -295,7 +299,8 @@ def reopen_last_round(species_safe: str) -> dict:
     rounds = rounds_done_by_species(d).get(species_safe, 0)
     if rounds < 1:
         raise HTTPException(400, "Esta especie no tiene ninguna ronda terminada.")
-    if (d / f"decisions_{species_safe}_pending.csv").exists() or (d / f"unsure_cleared_{species_safe}.csv").exists():
+    if any((d / f"{name}_{species_safe}{ext}").exists() for name, ext in
+           (("decisions", "_pending.csv"), ("unsure_cleared", ".csv"), ("pending_rejected", ".csv"))):
         raise HTTPException(
             400,
             "Ya se han resuelto ocasiones pendientes o se han editado las decisiones de esta "

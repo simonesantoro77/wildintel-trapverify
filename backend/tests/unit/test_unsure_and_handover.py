@@ -466,3 +466,61 @@ def test_existing_filepath_wins_over_extra_folders(tmp_path):
     imgs.mkdir()
     r = MediaResolver(str(imgs), imgs, extra_bases=(str(tmp_path / "other"),))
     assert r.resolve(str(real), "nope", "a.jpg") == real
+
+
+# ─── Pending review in rounds ─────────────────────────────────────────────────
+
+def _both_a1_events_unsure(client):
+    """A1 unsure in rounds 1 and 2 (its two events); B1 unsure in round 1."""
+    _round1_with_unsure(client)
+    ev2 = _events(client, 2)
+    resp = client.post("/api/decisions", json={
+        "species": SP, "iteration": 2, "confirmed": [], "unsure": [ev2[A1]["repObsId"]],
+    })
+    assert resp.status_code == 200
+    return ev2[A1]["repObsId"]
+
+
+def _pending(client):
+    return {e["key"]: e for e in client.get(f"/api/species/{SP}/pending").json()}
+
+
+def test_pending_review_goes_in_rounds_one_unsure_event_at_a_time(client, session):
+    ev1 = _events(client, 1)
+    a1_second = _both_a1_events_unsure(client)
+
+    # round 1 of the pending review: A1 shows only its first unsure event
+    p = _pending(client)
+    assert p[A1]["pendingIndex"] == 1 and p[A1]["pendingTotal"] == 2
+    assert {f["burstRepObsId"] for f in p[A1]["frames"]} == {ev1[A1]["repObsId"]}
+    assert p[B1]["pendingTotal"] == 1
+
+    # rejecting it does not settle A1: its second unsure event comes next
+    r = client.post(f"/api/species/{SP}/pending", json={"confirmed": [], "rejected_keys": [A1, B1]}).json()
+    assert r["rejected"] == 1          # only B1 is settled as not detected
+    assert r["pending"] == 1
+    p = _pending(client)
+    assert set(p) == {A1}
+    assert p[A1]["pendingIndex"] == 2
+    assert {f["burstRepObsId"] for f in p[A1]["frames"]} == {a1_second}
+
+    # rejecting the last one settles A1 as not detected
+    r = client.post(f"/api/species/{SP}/pending", json={"confirmed": [], "rejected_keys": [A1]}).json()
+    assert r["rejected"] == 1 and r["pending"] == 0
+    assert _stats(client)["phase"] == "complete"
+
+    # both A1 events are tagged rejected in the verified CamtrapDP
+    client.get("/api/results")
+    obs = pd.read_csv(Path(session["session_dir"]) / "camtrap_dp_verified" / "observations.csv", dtype=str)
+    a1 = obs[obs["observationID"].isin([ev1[A1]["repObsId"], a1_second])]
+    assert set(a1["observationTags"]) == {"camtrapverify:rejected"}
+
+
+def test_pending_review_confirming_a_later_unsure_event(client, session):
+    a1_second = _both_a1_events_unsure(client)
+    client.post(f"/api/species/{SP}/pending", json={"confirmed": [], "rejected_keys": [A1]})
+    p = _pending(client)
+    r = client.post(f"/api/species/{SP}/pending", json={"confirmed": [p[A1]["repObsId"]]}).json()
+    assert r["confirmed"] == 1
+    assert A1 not in _pending(client)
+    assert p[A1]["repObsId"] == a1_second

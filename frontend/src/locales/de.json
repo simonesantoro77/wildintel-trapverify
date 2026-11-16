@@ -265,7 +265,7 @@
     "needs_decision_count": "Für {{n}} Erkennungsereignisse fehlt noch eine Entscheidung, bevor die Runde abgeschlossen werden kann. Ihr Fortschritt ist bereits gespeichert: Sie können schließen und später weitermachen.",
     "toast_rounds_done_pending": "Runden abgeschlossen. {{n}} Stichprobenanlässe warten auf Expertenprüfung: Prüfen Sie sie jetzt oder exportieren Sie die Sitzung, damit jemand anderes sie abschließt.",
     "pending_badge": "Expertenprüfung offen",
-    "pending_hint": "Bei diesen Stichprobenanlässen sind alle Detektionsereignisse ohne Bestätigung aufgebraucht, und mindestens eines wurde als unsicher markiert. Bestätigen Sie jeweils das Vorkommen (das angezeigte Ereignis wird gespeichert), lehnen Sie ab oder lassen Sie es unsicher, damit jemand anderes es prüft. Sie können speichern, ohne alle zu entscheiden.",
+    "pending_hint": "Bei diesen Erfassungszeiträumen wurden alle Detektionsereignisse ohne Bestätigung geprüft, und mindestens eines wurde als unsicher markiert. Sie werden in Runden geprüft, jeweils ein unsicheres Ereignis: Anwesenheit bestätigen, ablehnen (hat der Zeitraum ein weiteres unsicheres Ereignis, erscheint es in der nächsten Runde; sonst gilt er als nicht nachgewiesen) oder unsicher lassen, damit jemand anderes es prüft. Sie können speichern, ohne alle zu entscheiden.",
     "pending_count": "{{n}} zur Expertenprüfung offen",
     "pending_nothing_to_save": "Sie haben keinen offenen Stichprobenanlass bestätigt oder abgelehnt.",
     "toast_pending_saved": "Gespeichert. {{n}} Stichprobenanlässe sind noch zur Expertenprüfung offen.",
@@ -310,7 +310,8 @@
     "lb_reviewing": "Geprüfte Art",
     "cross_outside": "hier keine Kandidaten: wird separat erfasst",
     "cross_outside_tooltip": "Der Klassifikator hat {{species}} an diesem Standort und Erfassungszeitraum nicht erkannt. Eine Bestätigung hier wird separat erfasst und zählt nicht in ihrer verifizierten Nachweishistorie, da solche Fälle nur bei der Prüfung anderer Arten auffallen.",
-    "cross_added_outside": "{{species}} an {{site}}, Erfassungszeitraum {{occasion}}, als Ergänzung erfasst: Der Klassifikator hatte sie hier nicht erkannt, daher bleibt sie außerhalb ihrer verifizierten Nachweishistorie (siehe Ergebnisse)."
+    "cross_added_outside": "{{species}} an {{site}}, Erfassungszeitraum {{occasion}}, als Ergänzung erfasst: Der Klassifikator hatte sie hier nicht erkannt, daher bleibt sie außerhalb ihrer verifizierten Nachweishistorie (siehe Ergebnisse).",
+    "pending_pos": "unsicheres Ereignis {{i}} von {{n}}"
   },
   "help": {
     "title": "Hilfe — CamTrap Verify",

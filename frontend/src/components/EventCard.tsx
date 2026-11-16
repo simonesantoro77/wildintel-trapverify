@@ -161,6 +161,11 @@ function EventCard({
         >
           <span>{t('gallery.occasion_label', { n: event.occasion })}</span>
           <span>{t('gallery.sequence', { rank: frame?.rank ?? event.rank, total: event.totalSeqs })}</span>
+          {event.pendingTotal != null && event.pendingTotal > 1 && (
+            <span className="text-amber-300" data-testid="pending-pos">
+              {t('gallery.pending_pos', { i: event.pendingIndex, n: event.pendingTotal })}
+            </span>
+          )}
         </span>
 
         <button

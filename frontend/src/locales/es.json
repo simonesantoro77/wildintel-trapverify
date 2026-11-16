@@ -265,7 +265,7 @@
     "needs_decision_count": "Faltan {{n}} eventos de detección por marcar antes de terminar la ronda. Lo que llevas ya está guardado: puedes cerrar y seguir más tarde.",
     "toast_rounds_done_pending": "Rondas terminadas. {{n}} ocasiones han quedado pendientes de experto: puedes revisarlas ahora o exportar la sesión para que otra persona las termine.",
     "pending_badge": "Pendientes de experto",
-    "pending_hint": "Estas ocasiones agotaron sus eventos de detección sin confirmarse y al menos uno se marcó como dudoso. Para cada una, confirma la presencia (se registra el evento que estés viendo), márcala como no confirmada o déjala como dudosa para que la revise otra persona. Puedes guardar sin decidirlas todas.",
+    "pending_hint": "Estas ocasiones se quedaron sin eventos de detección sin ninguna confirmación, y al menos uno se marcó como dudoso. Se revisan por rondas, un evento dudoso cada vez: confirma la presencia, recházalo (si la ocasión tiene otro evento dudoso, aparece en la ronda siguiente; si no, la ocasión queda como no detectada) o déjalo dudoso para que lo revise otra persona. Puedes guardar sin decidirlas todas.",
     "pending_count": "{{n}} pendientes de experto",
     "pending_nothing_to_save": "No has confirmado ni rechazado ninguna ocasión pendiente.",
     "toast_pending_saved": "Guardado. Quedan {{n}} ocasiones pendientes de experto.",
@@ -310,7 +310,8 @@
     "lb_reviewing": "Revisando",
     "cross_outside": "sin candidatas aquí: se anota aparte",
     "cross_outside_tooltip": "El clasificador no asignó {{species}} en esta localización y ocasión. Una confirmación aquí se anota aparte y no cuenta en su historial verificado, porque estos casos solo salen a la luz cuando se revisan otras especies.",
-    "cross_added_outside": "{{species}} anotada en {{site}}, ocasión {{occasion}}, como adición: el clasificador no la había asignado aquí, así que queda fuera de su historial verificado (ver Resultados)."
+    "cross_added_outside": "{{species}} anotada en {{site}}, ocasión {{occasion}}, como adición: el clasificador no la había asignado aquí, así que queda fuera de su historial verificado (ver Resultados).",
+    "pending_pos": "evento dudoso {{i}} de {{n}}"
   },
   "help": {
     "title": "Ayuda — CamTrap Verify",

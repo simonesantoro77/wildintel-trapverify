@@ -515,10 +515,10 @@ When you can't tell whether a detection event shows the species, mark it **? Uns
 
 ### Pending Expert Review
 
-Once all rounds of a species are done, its pending occasions are shown on their own (amber **Pending expert review** badge). Each card shows the detection events that were marked unsure. For each occasion you can:
+Once all rounds of a species are done, its pending occasions are shown on their own (amber **Pending expert review · round N** badge). Like the main review, this goes in rounds, one unsure detection event per occasion at a time, from the most confident one; when an occasion had several, the card says which one it is (*unsure event 1 of 3*). For each card you can:
 
-- **✓ Confirm** presence. The detection event you are looking at (in the card or the lightbox) is recorded as the confirmed one.
-- **✗ Reject** it: the occasion becomes a verified non-detection.
+- **✓ Confirm** presence. This detection event is recorded as the confirmed one and the occasion is closed.
+- **✗ Reject** it. If the occasion has another unsure event, that one is shown in the next pending round; if this was the last one, the occasion becomes a verified non-detection.
 - Leave it **? Unsure**, so that someone else can review it.
 
 You can save without deciding every card; whatever is left unsure stays pending. To hand the remaining occasions to a colleague, export the session (see [section 9](#9-continuing-a-session-on-another-computer)).

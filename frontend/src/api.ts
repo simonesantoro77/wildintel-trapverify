@@ -68,7 +68,7 @@ export const api = {
     req<DetectionEvent[]>(`/api/species/${species}/pending`),
 
   settlePending: (species: string, confirmed: string[], rejectedKeys: string[]) =>
-    post<{ success: boolean; confirmed: number; rejected: number }>(
+    post<{ success: boolean; confirmed: number; rejected: number; pending?: number }>(
       `/api/species/${species}/pending`,
       { confirmed, rejected_keys: rejectedKeys },
     ),

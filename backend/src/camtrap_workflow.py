@@ -1832,6 +1832,39 @@ def cleared_keys_set(decisions_dir: Path) -> set[str]:
     return keys
 
 
+def load_pending_rejected(decisions_dir: Path, species_safe: Optional[str] = None) -> set[tuple[str, int]]:
+    """Unsure events the expert rejected in the pending review, as
+    ``(site_occasion_key, rank)`` (``pending_rejected_<sp>.csv``)."""
+    out: set[tuple[str, int]] = set()
+    if decisions_dir.exists():
+        pattern = f"pending_rejected_{species_safe}.csv" if species_safe else "pending_rejected_*.csv"
+        for f in decisions_dir.glob(pattern):
+            df = pd.read_csv(f, dtype=str)
+            if {"site_occasion_key", "rank"} <= set(df.columns):
+                out.update(zip(df["site_occasion_key"], df["rank"].astype(int)))
+    return out
+
+
+def pending_queue(decisions_dir: Path, species_safe: str, keys: set[str]) -> dict[str, tuple[list[int], int]]:
+    """For each pending cell in ``keys``: the ranks of its unsure events still
+    to be shown in the pending review (lowest first), and how many unsure
+    events it had in total.
+
+    The pending review goes in rounds, like the main review: each round shows
+    one unsure event per cell; rejecting it brings the cell's next unsure event
+    in the next round, and rejecting the last one settles the cell as not
+    detected.
+    """
+    unsure = load_unsure(decisions_dir, species_safe)
+    unsure = unsure[unsure["site_occasion_key"].isin(keys)]
+    rejected = load_pending_rejected(decisions_dir, species_safe)
+    out: dict[str, tuple[list[int], int]] = {}
+    for key, grp in unsure.groupby("site_occasion_key"):
+        ranks = sorted(set(grp["round"].astype(int)))
+        out[key] = ([r for r in ranks if (key, r) not in rejected], len(ranks))
+    return out
+
+
 def cell_states(candidates: pd.DataFrame, decisions_dir: Path) -> pd.DataFrame:
     """One row per site × occasion × species cell with its review status.
 
@@ -1889,12 +1922,16 @@ def resolve_pending(
 
     Confirmed representative observations are appended to
     ``decisions_{species_safe}_pending.csv`` (picked up like any other
-    decision file, without counting as a new round); cells settled as not
-    detected are appended to ``unsure_cleared_{species_safe}.csv``. Cells
-    left unsure again are simply not mentioned and stay pending.
+    decision file, without counting as a new round). A rejected cell's
+    current unsure event is appended to ``pending_rejected_{species_safe}.csv``;
+    if it was the cell's last unsure event the cell is settled as not detected
+    (``unsure_cleared_{species_safe}.csv``), otherwise it stays pending and
+    shows its next unsure event. Cells left unsure again are simply not
+    mentioned and stay pending.
 
     Returns:
-        ``(n_confirmed, n_rejected)`` actually recorded.
+        ``(n_confirmed, n_rejected)``: cells confirmed, and cells settled as
+        not detected.
     """
     decisions_dir.mkdir(parents=True, exist_ok=True)
     sp_cands = candidates[candidates["species_safe"] == species_safe]
@@ -1912,7 +1949,19 @@ def resolve_pending(
         conf_rows.drop_duplicates("site_occasion_key").to_csv(path, index=False)
 
     confirmed_keys = set(conf_rows["site_occasion_key"]) if not conf_rows.empty else set()
-    cleared = sorted((set(rejected_keys) & pending) - confirmed_keys)
+    # Rejecting a pending card rejects the unsure event it shows. The cell is
+    # settled as not detected only when that was its last unsure event;
+    # otherwise its next unsure event comes in the next pending round.
+    to_reject = (set(rejected_keys) & pending) - confirmed_keys
+    queue = pending_queue(decisions_dir, species_safe, to_reject)
+    rej_rows = [{"site_occasion_key": k, "rank": queue[k][0][0]} for k in sorted(to_reject) if queue.get(k, ([],))[0]]
+    if rej_rows:
+        path = decisions_dir / f"pending_rejected_{species_safe}.csv"
+        new = pd.DataFrame(rej_rows).astype(str)
+        if path.exists():
+            new = pd.concat([pd.read_csv(path, dtype=str), new])
+        new.drop_duplicates().to_csv(path, index=False)
+    cleared = sorted(k for k in to_reject if len(queue.get(k, ([],))[0]) <= 1)
     if cleared:
         path = decisions_dir / f"unsure_cleared_{species_safe}.csv"
         existing = pd.read_csv(path, dtype=str) if path.exists() else pd.DataFrame(columns=["site_occasion_key"])
@@ -2253,11 +2302,12 @@ def get_pending_events(
 ) -> list[dict]:
     """Return the cells of a species that are pending expert review.
 
-    Each card carries the frames of every detection event of that cell that
-    was marked as unsure during the rounds (lowest rank first). Every frame
-    also has ``burstRepObsId`` (the representative observation of the event
-    it belongs to), so confirming while looking at a given event records
-    that event, not just the first one.
+    The pending review goes in rounds (see :func:`pending_queue`): each card
+    is the next unsure detection event of its cell not yet rejected in this
+    review, with ``pendingIndex`` (its position among the cell's unsure
+    events, 1-based) and ``pendingTotal``. Every frame has ``burstRepObsId``
+    (the event's representative observation), which is what a confirmation
+    records.
 
     Returns:
         List of event dicts (same structure as :func:`get_events`) with
@@ -2267,11 +2317,14 @@ def get_pending_events(
     pending = set(states.loc[states["status"] == "pending", "site_occasion_key"])
     if not pending:
         return []
-    unsure = load_unsure(decisions_dir)
-    unsure = unsure[unsure["site_occasion_key"].isin(pending)]
-    flagged = species_cands[species_cands["observationID"].isin(set(unsure["observationID"]))]
-    burst_keys = flagged[["site_occasion_key", "burst_id"]].drop_duplicates()
-    rows = species_cands.merge(burst_keys, on=["site_occasion_key", "burst_id"])
+    sp_safe = str(species_cands["species_safe"].iloc[0])
+    queue = pending_queue(decisions_dir, sp_safe, pending)
+    current = {k: (ranks[0], total) for k, (ranks, total) in queue.items() if ranks}
+    if not current:
+        return []
+    rank_num = pd.to_numeric(species_cands["rank"], errors="coerce")
+    want = species_cands["site_occasion_key"].map(lambda k: current.get(k, (None,))[0])
+    rows = species_cands[rank_num.eq(want)]
     total_seqs_by_key = species_cands.groupby("site_occasion_key")["rank"].max().to_dict()
 
     frame_url = _frame_url_factory(image_base_dir, fallback_base, flat_search, resolver, token)
@@ -2279,6 +2332,9 @@ def get_pending_events(
     for key, recs in _event_records(_sort_frames(rows, ["rank", "ts"])).items():
         event = _build_event(key, recs, total_seqs_by_key.get(key, 1), frame_url, with_burst_reps=True)
         event["status"] = "pending"
+        ranks, total = queue[key]
+        event["pendingIndex"] = total - len(ranks) + 1
+        event["pendingTotal"] = total
         events.append(event)
     events.sort(key=lambda e: (e["siteId"], e["occasion"]))
     return events
@@ -2319,6 +2375,7 @@ def review_outcomes(candidates: pd.DataFrame, decisions_dir: Path) -> dict[tuple
         d = pd.read_csv(path, dtype=str)
         return set(d["site_occasion_key"].dropna()) if "site_occasion_key" in d else set()
 
+    pending_rej = load_pending_rejected(decisions_dir)
     for sp, ns in rounds.items():
         earlier: set = set()
         for n in sorted(ns):
@@ -2329,7 +2386,7 @@ def review_outcomes(candidates: pd.DataFrame, decisions_dir: Path) -> dict[tuple
             # pending cells the expert later set to not detected: rejected
             cleared = keys(decisions_dir / f"unsure_cleared_{sp}.csv")
             for m, sp_name, key in zip(unsure_rows["mediaID"], unsure_rows["scientificName"], unsure_rows["site_occasion_key"]):
-                out[(m, sp_name)] = TAG_REJECTED if key in cleared else TAG_UNSURE
+                out[(m, sp_name)] = TAG_REJECTED if (key in cleared or (key, n) in pending_rej) else TAG_UNSURE
             rej = shown[~shown["site_occasion_key"].isin(conf | uns)]
             for m, sp_name in zip(rej["mediaID"], rej["scientificName"]):
                 out[(m, sp_name)] = TAG_REJECTED

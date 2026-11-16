@@ -265,7 +265,7 @@
     "needs_decision_count": "{{n}} zdarzeń wykrycia wymaga jeszcze decyzji przed zakończeniem rundy. Twój postęp jest już zapisany: możesz zamknąć i kontynuować później.",
     "toast_rounds_done_pending": "Rundy zakończone. {{n}} okazji czeka na ocenę eksperta: przejrzyj je teraz lub wyeksportuj sesję, aby dokończył je ktoś inny.",
     "pending_badge": "Do oceny eksperta",
-    "pending_hint": "W tych okazjach wyczerpały się zdarzenia detekcji bez potwierdzenia, a co najmniej jedno oznaczono jako niepewne. Dla każdej potwierdź obecność (zapisywane jest oglądane zdarzenie), odrzuć ją lub zostaw jako niepewną, aby przejrzał ją ktoś inny. Możesz zapisać bez rozstrzygania wszystkich.",
+    "pending_hint": "W tych okresach wyczerpano zdarzenia detekcji bez potwierdzenia, a co najmniej jedno oznaczono jako niepewne. Przegląda się je w rundach, po jednym niepewnym zdarzeniu: potwierdź obecność, odrzuć (jeśli okres ma kolejne niepewne zdarzenie, pojawi się w następnej rundzie; jeśli nie, okres zostaje oznaczony jako bez wykrycia) albo pozostaw jako niepewne do przeglądu przez inną osobę. Możesz zapisać bez decydowania o wszystkich.",
     "pending_count": "{{n}} do oceny eksperta",
     "pending_nothing_to_save": "Nie potwierdzono ani nie odrzucono żadnej oczekującej okazji.",
     "toast_pending_saved": "Zapisano. {{n}} okazji nadal czeka na ocenę eksperta.",
@@ -310,7 +310,8 @@
     "lb_reviewing": "Przeglądany gatunek",
     "cross_outside": "brak kandydatów tutaj: zapisane osobno",
     "cross_outside_tooltip": "Klasyfikator nie wskazał {{species}} w tej lokalizacji i okresie próbkowania. Potwierdzenie tutaj jest zapisywane osobno i nie liczy się w jego zweryfikowanej historii wykryć, ponieważ takie przypadki wychodzą na jaw tylko podczas przeglądu innych gatunków.",
-    "cross_added_outside": "{{species}} zapisany w {{site}}, okres {{occasion}}, jako uzupełnienie: klasyfikator go tu nie wskazał, więc pozostaje poza jego zweryfikowaną historią wykryć (zob. Wyniki)."
+    "cross_added_outside": "{{species}} zapisany w {{site}}, okres {{occasion}}, jako uzupełnienie: klasyfikator go tu nie wskazał, więc pozostaje poza jego zweryfikowaną historią wykryć (zob. Wyniki).",
+    "pending_pos": "niepewne zdarzenie {{i}} z {{n}}"
   },
   "help": {
     "title": "Pomoc — CamTrap Verify",

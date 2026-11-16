@@ -567,9 +567,11 @@ export default function GalleryPage() {
     if (progressTimerRef.current) window.clearTimeout(progressTimerRef.current)
     setSaving(true)
     try {
-      await api.settlePending(species, confirmed, rejectedKeys)
+      const res = await api.settlePending(species, confirmed, rejectedKeys)
       clearDraft(draftId)
-      const left = events.length - confirmed.length - rejectedKeys.length
+      // A rejected occasion with more unsure events stays pending and shows
+      // its next one in the next pending round.
+      const left = res.pending ?? (events.length - confirmed.length - rejectedKeys.length)
       if (left === 0) {
         showToast(t('gallery.toast_done'), 'success')
         setTimeout(() => navigate('/species'), 1500)
@@ -696,6 +698,7 @@ export default function GalleryPage() {
             ) : mode === 'pending' ? (
               <span className="px-2 py-0.5 text-xs font-medium bg-amber-500 text-white rounded-full">
                 {t('gallery.pending_badge')}
+                {events.length > 0 && ` · ${t('gallery.round', { n: Math.min(...events.map((e) => e.pendingIndex ?? 1)) })}`}
               </span>
             ) : (
               <span className="px-2 py-0.5 text-xs font-medium bg-zinc-600 text-zinc-200 rounded-full">

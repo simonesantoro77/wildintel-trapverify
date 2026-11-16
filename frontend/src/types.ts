@@ -17,6 +17,9 @@ export interface DetectionEvent {
   occasion: number
   rank: number
   totalSeqs: number
+  /** Pending review: position of this unsure event among its cell's unsure events (1-based) */
+  pendingIndex?: number
+  pendingTotal?: number
   repObsId: string
   maxProb: number
   frames: Frame[]
