@@ -58,6 +58,20 @@ def _nll(params: np.ndarray, y: np.ndarray) -> float:
     return -ll
 
 
+def _hessian(f, x: np.ndarray, h: float = 1e-4) -> np.ndarray:
+    """Observed Hessian of ``f`` at ``x`` by central finite differences."""
+    n = len(x)
+    H = np.zeros((n, n))
+    for i in range(n):
+        for j in range(i, n):
+            ei = np.zeros(n); ei[i] = h
+            ej = np.zeros(n); ej[j] = h
+            H[i, j] = H[j, i] = (
+                f(x + ei + ej) - f(x + ei - ej) - f(x - ei + ej) + f(x - ei - ej)
+            ) / (4 * h * h)
+    return H
+
+
 def fit_occu(y: np.ndarray) -> dict:
     """Fit psi(.)p(.) by MLE for one detection-history matrix.
 
@@ -66,7 +80,8 @@ def fit_occu(y: np.ndarray) -> dict:
 
     Returns:
         Dict with keys psi, psi_lo, psi_hi, p, degenerate, converged.
-        psi_lo/psi_hi are 95 % profile CI on the probability scale.
+        psi_lo/psi_hi are the 95 % Wald CI on the logit scale (from the
+        observed Hessian), back-transformed to the probability scale.
         degenerate=True means the estimate should be reported as
         "degenerate (report at detection level)" following the R version.
     """
@@ -109,9 +124,17 @@ def fit_occu(y: np.ndarray) -> dict:
     lo: Optional[float] = None
     hi: Optional[float] = None
     try:
-        se = float(np.sqrt(np.diag(res.hess_inv)[0]))
-        lo = _sigmoid(float(res.x[0]) - 1.96 * se)
-        hi = _sigmoid(float(res.x[0]) + 1.96 * se)
+        # Standard error from the observed information (the inverse of the
+        # Hessian of the negative log-likelihood at the MLE), as unmarked does.
+        # BFGS's own ``hess_inv`` is only an approximation built along the
+        # optimisation path and can be far too small (e.g. a 95 % CI of
+        # 0.76-0.80 where the correct one is 0.66-0.87).
+        cov = np.linalg.inv(_hessian(lambda q: _nll(q, y), np.asarray(res.x, dtype=float)))
+        var = float(cov[0, 0])
+        if var > 0 and np.isfinite(var):
+            se = float(np.sqrt(var))
+            lo = _sigmoid(float(res.x[0]) - 1.96 * se)
+            hi = _sigmoid(float(res.x[0]) + 1.96 * se)
     except Exception:
         pass
 
