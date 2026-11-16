@@ -22,6 +22,8 @@ interface Results {
   unverified: number
   pending: number
   by_species: SpeciesRow[]
+  added?: number
+  added_by_species?: Record<string, number>
   seq_total: number
   seq_confirmed: number
   seq_rejected: number
@@ -224,6 +226,18 @@ export default function ResultsPage() {
               {results.datapackage_fabricated_fields.map((f) => <li key={f}>{f}</li>)}
             </ul>
           )}
+        </div>
+      )}
+
+      {(results.added ?? 0) > 0 && (
+        <div className="px-4 py-3 rounded bg-sky-50 dark:bg-sky-950 border border-sky-200 dark:border-sky-800 text-sky-800 dark:text-sky-300 text-sm mb-4" data-testid="added-notice">
+          <p className="font-medium mb-1">{t('results.added_title', { n: results.added })}</p>
+          <p dangerouslySetInnerHTML={{ __html: t('results.added_hint') }} />
+          <ul className="list-disc list-inside mt-1">
+            {Object.entries(results.added_by_species ?? {}).map(([sp, n]) => (
+              <li key={sp}><span className="italic">{sp}</span>: {n}</li>
+            ))}
+          </ul>
         </div>
       )}
 

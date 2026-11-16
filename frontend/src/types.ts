@@ -111,6 +111,8 @@ export interface CrossSpecies {
   species_safe: string
   /** cross: confirmed from a photo of another species; confirmed: in its own review */
   status: 'none' | 'cross' | 'confirmed'
+  /** whether the classifier flagged this species at this location and occasion */
+  has_candidates?: boolean
   mediaID?: string
   observationID?: string
   source?: string

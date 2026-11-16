@@ -452,7 +452,8 @@ The lightbox shows:
 
 If the photo you are looking at shows another target species (for example a fallow deer in a red deer sequence), click that species in the lightbox's left panel, or press its number (`1` to `9`). This confirms that species at the same location and sampling occasion, using this photo, without leaving the species you are reviewing:
 
-- The occasion counts as a detection of that species (`1` in its `dethist_verified_<sp>.csv`), also when the classifier never assigned it there; `verification_summary.csv` reports those cells as `false_negative_cells`.
+- If the classifier had flagged that species at that location and occasion, the occasion counts as a detection of it (`1` in its `dethist_verified_<sp>.csv`).
+- If the classifier had **not** flagged it there (the button reads *no candidates here: recorded apart*), the confirmation recovers a classifier miss. Such misses are found only where other target species are being reviewed, so counting them would make detection uneven among sites. The cell stays `0` in `dethist_verified_<sp>.csv`, appears as `added` in `cell_status_<sp>.csv`, is counted in `added_cells` of `verification_summary.csv` and is `1` in `dethist_verified_with_additions_<sp>.csv`, for those who want to use it. The Results page lists these cells.
 - If the occasion was still waiting in that species' own rounds, it will not be shown again there.
 - In the verified CamtrapDP, the photo gets a human-confirmed observation of that species (an existing one for the same photo and species is marked, otherwise a new one is added). The observation of the species being reviewed is not changed: decide on it as usual with the decision buttons.
 - A species confirmed from this list, from a photo of the detection event you are looking at, appears in blue with ✓; click it again to undo.
@@ -586,7 +587,7 @@ Each session is saved in a timestamped subfolder inside the output directory (e.
 |---|---|
 | `deployments.csv` | Original deployment table (unchanged). |
 | `media.csv` | Original media table (unchanged). |
-| `observations.csv` | Every observation of the source. Confirmed ones are updated with `classificationMethod='human'`, `classificationProbability=1.0`, `classifiedBy=<configured value>` and `classificationTimestamp`. `observationTags` records the review: `camtrapverify:confirmed`, `camtrapverify:rejected` (shown in a round and not confirmed) or `camtrapverify:unsure` (still pending expert review); events never shown are untouched. With a dataset from *Classifiers and reference*, `camtrapverify:filtered` marks detection events that were left out of the review and `camtrapverify:reference` those the reference confirmed. |
+| `observations.csv` | Every observation of the source. Confirmed ones are updated with `classificationMethod='human'`, `classificationProbability=1.0`, `classifiedBy=<configured value>` and `classificationTimestamp`. `observationTags` records the review: `camtrapverify:confirmed`, `camtrapverify:rejected` (shown in a round and not confirmed) or `camtrapverify:unsure` (still pending expert review); events never shown are untouched. A species confirmed from a photo reviewed for another species, where the classifier had not flagged it, is also tagged `camtrapverify:added`. With a dataset from *Classifiers and reference*, `camtrapverify:filtered` marks detection events that were left out of the review and `camtrapverify:reference` those the reference confirmed. |
 
 **`occupancy_inputs/`** — ready-to-use files for occupancy models
 
@@ -595,7 +596,8 @@ Each session is saved in a timestamped subfolder inside the output directory (e.
 | `camera_operation.csv` | Camera operation matrix (sites × sampling occasions): days of operation per occasion, or hours with occasions in hours. |
 | `dethist_naive_{sp}.csv` | Naive detection history per species (AI detections, not human-validated). One file per species. |
 | `dethist_verified_{sp}.csv` | Verified detection history per species (confirmed by expert). One file per species. Occasions pending expert review are NA, like inactive-camera occasions. |
-| `cell_status_{sp}.csv` | Same sites × occasions layout, with the status of each cell: `1` (confirmed), `0` (not detected), `pending` (pending expert review), `unreviewed` (rounds not finished) or `inactive` (camera not operating). Use it to tell the two kinds of NA apart. |
+| `cell_status_{sp}.csv` | Same sites × occasions layout, with the status of each cell: `1` (confirmed), `0` (not detected), `pending` (pending expert review), `unreviewed` (rounds not finished), `added` (confirmed from a photo reviewed for another species where the classifier had not flagged this one; 0 in the verified history) or `inactive` (camera not operating). Use it to tell the two kinds of NA apart. |
+| `dethist_verified_with_additions_{sp}.csv` | Only when a species has `added` cells: the verified history with those cells as 1. |
 | `verification_summary.csv` | Per-species summary: naive and verified detections, false-positive cells, `pending_cells`, `unreviewed_cells` and observed occupancy. |
 | `ttd_naive_{sp}.csv`, `ttd_verified_{sp}.csv` | Only with *Order: by time*. Hours from the start of each occasion to its first detection event (naive) or first confirmed one (verified). An occasion without detection holds the occasion length (censored, as `unmarked::occuTTD` expects); NA where the camera was off or the occasion is pending or unreviewed. An occasion confirmed only from another species' photo takes the time of that photo. |
 | `review_effort.csv` | Total review effort: number of detection events and images inspected. |

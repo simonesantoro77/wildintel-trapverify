@@ -307,7 +307,10 @@
     "round_hint_unsure_time": "In Runde {{n}} wird jeder Stichprobenanlass durch sein frühestes noch nicht geprüftes Detektionsereignis vertreten. Wenn Sie unsicher sind, markieren Sie es als «Unsicher»: Es zählt für die nächste Runde als nicht bestätigt, aber der Stichprobenanlass gilt erst als nicht nachgewiesen, wenn jemand ihn geprüft hat.",
     "cross_elsewhere": "in dieser Periode bereits bestätigt",
     "cross_elsewhere_tooltip": "{{species}} wurde an diesem Standort und in dieser Periode auf einem Foto eines anderen Detektionsereignisses bestätigt. Rückgängig machen geht nur von jenem Foto aus.",
-    "lb_reviewing": "Geprüfte Art"
+    "lb_reviewing": "Geprüfte Art",
+    "cross_outside": "hier keine Kandidaten: wird separat erfasst",
+    "cross_outside_tooltip": "Der Klassifikator hat {{species}} an diesem Standort und Erfassungszeitraum nicht erkannt. Eine Bestätigung hier wird separat erfasst und zählt nicht in ihrer verifizierten Nachweishistorie, da solche Fälle nur bei der Prüfung anderer Arten auffallen.",
+    "cross_added_outside": "{{species}} an {{site}}, Erfassungszeitraum {{occasion}}, als Ergänzung erfasst: Der Klassifikator hatte sie hier nicht erkannt, daher bleibt sie außerhalb ihrer verifizierten Nachweishistorie (siehe Ergebnisse)."
   },
   "help": {
     "title": "Hilfe — CamTrap Verify",
@@ -375,7 +378,9 @@
     "col_p_verified": "p verifiziert",
     "degenerate": "Entartet",
     "pending_title": "{{n}} Stichprobenanlässe sind noch zur Expertenprüfung offen",
-    "pending_hint": "Sie erscheinen in <code>dethist_verified_*.csv</code> als NA, genau wie Stichprobenanlässe mit inaktiver Kamera. Zur Unterscheidung siehe <code>cell_status_*.csv</code> (Werte <code>pending</code> und <code>inactive</code>). Sie können die Sitzung im Artenindex exportieren, damit jemand anderes sie prüft."
+    "pending_hint": "Sie erscheinen in <code>dethist_verified_*.csv</code> als NA, genau wie Stichprobenanlässe mit inaktiver Kamera. Zur Unterscheidung siehe <code>cell_status_*.csv</code> (Werte <code>pending</code> und <code>inactive</code>). Sie können die Sitzung im Artenindex exportieren, damit jemand anderes sie prüft.",
+    "added_title": "{{n}} Zellen bestätigt, in denen der Klassifikator die Art nicht erkannt hatte",
+    "added_hint": "Sie wurden anhand von Fotos bestätigt, die für eine andere Art geprüft wurden. Sie zählen <b>nicht</b> in <code>dethist_verified_*.csv</code>: Solche Fehler werden nur dort gefunden, wo andere Zielarten geprüft werden, sodass ihre Zählung die Nachweiswahrscheinlichkeit zwischen Standorten ungleich machen würde. Sie erscheinen als <code>added</code> in <code>cell_status_*.csv</code> und sind in <code>dethist_verified_with_additions_*.csv</code> enthalten."
   },
   "footer": {
     "copyright": "© {{year}} <a href='https://wildintel.eu/' target='_blank' rel='noopener noreferrer' style='color:inherit;text-decoration:underline'>WildINTEL</a>. Alle Rechte vorbehalten.",

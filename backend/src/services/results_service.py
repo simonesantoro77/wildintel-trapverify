@@ -10,7 +10,9 @@ import logging
 import pandas as pd
 from fastapi import HTTPException
 
-from camtrap_workflow import cell_states, load_all_decisions, rounds_done_by_species
+from camtrap_workflow import (
+    added_cross_keys, cell_states, load_all_decisions, load_cross, rounds_done_by_species,
+)
 from services import session_service
 
 logger = logging.getLogger(__name__)
@@ -114,6 +116,14 @@ def compute_results() -> dict:
         int(p_counts.get("pending", 0)),
         int(p_counts.get("unverified", 0)),
     )
+    # Confirmations from another species' photo where the classifier had not
+    # flagged that species: kept out of the verified histories (added_cross_keys).
+    added_keys = added_cross_keys(decisions_dir, candidates) if decisions_dir.exists() else set()
+    cross = load_cross(decisions_dir) if added_keys else pd.DataFrame()
+    added_by_species: dict[str, int] = {}
+    if added_keys:
+        rows = cross[cross["site_occasion_key"].isin(added_keys)].drop_duplicates("site_occasion_key")
+        added_by_species = {str(k): int(v) for k, v in rows["scientificName"].value_counts().items()}
     datapackage_generated, datapackage_fabricated_fields = _datapackage_warning(p["camtrap_out"])
     return {
         "session_dir":     str(session_service.session_dir()),
@@ -127,6 +137,8 @@ def compute_results() -> dict:
         "unverified":      int(p_counts.get("unverified", 0)),
         "pending":         int(p_counts.get("pending", 0)),
         "by_species":      by_species,
+        "added":           len(added_keys),
+        "added_by_species": added_by_species,
         "seq_total":       len(seqs),
         "seq_confirmed":   int(s_counts.get("confirmed", 0)),
         "seq_rejected":    int(s_counts.get("rejected", 0)),

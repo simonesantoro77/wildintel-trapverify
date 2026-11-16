@@ -48,8 +48,13 @@ def _read(zf, suffix):
     return pd.read_csv(zf.open(name), dtype=str)
 
 
-def test_cross_confirmation_reaches_status_occupancy_and_export(client, session2):
+def test_cross_confirmation_outside_candidates_is_kept_apart(client, session2):
+    """The badger has no candidate at SITE_A occ1: a confirmation there recovers
+    a classifier false negative, so it is reported apart ("added") and kept out
+    of the verified history."""
     assert _cross(client)["Meles meles"]["status"] == "none"
+    assert _cross(client)["Meles meles"]["has_candidates"] is False
+    assert _cross(client)["Vulpes vulpes"]["has_candidates"] is True
     frame = _confirm_badger(client)
     st = _cross(client)
     assert st["Meles meles"]["status"] == "cross"
@@ -61,15 +66,24 @@ def test_cross_confirmation_reaches_status_occupancy_and_export(client, session2
     zf = _download(client)
     ver = _read(zf, "dethist_verified_Meles_meles.csv").set_index("siteID")
     naive = _read(zf, "dethist_naive_Meles_meles.csv").set_index("siteID")
-    assert ver.loc["SITE_A", "occ1"] == "1"
+    assert ver.loc["SITE_A", "occ1"] == "0"
     assert naive.loc["SITE_A", "occ1"] == "0"
+    with_add = _read(zf, "dethist_verified_with_additions_Meles_meles.csv").set_index("siteID")
+    assert with_add.loc["SITE_A", "occ1"] == "1"
+    status = _read(zf, "cell_status_Meles_meles.csv").set_index("siteID")
+    assert status.loc["SITE_A", "occ1"] == "added"
     summary = _read(zf, "verification_summary.csv").set_index("species")
-    assert summary.loc["Meles meles", "false_negative_cells"] == "1"
+    assert summary.loc["Meles meles", "added_cells"] == "1"
+    assert summary.loc["Meles meles", "verified_detections"] == "0"
+    assert not any(n.endswith("dethist_verified_with_additions_Vulpes_vulpes.csv") for n in zf.namelist())
+    res = client.get("/api/results").json()
+    assert res["added"] == 1 and res["added_by_species"] == {"Meles meles": 1}
 
     obs = _read(zf, "camtrap_dp_verified/observations.csv")
     added = obs[(obs["mediaID"] == frame["mediaId"]) & (obs["scientificName"] == "Meles meles")]
     assert len(added) == 1
     assert added.iloc[0]["classificationMethod"] == "human"
+    assert added.iloc[0]["observationTags"] == "camtrapverify:confirmed|camtrapverify:added"
     # the fox observation of that photo is NOT confirmed by this
     fox = obs[obs["observationID"] == frame["obsId"]]
     assert (fox["classificationMethod"] != "human").all()
@@ -100,8 +114,15 @@ def test_cross_confirmed_cell_leaves_that_species_rounds(client, session2):
         "source_species": "Meles meles",
     })
     assert resp.status_code == 200
+    assert resp.json()["added"] is False
     assert set(_events(client, 1)) == {A1, A2}
     assert _stats(client)["n_confirmed_combos"] == 1
+    # the fox was flagged there: the cell counts as a verified detection
+    zf = _download(client)
+    ver = _read(zf, "dethist_verified_Vulpes_vulpes.csv").set_index("siteID")
+    assert ver.loc["SITE_B", "occ1"] == "1"
+    assert _read(zf, "cell_status_Vulpes_vulpes.csv").set_index("siteID").loc["SITE_B", "occ1"] == "1"
+    assert client.get("/api/results").json()["added"] == 0
 
 
 def test_undone_cross_confirmation_leaves_no_trace(client, session2):

@@ -1715,7 +1715,8 @@ def test_export_rejected_photo_with_another_species(camtrap_dir, tmp_path, candi
     photo = obs[obs["mediaID"] == row["mediaID"]].set_index("scientificName")
     assert photo.loc["Vulpes vulpes", "observationTags"] == "camtrapverify:rejected"
     assert photo.loc["Vulpes vulpes", "classificationMethod"] == "machine"
-    assert photo.loc["Meles meles", "observationTags"] == "camtrapverify:confirmed"
+    # the badger had no candidate in that cell: confirmed, but tagged apart
+    assert photo.loc["Meles meles", "observationTags"] == "camtrapverify:confirmed|camtrapverify:added"
     assert photo.loc["Meles meles", "classificationMethod"] == "human"
 
 

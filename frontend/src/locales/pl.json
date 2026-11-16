@@ -307,7 +307,10 @@
     "round_hint_unsure_time": "W rundzie {{n}} każdą okazję próbkowania reprezentuje jej najwcześniejsze zdarzenie detekcji spośród jeszcze nieprzejrzanych. Jeśli nie masz pewności, oznacz je jako «Niepewne»: liczy się jako niepotwierdzone przy przejściu do następnej rundy, ale okazja nie zostanie uznana za niewykrytą, dopóki ktoś jej nie przejrzy.",
     "cross_elsewhere": "już potwierdzony w tej okazji",
     "cross_elsewhere_tooltip": "{{species}} został potwierdzony w tej lokalizacji i okazji ze zdjęcia innego zdarzenia detekcji. Można to cofnąć tylko z tamtego zdjęcia.",
-    "lb_reviewing": "Przeglądany gatunek"
+    "lb_reviewing": "Przeglądany gatunek",
+    "cross_outside": "brak kandydatów tutaj: zapisane osobno",
+    "cross_outside_tooltip": "Klasyfikator nie wskazał {{species}} w tej lokalizacji i okresie próbkowania. Potwierdzenie tutaj jest zapisywane osobno i nie liczy się w jego zweryfikowanej historii wykryć, ponieważ takie przypadki wychodzą na jaw tylko podczas przeglądu innych gatunków.",
+    "cross_added_outside": "{{species}} zapisany w {{site}}, okres {{occasion}}, jako uzupełnienie: klasyfikator go tu nie wskazał, więc pozostaje poza jego zweryfikowaną historią wykryć (zob. Wyniki)."
   },
   "help": {
     "title": "Pomoc — CamTrap Verify",
@@ -375,7 +378,9 @@
     "col_p_verified": "p zweryfikowane",
     "degenerate": "Zdegenerowane",
     "pending_title": "{{n}} okazji nadal czeka na ocenę eksperta",
-    "pending_hint": "W <code>dethist_verified_*.csv</code> pojawiają się jako NA, tak jak okazje z nieaktywną kamerą. Aby je rozróżnić, zajrzyj do <code>cell_status_*.csv</code> (wartości <code>pending</code> i <code>inactive</code>). Sesję możesz wyeksportować z indeksu gatunków, aby przejrzał je ktoś inny."
+    "pending_hint": "W <code>dethist_verified_*.csv</code> pojawiają się jako NA, tak jak okazje z nieaktywną kamerą. Aby je rozróżnić, zajrzyj do <code>cell_status_*.csv</code> (wartości <code>pending</code> i <code>inactive</code>). Sesję możesz wyeksportować z indeksu gatunków, aby przejrzał je ktoś inny.",
+    "added_title": "{{n}} komórek potwierdzonych tam, gdzie klasyfikator nie wskazał gatunku",
+    "added_hint": "Potwierdzono je na zdjęciach przeglądanych dla innego gatunku. <b>Nie</b> liczą się w <code>dethist_verified_*.csv</code>: takie pominięcia wykrywa się tylko tam, gdzie przegląda się inne gatunki docelowe, więc ich liczenie sprawiłoby, że wykrywalność różniłaby się między stanowiskami. Są oznaczone jako <code>added</code> w <code>cell_status_*.csv</code> i uwzględnione w <code>dethist_verified_with_additions_*.csv</code>."
   },
   "footer": {
     "copyright": "© {{year}} <a href='https://wildintel.eu/' target='_blank' rel='noopener noreferrer' style='color:inherit;text-decoration:underline'>WildINTEL</a>. Wszelkie prawa zastrzeżone.",

@@ -307,7 +307,10 @@
     "round_hint_unsure_time": "En la ronda {{n}}, cada ocasión de muestreo se representa con su evento de detección más temprano entre los aún no revisados. Si no lo tienes claro, márcalo como «Dudosa»: cuenta como no confirmado para avanzar de ronda, pero la ocasión no se dará por no detectada sin que alguien la revise.",
     "cross_elsewhere": "ya confirmada en esta ocasión",
     "cross_elsewhere_tooltip": "{{species}} se confirmó en esta localización y ocasión desde una foto de otro evento de detección. Solo se puede deshacer desde esa foto.",
-    "lb_reviewing": "Revisando"
+    "lb_reviewing": "Revisando",
+    "cross_outside": "sin candidatas aquí: se anota aparte",
+    "cross_outside_tooltip": "El clasificador no asignó {{species}} en esta localización y ocasión. Una confirmación aquí se anota aparte y no cuenta en su historial verificado, porque estos casos solo salen a la luz cuando se revisan otras especies.",
+    "cross_added_outside": "{{species}} anotada en {{site}}, ocasión {{occasion}}, como adición: el clasificador no la había asignado aquí, así que queda fuera de su historial verificado (ver Resultados)."
   },
   "help": {
     "title": "Ayuda — CamTrap Verify",
@@ -375,7 +378,9 @@
     "col_p_verified": "p verificado",
     "degenerate": "Degenerado",
     "pending_title": "{{n}} ocasiones siguen pendientes de experto",
-    "pending_hint": "Aparecen como NA en <code>dethist_verified_*.csv</code>, igual que las ocasiones con la cámara inactiva. Para distinguirlas, consulta <code>cell_status_*.csv</code> (valores <code>pending</code> e <code>inactive</code>). Puedes exportar la sesión desde el índice de especies para que otra persona las revise."
+    "pending_hint": "Aparecen como NA en <code>dethist_verified_*.csv</code>, igual que las ocasiones con la cámara inactiva. Para distinguirlas, consulta <code>cell_status_*.csv</code> (valores <code>pending</code> e <code>inactive</code>). Puedes exportar la sesión desde el índice de especies para que otra persona las revise.",
+    "added_title": "{{n}} celdas confirmadas donde el clasificador no había asignado la especie",
+    "added_hint": "Se confirmaron desde fotos revisadas para otra especie. <b>No</b> cuentan en <code>dethist_verified_*.csv</code>: estos fallos solo se encuentran donde se revisan otras especies objetivo, y contarlos haría que la detección variara entre sitios. Aparecen como <code>added</code> en <code>cell_status_*.csv</code> y se incluyen en <code>dethist_verified_with_additions_*.csv</code>."
   },
   "footer": {
     "copyright": "© {{year}} <a href='https://wildintel.eu/' target='_blank' rel='noopener noreferrer' style='color:inherit;text-decoration:underline'>WildINTEL</a>. Todos los derechos reservados.",

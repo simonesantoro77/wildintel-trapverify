@@ -307,7 +307,10 @@
     "round_hint_unsure_time": "In round {{n}}, each sampling occasion is represented by its earliest detection event among those not yet reviewed. If you are not sure, mark it «Unsure»: it counts as not confirmed for the next round, but the occasion will not be set to not detected until someone reviews it.",
     "cross_elsewhere": "already confirmed in this occasion",
     "cross_elsewhere_tooltip": "{{species}} was confirmed at this location and occasion from a photo of another detection event. It can only be undone from that photo.",
-    "lb_reviewing": "Reviewing"
+    "lb_reviewing": "Reviewing",
+    "cross_outside": "no candidates here: recorded apart",
+    "cross_outside_tooltip": "The classifier did not flag {{species}} at this location and occasion. A confirmation here is recorded apart and does not count in its verified history, because only other species being reviewed can bring such cases to light.",
+    "cross_added_outside": "{{species}} recorded at {{site}}, occasion {{occasion}}, as an addition: the classifier had not flagged it here, so it is kept out of its verified history (see Results)."
   },
   "help": {
     "title": "Help — CamTrap Verify",
@@ -375,7 +378,9 @@
     "col_p_verified": "p verified",
     "degenerate": "Degenerate",
     "pending_title": "{{n}} occasions are still pending expert review",
-    "pending_hint": "They appear as NA in <code>dethist_verified_*.csv</code>, just like occasions with an inactive camera. To tell them apart, see <code>cell_status_*.csv</code> (values <code>pending</code> and <code>inactive</code>). You can export the session from the species index so that someone else reviews them."
+    "pending_hint": "They appear as NA in <code>dethist_verified_*.csv</code>, just like occasions with an inactive camera. To tell them apart, see <code>cell_status_*.csv</code> (values <code>pending</code> and <code>inactive</code>). You can export the session from the species index so that someone else reviews them.",
+    "added_title": "{{n}} cells confirmed where the classifier had not flagged the species",
+    "added_hint": "They were confirmed from photos reviewed for another species. They are <b>not</b> counted in <code>dethist_verified_*.csv</code>: such misses are found only where other target species are reviewed, so counting them would make detection uneven among sites. They are listed as <code>added</code> in <code>cell_status_*.csv</code> and included in <code>dethist_verified_with_additions_*.csv</code>."
   },
   "footer": {
     "copyright": "© {{year}} <a href='https://wildintel.eu/' target='_blank' rel='noopener noreferrer' style='color:inherit;text-decoration:underline'>WildINTEL</a>. All rights reserved.",

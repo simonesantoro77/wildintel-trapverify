@@ -87,7 +87,7 @@ export const api = {
     ),
 
   addCross: (body: { species: string; site_id: string; occasion: number; media_id: string; observation_id: string; source_species: string }) =>
-    post<{ success: boolean; key: string }>('/api/cross', body),
+    post<{ success: boolean; key: string; added?: boolean }>('/api/cross', body),
 
   removeCross: (species: string, siteId: string, occasion: number) =>
     req<{ success: boolean; removed: number }>(
